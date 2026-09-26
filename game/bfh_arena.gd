@@ -832,7 +832,14 @@ const PILLAR_CLEARANCE := 3.6
 ## to: a bus that comes round a pillar and finds another one is a bus that has to come
 ## round again, which is the whole reason there is a lane through the middle for a driver
 ## who would rather not.
-func steer_around(from: Vector3, target: Vector3) -> Vector3:
+func steer_around(from: Vector3, target: Vector3, facing: Vector3 = Vector3.ZERO) -> Vector3:
+	# The road up the ramp is held clear of every obstacle already, and threads the hook
+	# closer than the nudge's clearance: nudged, a bus on it would be pushed off it.
+	if bound_up(from, target):
+		var up: Array = _up_the_ramp(from, facing, target)
+		if up[1]:
+			return up[0]
+		return _at_least(from, _round_the_obstacles(from, up[0]), RAMP_MIN_AIM)
 	return _round_the_obstacles(from, _round_the_ramp(from, target))
 
 
@@ -854,19 +861,11 @@ func _round_the_ramp(from: Vector3, target: Vector3) -> Vector3:
 	var foot_z := ramp_foot().z
 	var deck_front := -(radius - LEDGE_DEPTH)
 
-	# Up there already, or lined up at the bottom: the ramp is its road, not its obstacle.
-	var on_deck := absf(from.x) < LEDGE_WIDTH * 0.5 and from.z < deck_front
-	var in_lane := absf(from.x) < RAMP_WIDTH * 0.5 and from.z < foot_z + RAMP_APPROACH
-	if on_deck or in_lane:
+	# Over the deck in plan, on it or on the sand under the shelf: either way the ramp is
+	# not between this bus and anywhere it is going on the floor. By plan only, unlike
+	# [method _on_deck], which [method bound_up] needs to tell the two apart.
+	if absf(from.x) < LEDGE_WIDTH * 0.5 and from.z < deck_front:
 		return target
-
-	# A quarry on the ramp or the deck is reached from the bottom of it.
-	var target_up := (
-		(absf(target.x) < half and target.z < foot_z)
-		or (absf(target.x) < LEDGE_WIDTH * 0.5 and target.z < deck_front)
-	)
-	if target_up:
-		return Vector3(0.0, target.y, foot_z + RAMP_APPROACH)
 
 	# Against the slab itself, not the slab widened by a bus. A bus that is BESIDE the ramp
 	# and driving away from it passes through the widened box without ever touching the
@@ -882,6 +881,200 @@ func _round_the_ramp(from: Vector3, target: Vector3) -> Vector3:
 		side = 1.0
 
 	return Vector3(side * (half + PILLAR_CLEARANCE), target.y, foot_z + PILLAR_CLEARANCE)
+
+
+## [param aim], moved out along the line from [param from] to at least [param reach] away.
+## A nudge round an obstacle can land a few metres from the bus, which the driver reads as
+## arrived and brakes for; measured on the way to the road, a bus stood at 0.0 m/s for six
+## seconds until the stuck rule sent it home.
+func _at_least(from: Vector3, aim: Vector3, reach: float) -> Vector3:
+	var flat := Vector3(aim.x - from.x, 0.0, aim.z - from.z)
+	if flat.length() >= reach or flat.length() < 0.01:
+		return aim
+	var out := flat.normalized() * reach
+	return Vector3(from.x + out.x, aim.y, from.z + out.z)
+
+
+## Whether a bus at [param from] chasing [param target] has to get up the ramp to do it:
+## its quarry is on the ramp or the deck and it is not on the deck itself.
+func bound_up(from: Vector3, target: Vector3) -> bool:
+	return _ramp != null and not _on_deck(from) and _is_up(target)
+
+
+## Up there already. [b]By height as well as plan[/b], because the deck is a shelf 7 m up
+## with open sand under it, and a bus on that sand is not on the deck.
+func _on_deck(at: Vector3) -> bool:
+	return (
+		absf(at.x) < LEDGE_WIDTH * 0.5 and at.z < -(radius - LEDGE_DEPTH)
+		and at.y > deck_top() - 0.5
+	)
+
+
+## Whether [param at] is on the ramp or the deck. The deck takes a height too, for the
+## sand under the shelf; and anything far above the floor is up, which catches an aim point
+## the autopilot overshot past the deck's edge from a runner standing on it.
+func _is_up(at: Vector3) -> bool:
+	var deck_front := -(radius - LEDGE_DEPTH)
+	return (
+		(absf(at.x) < RAMP_WIDTH * 0.5 + BUS_HALF_WIDTH and at.z < ramp_foot().z
+			and at.z > deck_front and at.y > _ramp_height_at(at.z) * 0.5)
+		or (absf(at.x) < LEDGE_WIDTH * 0.5 and at.z < deck_front and at.y > LEDGE_HEIGHT * 0.5)
+		or at.y > deck_top() - 1.0
+	)
+
+
+## The height of the ramp's surface above the floor at [param z], in plan: nothing at the
+## foot, the deck's height where it meets the deck. The sand under the ramp is not up.
+func _ramp_height_at(z: float) -> float:
+	return maxf(ramp_foot().z - z, 0.0) * tan(deg_to_rad(RAMP_ANGLE))
+
+
+## Where to aim a bus that has to get up the ramp, from wherever it is on the sand, and
+## whether that aim is on the road -- a line already held clear of every obstacle, which
+## the obstacle pass must then leave alone. `[aim, on_road]`.
+##
+## [b]A road to follow, not a point to reach, and the point is what never got a bus up
+## there.[/b] This used to hand the driver the spot [constant RAMP_APPROACH] in front of the
+## foot and then, once the bus was anywhere inside the ramp's width, the quarry itself.
+## Measured with the autopilot chasing a runner standing on the deck, from five starts:
+## no bus reached the deck in twenty seconds, and three were teleported home. A bus
+## crossing the centreline sideways was "in the lane" for a tick, turned for the deck, was
+## out of the lane a tick later and turned back, and never pointed up the slab; and a bus
+## starting in its lane beside the ramp was sent straight at that spot, which is through
+## the slab's side, and scraped along it at 1-2 m/s.
+##
+## [b]And the floor in front of the foot has no room to line up in.[/b] A bus turns on a
+## circle about 17 m across (measured, full lock at 4 m/s), and the hook stands 15 m out
+## from the foot: a bus that arrives beside the ramp or across its front cannot turn onto
+## a five-metre slab there, whatever it is told. So the road, [method ramp_approach],
+## starts out in the open floor south of the hook, where a bus can turn round, and runs
+## into the foot on the one straight line that threads the hook and the stacks with a
+## metre to spare either side of a bus.
+##
+## On the road and heading up it, or anywhere in its turning ground at the far end, a bus
+## chases a point [constant RAMP_LOOKAHEAD] further along the road than its own nearest
+## point -- pure pursuit, which converges onto a line and arrives on it pointing along it.
+## On the road heading the wrong way, it drives on down it to the turning ground. Beside
+## the ramp it is sent round the foot; anywhere else, to the road's far end.
+func _up_the_ramp(from: Vector3, facing: Vector3, target: Vector3) -> Array:
+	var road := ramp_approach()
+	var near: Array = _nearest_on(road, from)
+	var along: float = near[0]
+	var off: float = near[1]
+	var leg: int = near[2]
+
+	# The turning ground: past the road's far end, or just short of it, and off its line
+	# by up to a turning circle. Whatever way a bus faces there, it pursues the road.
+	var turning := along < RAMP_PURSUE_ALONG and off < RAMP_PURSUE_OFF
+	var on_road := off < RAMP_ROAD_HALF[mini(leg, RAMP_ROAD_HALF.size() - 1)]
+
+	var up_leg := Vector2(road[leg + 1].x - road[leg].x, road[leg + 1].z - road[leg].z)
+	var heading := Vector2(facing.x, facing.z)
+	var heading_up := heading.length() < 0.01 or heading.dot(up_leg) >= 0.0
+
+	if turning or (on_road and heading_up):
+		return [_on_road(road, along + RAMP_LOOKAHEAD, target.y), true]
+	if on_road:
+		return [_on_road(road, 0.0, target.y), true]
+
+	# Beside the slab, between its foot and the deck: round the foot first, on the side
+	# it is on, and the road's far end after that.
+	var foot_z := ramp_foot().z
+	var deck_front := -(radius - LEDGE_DEPTH)
+	var half := RAMP_WIDTH * 0.5 + BUS_HALF_WIDTH
+	if from.z < foot_z and from.z > deck_front and absf(from.x) < half + PILLAR_CLEARANCE * 2.0:
+		var side := signf(from.x) if absf(from.x) > 0.01 else 1.0
+		return [Vector3(side * (half + PILLAR_CLEARANCE), target.y, foot_z + PILLAR_CLEARANCE), false]
+	return [_on_road(road, 0.0, target.y), false]
+
+
+func _on_road(road: PackedVector3Array, distance: float, y: float) -> Vector3:
+	var at := _point_along(road, distance)
+	return Vector3(at.x, y, at.z)
+
+
+## The road a bus takes onto the ramp, far end first, on the floor plane: from the turning
+## ground south of the hook, straight into the foot, up the centreline, onto the deck.
+##
+## [b]Its far end is placed along [constant RAMP_ROAD_BEARING] as far as the floor allows,
+## up to [constant RAMP_ROAD_LENGTH].[/b] A smaller bowl brings the wall in and the road
+## is shorter; `headless_run` holds whatever it comes to clear of every obstacle.
+func ramp_approach() -> PackedVector3Array:
+	var foot := ramp_foot()
+	var bearing := deg_to_rad(RAMP_ROAD_BEARING)
+	var out := Vector3(sin(bearing), 0.0, cos(bearing))
+	var room := radius - RAMP_TURN_ROOM - BUS_HALF_WIDTH
+	var length := RAMP_ROAD_LENGTH
+	while length > 0.0 and Vector2(foot.x + out.x * length, foot.z + out.z * length).length() > room:
+		length -= 1.0
+
+	var road := PackedVector3Array()
+	road.append(Vector3(foot.x, 0.0, foot.z) + out * length)
+	road.append(Vector3(foot.x, 0.0, foot.z))
+	road.append(Vector3(0.0, 0.0, -(radius - LEDGE_DEPTH * 0.5)))
+	return road
+
+
+## Degrees east of due south the road leaves the ramp's foot at. [b]The one line that
+## threads the hook:[/b] swept at half-degree steps against every obstacle, 9.5 leaves the
+## most floor -- 2.2 m from the nearest pillar's surface to the line, a metre either side
+## of a bus. Straight south runs into the dog-leg at 20 m.
+const RAMP_ROAD_BEARING := 9.5
+
+## How far out the road starts, in metres from the foot, where the floor allows.
+const RAMP_ROAD_LENGTH := 40.0
+
+## How far the turning ground at the road's far end reaches off the road's line, and how
+## far along it past the far end: room for the 17 m circle a bus turns on.
+const RAMP_TURN_ROOM := 12.0
+
+## And how far in from the far end it reaches. Short, because the hook's last pillar
+## stands 10 m in from it, 3.4 m off the line.
+const RAMP_TURN_ALONG := 4.0
+
+## Where a bus near the road's far end pursues the road whatever way it faces: this far
+## along it and this far off it. Wider than the turning ground, because a bus coming about
+## on its 17 m circle swings out past it, and a bus re-aimed at the far end halfway round
+## its turn only comes round again.
+const RAMP_PURSUE_ALONG := 12.0
+const RAMP_PURSUE_OFF := 18.0
+
+## How far off each leg of the road a bus still counts as on it. Narrow on the approach,
+## because the road threads the hook with a metre either side; the slab's own half-width
+## on the ramp.
+const RAMP_ROAD_HALF: Array[float] = [1.5, RAMP_WIDTH * 0.5]
+
+
+## [distance along, distance off, leg index] of the point of [param road] nearest
+## [param at]. The first leg runs on past the road's far end, so a bus beyond it is
+## measured against the line it is about to turn onto rather than against a point.
+func _nearest_on(road: PackedVector3Array, at: Vector3) -> Array:
+	var best := [0.0, INF, 0]
+	var walked := 0.0
+	var p := Vector2(at.x, at.z)
+	for i in range(road.size() - 1):
+		var a := Vector2(road[i].x, road[i].z)
+		var b := Vector2(road[i + 1].x, road[i + 1].z)
+		var length := a.distance_to(b)
+		var t := (p - a).dot(b - a) / maxf(length * length, 0.0001)
+		t = clampf(t, -INF if i == 0 else 0.0, 1.0)
+		var off := p.distance_to(a + (b - a) * t)
+		if off < best[1]:
+			best = [walked + t * length, off, i]
+		walked += length
+	return best
+
+
+## The point [param distance] along [param road]: before its start on the first leg's own
+## line, and clamped at its end.
+func _point_along(road: PackedVector3Array, distance: float) -> Vector3:
+	var left := distance
+	for i in range(road.size() - 1):
+		var length := Vector2(road[i + 1].x - road[i].x, road[i + 1].z - road[i].z).length()
+		if left <= length:
+			return road[i] + (road[i + 1] - road[i]) * (left / maxf(length, 0.0001))
+		left -= length
+	return road[road.size() - 1]
 
 
 ## Whether the segment [param from] to [param to] passes through the box [param half]
@@ -915,6 +1108,18 @@ const BUS_HALF_WIDTH := 1.25
 
 ## How far in front of the ramp's foot a bus lines up before driving up it.
 const RAMP_APPROACH := 8.0
+
+## How far up the ramp's centreline, from the bus, a bus lining up on it is aimed. Longer
+## lines up more gently and needs more floor in front of the foot; a bus is nine metres.
+const RAMP_LOOKAHEAD := 10.0
+
+## The autopilot's speed while it is making for the ramp, in m/s. About what a bus holds
+## climbing it, and slow enough to turn onto a five-metre slab from the road.
+const RAMP_SPEED := 10.0
+
+## The nearest a bus making for the road is ever aimed, in metres: twice the driver's
+## own arrival radius.
+const RAMP_MIN_AIM := 12.0
 
 
 func _round_the_obstacles(from: Vector3, target: Vector3) -> Vector3:
