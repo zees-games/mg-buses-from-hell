@@ -23,7 +23,7 @@ const BfhAvatars := preload("../game/bfh_avatars.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 91
+const CHECKS := 94
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -717,12 +717,61 @@ func _test_the_bots() -> void:
 		"each of them replicated exactly like a person"
 	)
 
+	# [b]A person who takes a seat takes it from a bot, and leaving gives it back[/b]:
+	# DotBotQuota's fill mode, counted in driving seats. One bot in two seats leaves one
+	# free, so a person added through the bridge (peer zero, the way a test's player is)
+	# joins into it as a driver. The roster check is called rather than waited for, so
+	# nothing else moves under the count.
+	_check(server.console.find_cvar("bot_quota") != null and server.console.find_cvar("bot_quota_mode") != null,
+		"the shared bot_quota cvars are registered")
+
+	var bridge: Object = module.get("bridge") if module != null else null
+
+	if module != null and bridge != null:
+		var _one := _run_command("bot_quota 1")
+		module.call("_keep_the_seats_full")
+		var bots_before := _bot_drivers()
+		var joined: DotResult = bridge.call("add_player", 0, 9001, "Person")
+		module.call("_keep_the_seats_full")
+		var bots_with := _bot_drivers()
+		_check(joined.ok and bots_before == 1 and bots_with == 0
+			and game.drivers().size() == 1 and not game.drivers()[0].is_bot,
+			"a person taking a seat takes it from a bot", "%d -> %d" % [bots_before, bots_with])
+		bridge.call("remove_player", 9001)
+		module.call("_keep_the_seats_full")
+		var bots_after := _bot_drivers()
+		_check(bots_after == bots_before, "and the bot comes back when they leave",
+			"%d -> %d" % [bots_with, bots_after])
+		var _all := _run_command("bot_quota %d" % game.config.driver_count)
+	else:
+		_check(false, "a person taking a seat takes it from a bot", "no module")
+		_check(false, "and the bot comes back when they leave", "no module")
+
 	_run_command("bfh_bots 0")
-	_check(
-		server.console.find_cvar("bfh_bots") != null,
-		"and an operator can turn them off"
-	)
+
+	for _i in range(int(3.0 * TICK_RATE)):
+		await get_tree().physics_frame
+
+	_check(_bot_drivers() == 0, "and an operator can turn them off, which takes them out",
+		"%d left" % _bot_drivers())
+	# Back on, and refilled now rather than at the next check: the sections after this one
+	# need every seat taken, so that the person they add joins on foot.
+	_run_command("bfh_bots 1")
+
+	if module != null:
+		module.call("_keep_the_seats_full")
+
 	_done()
+
+
+func _bot_drivers() -> int:
+	var n := 0
+
+	for driver in game.drivers():
+		if driver.is_bot:
+			n += 1
+
+	return n
 
 
 ## Chat, voice and moderation, as a module actually builds them.

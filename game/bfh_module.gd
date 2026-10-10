@@ -143,8 +143,19 @@ func _game_load() -> DotResult:
 
 	_bots = add_cvar(
 		"bfh_bots", "1",
-		"Fill empty driving seats with bots. 0 leaves them empty."
+		"Bots in empty driving seats: 1 keeps as many as bot_quota and bot_quota_mode say, 0 none at all."
 	)
+
+	# [b]How many is dot-server's [DotBotQuota], so `bot_quota` and `bot_quota_mode` mean the
+	# same thing on every server in the family[/b] — counted in DRIVING SEATS here, because a
+	# bot only ever drives. The people it is given are the people driving, not everybody on
+	# the server: counting runners would stand a bus down for a person who joined on foot,
+	# and two people joining inside one check would leave both on foot with no bus at all,
+	# which is a round that never starts. The default is the seat count in fill mode, the
+	# rule this game ran before the policy was shared: every seat nobody is driving has a bot
+	# in it, and a person who takes a seat (the sides swap every few rounds) takes it from a
+	# bot. `bfh_drivers` is still how many seats there are and caps whatever the quota says.
+	_quota = DotBotQuota.install(self, world.config.driver_count)
 
 	# [b]Started here and not in the world's own `_ready`.[/b] `start()` lays the bowl out
 	# and puts the buses on it, and a world that did that before the bridge existed would
@@ -261,6 +272,9 @@ const BOT_INTERVAL := 2.0
 ## The `bfh_bots` cvar, held so the tick does not look it up sixty times a second.
 var _bots: DotConVar = null
 
+## How many bots drive, from how many people are driving. See [method _keep_the_seats_full].
+var _quota: DotBotQuota = null
+
 var _since_bot_check: float = 0.0
 
 
@@ -288,39 +302,59 @@ func _game_tick(_tick: int, delta: float) -> void:
 func _keep_the_seats_full() -> void:
 	var world := game as BfhGame
 
-	if world == null or bridge == null or _bots == null or not _bots.get_bool():
+	if world == null or bridge == null or _quota == null:
 		return
 
-	var wanted := world.config.driver_count
-	var humans := 0
+	# Bots are told apart by the flag rather than by a list of the ones this module added,
+	# as they always were here: a bot an admin or a test put in a seat is a bot in that
+	# seat, and it stands down for a person like any other. A leaver is gone from the world
+	# the moment the bridge removes them, so nobody half-disconnected is counted.
+	var drivers_human := 0
 	var bots: Array[BfhPlayer] = []
 
 	for driver in world.drivers():
 		if driver.is_bot:
 			bots.append(driver)
 		else:
-			humans += 1
+			drivers_human += 1
 
 	# [b]A bot that is no longer a driver is removed rather than left to walk.[/b] Sides
 	# swap every few rounds and take the bots with them, and a bot RUNNER is a person
 	# shaped obstacle that never moves: free points for the drivers and nothing for
 	# anybody else. There is no walking AI here and there should not be one — the bots
 	# exist to fill a bus, and a bus is the only thing this game can drive itself.
+	var people := 0
+
 	for player in world.runners():
 		if player.is_bot:
 			bridge.call("remove_player", BfhNetBridge.session_of(player.player_id))
+		else:
+			people += 1
 
-	var short := wanted - humans - bots.size()
+	people += drivers_human
 
-	for _i in range(maxi(short, 0)):
-		if bridge.call("add_bot", "Bus driver", BfhGame.TEAM_DRIVERS) == null:
+	# `bfh_bots 0` takes the bots out as well as not adding more: a switch that left the ones
+	# already driving until a map change would be an operator with no way to empty a server.
+	var wanted := 0
+
+	if _bots == null or _bots.get_bool():
+		# The seats are the cap the quota works inside; the server's slots are a second one,
+		# so a bot never holds a place a person on foot could have joined into.
+		wanted = _quota.wanted(drivers_human, world.config.driver_count)
+
+		if server != null and server.config != null:
+			wanted = mini(wanted, maxi(server.config.max_players - people, 0))
+
+	for _i in range(maxi(wanted - bots.size(), 0)):
+		var bot: BfhPlayer = bridge.call("add_bot", "Bus driver", BfhGame.TEAM_DRIVERS)
+
+		if bot == null:
 			break
 
-	# And one bot stands down for each person who wants the seat.
-	for _i in range(maxi(humans + bots.size() - wanted, 0)):
-		if bots.is_empty():
-			break
+		bots.append(bot)
 
+	# One bot stands down for each person who takes a seat, the newest first.
+	while bots.size() > wanted:
 		var leaving: BfhPlayer = bots.pop_back()
 		bridge.call("remove_player", BfhNetBridge.session_of(leaving.player_id))
 

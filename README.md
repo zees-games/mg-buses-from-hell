@@ -80,12 +80,16 @@ bfh_barrels 9                // barrels in the next round
 bfh_bus_top_speed 22         // m/s
 bfh_bus_lethal_speed 9       // closing speed at which a bus kills outright, m/s
 bfh_bus_lane_width 6         // metres kept clear in front of each bus start (0 = none)
-bfh_bots 1                   // fill empty driving seats with bots
+bfh_bots 1                   // 0 = no automatic bots at all
+bot_quota 2                  // driving seats kept full: bots + people driving; a person who takes a seat replaces a bot
+bot_quota_mode fill          // fill (as above), fixed (that many bots), per_player (that many per driver) or off
 bfh_bot_aim_past 8           // metres past a runner a bot bus aims, so it arrives at speed
 bfh_bot_steer_clearance 3.6  // metres a bot bus keeps off a pillar's or drum's surface
 bfh_bus_stuck_break 1        // seconds a bus may push against something before what is under it breaks
 bfh_bus_stuck_reset 5        // seconds before a stuck bus is put back on its start line
 ```
+
+The bot cvars are the family's shared ones (dot-server's `DotBotQuota`), counted here in driving seats because a bot only ever drives: `bfh_drivers` is how many seats there are and caps the quota.
 
 Two settings are the map itself, so they are read when the bowl is built and are not cvars: set them in the JSON config, the environment (`BFH_HOOK_LAYOUT`, `BFH_COURTYARD_WEST_LANE`) or the command line (`--bfh-hook-layout`, `--bfh-courtyard-west-lane`) and restart. Connected clients are told them when they join.
 
