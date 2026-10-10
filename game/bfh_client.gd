@@ -62,6 +62,9 @@ var fx: BfhFx = null
 ## The player's own settings and the screen that changes them. See [BfhSettings].
 var settings: BfhSettings = null
 
+## The player's console. See [method DotConsoleKit.build].
+var console: DotConsoleController = null
+
 ## Whether the camera was last put on somebody else's eyes. See [method _process].
 var _spectating: bool = false
 
@@ -392,6 +395,10 @@ func _build_settings() -> void:
 		# Typing a line is the chat box's keyboard: Escape there closes the line, not
 		# opens the menu.
 		settings.menu.busy = func() -> bool: return chat != null and chat.is_typing()
+		# The console (the key under Escape): net_stat and every other setting by name, and
+		# the server's console when one runs in this process. One of the menu's overlays, so
+		# opening it stops the player and frees the pointer exactly as the menu does.
+		console = DotConsoleKit.build(self, settings.settings, settings.menu)
 
 
 func _suspend_input(value: bool) -> void:
