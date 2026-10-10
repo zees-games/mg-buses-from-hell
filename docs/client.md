@@ -1,0 +1,57 @@
+# The client: bodies, camera, HUD, sound, effects, menus
+
+Everything here is built only by `BfhClient`; a dedicated server draws and plays nothing. The client listens to its one world's signals, which a connected client's bridge re-emits from the server's events (see [netcode.md](netcode.md#what-crosses)), so nothing here knows whether it is offline or connected.
+
+## Bodies
+
+`bfh_figure.gd` is Kenney's Blocky Character: six ordinary skins for runners, chosen by face (or by player id), and a uniform (`DRIVER_ATLAS`) for a driver on foot. It is scaled from its **measured** bounds to the runner's 1.8 m hull (the kit is 2.7 m) and turned half round, because the kit faces +Z and this family's forward is -Z (the bus had exactly that bug). Every surface gets its atlas explicitly, through `BfhPaths.rebase`, for the pack reason in [delivery.md](delivery.md).
+
+**Who is drawn** is `BfhPlayer.present_body`: everybody except the player the camera belongs to (first person), a driver (drawn AS the bus: nothing moves a rider, so a body would stand where they sat down, which is also why `drawn_position` answers with the bus), and a runner who is out.
+
+## Where a runner who is out looks
+
+Out is out until the next round, so the part of the game a runner spends dead is most of a round on a bad one. `bfh_spectate.gd` is dot-spectate's `DotSpectatorManager` with this game's policy and this game's idea of where a bus's eyes are.
+
+**The chain**: a death camera for a second from where they fell, looking at the bus; a freeze for two seconds from that bus's CAB (who got you, where they go next); then first person on somebody still up, sorted by key so "next" is stable. Left click next, right click back, space or middle button swaps eyes and a chase camera seven metres behind. `BfhHud.watching_line` says whose eyes; the crosshair goes.
+
+**A bus's eyes are its cab**: `BfhSpectate.pose_of` answers with the bus, `CAB_EYE` over the cab roof (3.8 m up, 1.2 m forward), pitched down the road. A check about what a camera looks at must measure to the cab, not the hull's centre or origin; both were wrong once.
+
+**The policy is the loosest in the family**, each line for a reason about this game:
+
+- **Anybody may be watched, a bus included** (`force_camera 0`). Every player and bus is always relevant, so every client already has every position a camera could show; forbidding the bus protects nothing from a modified client and denies an honest one the most watchable thing on the server.
+- **No delay**: a delay a client enforces over data it already has is theatre, and dot-spectate records delay history on the authority only, so a delayed mirror has no pose to draw.
+- **No roaming**: a free camera over the bowl is a map of it, and above the tanks it is exactly the view the farm exists to take away.
+- The living do not watch, and a driver cannot be out.
+
+The server decides and the client draws: the view is owner-only state, and `BfhClient.present_spectator_camera` (static, driven by `headless_net`) computes the camera from positions the frame is already drawing, so it is as smooth as the picture.
+
+## The HUD and the admin overlays
+
+`bfh_hud.gd`: four numbers (round, clock, runners up, crates left) and a dot. **A `CanvasLayer` does not lay out its children**: anchors on a `Label` parented straight to one resolve against nothing, and all four labels once landed on top of each other in a corner. Put a full-rect `Control` between them.
+
+`BfhHud.blind_overlay` fades a near-black rect in **under** the four numbers, which stay with a "blinded by an admin" line, so it reads as something done to the player rather than a client that stopped drawing. `bfh_beacon.gd` is a ring with a ripple once a second, a column drawn with no depth test (not on your own player), and a positional ping baked by dot-audio's synthesiser. A driver's beacon is round their bus: 5.2 m across so it circles a nine-metre hull, the column starting above the roof.
+
+## Sound
+
+`bfh_sounds.gd` is the document: ids positional for anything that happens somewhere (engine, horn, hammer swing and hit, crate shove and break, a runner bumped and flattened, a barrel) and flat on the interface bus for the round's cues and the interface's. **Won and lost are two sounds**: in an asymmetric game "the round ended" is good news for two people and bad news for six. `sound_recipes()` names the dot-audio synthesiser voice standing in for each, and every path is under `BfhPaths.root()`, because a pack's `res://audio/…` would otherwise resolve against the host and play another game's file. `sound_dir(root)` takes a root so the suite can ask that with a mount prefix; built in, it is a tautology.
+
+- **Hearing is the one sense a tank does not block**, which is why the bus's sound matters here more than anywhere. **The engine is the one sound nobody sends**, and it is a pulse whose RATE rises with speed (2.2 to 11 a second), measured frame to frame from the drawn position (a mirrored bus is a frozen body whose `linear_velocity` is zero). A pulse rather than a looping pitch, because the rate says the speed more clearly through a tank. Only a DRIVEN bus has an engine.
+- **The horn** is a driver's swing button, rate-limited on the authority (0.8 s; 6 s for a bot, which only sounds it at a runner squarely ahead within 22 m), because a held button would otherwise be a server-wide siren.
+- **The swing sound comes from the server, a round trip late, on purpose**: it says the server swung; a predicted one would sound for a swing the server may refuse on its cooldown.
+- No `tools/audio_probe.sh` here yet, so nothing has checked a speaker actually moving; headless has no sound device.
+
+## Effects
+
+`bfh_fx.gd` listens to the world's `barrel_exploded` and hands dot-fx an id and a place. `fx/bfh_blast.tscn` is built in code (no particle art): a fireball, a translucent disc and a ring on the sand out to **exactly the blast's reach** (what a runner reads: was I inside it), a flash and smoke. `configure(radius)` sizes it; unsized it is one metre, visibly wrong. **Alpha-blended, not additive**: additive over the bright sand saturated to white. The ring sits `GROUND_BELOW` the reported centre, because the server reports the blast at the barrel's middle. `BfhFx.setup` WARNs on `missing_scenes()`, since dot-fx logs a missing scene at DEBUG.
+
+## Scoreboard, settings and the menu
+
+**The scoreboard is two tables**, because the sides are not two teams of the same thing: drivers ("driving" / "on foot") and runners ("up" / "out", the living first). Held on Tab, and up on its own from `round_over` to the next `round_began`, naming the round just played. dot-match here scores rounds per side (`DotMatch.rounds_won` by team id), and no per-player column, for the reason in [services.md](services.md#a-players-numbers-and-what-they-earn). A `DotTableView` inside a container needs an explicit `custom_minimum_size` or it is laid out zero pixels tall.
+
+`bfh_settings.gd` is dot-menu's `DotMenuSettings` with this game's schema; Escape opens it over the bowl. Every setting is read by something: `sensitivity` into every sampler's look tunables, `field_of_view` into the camera, the volumes into dot-audio's mixer. **A loaded setting has not changed**, so `apply_all()` runs after load and every `bind_*` applies the current value as it binds. Scopes are the family's: `sensitivity` is ACCOUNT, at the family's 0.022 degrees per unit; `field_of_view` is SERVER_CLAMPED. Walking is suspended while the menu is open, and it neither pauses (a networked round does not stop for one player's volume) nor manages the pointer.
+
+## Lighting and the grid
+
+- **A scene with no light and no environment is not dark, it is flat**: every surface comes back its own albedo, and the depth a player judges distance by is gone. The bowl has a sun and a sky.
+- **`uv1_triplanar` with no texture under it does nothing.** `bfh_textures.gd` generates the metre grid, because the only thing a player judges a bus's speed by is how fast a pattern of known size goes past.
+- Lighting is tuned under `gl_compatibility`, the renderer players get; see [delivery.md](delivery.md).

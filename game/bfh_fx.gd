@@ -30,7 +30,7 @@ const CHANNEL := "bfh.fx"
 const BLAST := &"barrel_blast"
 
 ## Where this game's effect scenes are, wherever it is mounted. Rebased where it is
-## defined, for the reason Decision 7 in CLAUDE.md gives.
+## defined, for the reason docs/delivery.md gives.
 static var BLAST_SCENE := BfhPaths.rebase("res://fx/bfh_blast.tscn")
 
 ## A blast's lifetime in dot-fx, in milliseconds. The scene fades out inside it.

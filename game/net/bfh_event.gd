@@ -22,7 +22,7 @@ var body: PackedByteArray = PackedByteArray()
 ## named or given by path; a self-preload over [code]RefCounted[/code], [DotResult] or
 ## [DotNetBehaviour] is not, nor is a two-script cycle through [DotNetMessage]. The
 ## registry decodes with a bare [code]new()[/code], which is why both arguments default.
-## See CLAUDE.md, "The leak that was one line of a message".
+## See docs/history.md, "The leak that was one line of a message".
 func _init(p_kind: int = 0, p_body: PackedByteArray = PackedByteArray()) -> void:
 	kind = p_kind
 	body = p_body

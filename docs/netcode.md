@@ -1,0 +1,45 @@
+# The netcode
+
+`game/net/` and `game/bfh_module.gd`. `BfhNetBridge` is the only file that names both the game and dot-net, and its class docs carry the detailed reasoning; this is the shape.
+
+## Who is authoritative
+
+**Everything except a runner's own feet is server-authoritative**: thirty-odd crates, barrels, blocks and two buses, all rigid bodies, all drawn by a client that never simulates one. Godot's solver is not reproducible across machines, and here a crate is COVER: cover a few centimetres out on a client is a runner hit through a wall they believe they are behind.
+
+**A driver is not predicted, and the bus makes that acceptable.** A seated driver's position comes from the server, so their keys go round trip; four tonnes take about that long to respond anyway. The same latency on a runner would be intolerable, which is why the runner IS predicted. Not predicting a vehicle is dot-vehicle's decision (two machines diverge on a rigid body within a second or two, and a correction on something being steered reads worse than latency). While riding, `BfhPlayerNet._net_simulate` applies the owner's command without simulating it, and `_net_state_applied` writes the node from the server's answer.
+
+**The local runner is predicted because the mirror is owned.** `_apply_join` builds each mirrored player with `_mirror_owner(session_id)`: `net.local_peer_id` for the player whose session is `local_player_id`, 0 for everybody else. It keys on the session because JOIN carries no peer id and `is_owner` compares against THIS registry's local peer. HELLO precedes every JOIN on the same reliable channel, and `_apply_hello` still calls `_claim_local_player()` (through `registry.change_owner`) for a mirror that got there first, because the order is the server's property, not the bridge's. With owner 0 the client "agrees with the server" perfectly and predicts nothing, which no position check can tell apart; see [testing.md](testing.md#assert-the-mechanism-not-the-symptom).
+
+## What crosses
+
+- **The map is one number.** The bowl is `BfhArena.build(radius)` on both ends, so the HELLO carries a radius (plus `courtyard_west_lane` and `hook_layout`, appended), and a client that joins a smaller bowl rebuilds its own. `build()` clears first: called twice without it, a 46 m wall stands inside a 30 m one.
+- **The cover count rides the CLOCK.** A client does not run the prop spawner, so `crates_left()` there is zero, and it is the HUD number that tells a runner whether standing still is still an option. The CLOCK, twice a second, carries round, clock, runners up, crates left and the two sides' rounds won (`BfhGame.remote_rounds`; `rounds_won(team)` answers from dot-match on the authority and from that on a client). **On a round's end the server sends a CLOCK before the ROUND**, so the scoreboard that the client's `round_over` puts up already shows the round just played.
+- **The hammer is a BUTTON** (`BUTTON_USER_0` in the movement command), resolved on the server from the position and view that same command produced. A reliable request would arrive later, against a different position, and break the crate the player was no longer looking at. A driver's swing button is the horn.
+- **Sounds and signals.** The authority emits `BfhGame.noise(id, at)` where a thing happened; the bridge sends the ids in `BfhSounds.WORLD` as `BfhEvents.Kind.SOUND` (an index and a place; append-only, it is wire format), and a client's bridge **re-emits it as the client world's own `noise`**. It does the same for `round_began`, `round_over`, `player_died`, `barrel_exploded` and, once per swap, `sides_swapped` (`_heard_a_swap`). A client world emits the signals a server's does, so the client's audio, effects and scoreboard listen to one world and never learn which half they are in.
+- **Who somebody is** travels in JOIN, after the side. A JOIN for somebody the client already has is "who they are now": `refresh_player`, sent on `player_admitted`, `player_avatar_changed` and `player_renamed`, because admission can finish after seating.
+- **A beacon's bus**: `BfhPlayerNet.net_bus` is the bus a driver sits in, as state, because a client that joined after the SEAT event never saw it. `BfhPlayer.ridden` is set from it, and a driver is drawn (and beaconed, and spectated) as the bus.
+- **Every player and bus is always relevant** (`_build_entity`): the bowl is a disc with nothing tall enough to justify relevance, which also means every client already has every position. That is why the spectator policy is loose; see [client.md](client.md#where-a-runner-who-is-out-looks).
+
+## Per-player state, owner-only where it would leak
+
+- `net_blind` is **owner-only**: nobody else's screen changes, and a driver who could read it would know which runner cannot see the bus coming. `net_beacon` goes to everybody. State rather than an event, so a joiner and a lost snapshot are corrected by the next one.
+- `net_watch` and `net_watch_target` (the spectator view) are owner-only too. A click is `BfhEvents.Ask.WATCH` carrying only next, back or view, **never who to watch**, so a client cannot name somebody the policy would refuse. State, because the death camera is three timed modes handing over on the server's clock; a client that missed one hand-over event would sit on a freeze camera for the rest of the round. The client mirror is `adopt_watch`, keyed on the session id (what the server keys the view by). `DotSpectatorView`'s wire carries the death position since upstream fixed it, but this game replicates its own `net_watch` and not that wire, so `adopt` still takes the death position from where this machine last drew the player.
+
+## Interpolation, and arrivals
+
+- `BfhClient.present_frame` is the one per-frame path: `DotNetManager.interpolate_frame`, then every body, then every beacon. Without the first call every remote body moved only when a snapshot landed. It is static so `headless_net` drives exactly it. The local camera is drawn from `controller.render_state()`, which blends the controller's last two simulated ticks; that only works because the controller simulates (it is predicted).
+- `BfhGame.add_player` places anybody arriving after `start()` from its own `late_spawns` stream, because `_place_players` only runs when a round is laid out; without it a late joiner stood at the origin until the next round. Its own stream, so an arrival does not change where everybody is scattered next round.
+
+## Entity ids
+
+`BfhGame.entities` is a `DotEntityTable`. `remove_player` calls `DotCombatManager.forget()` and closes the entity, in that order, before the node goes: otherwise every disconnect leaves a `DotHealth` registered against a freed node for the life of the process, with no symptom because nothing ever asks about somebody who left. The table's reverse index answers "who killed you" without walking every player. An attacker of `0` is dot-combat's "the world" (an empty bus, a fall); the table returns an empty key for it.
+
+## Messages: never preload yourself
+
+**A script that `extends DotNetMessage` and preloads its own file leaks the whole script graph at exit**, when first loaded at runtime by a module a running `DotServer` loads, which is how every deployed server loads a game. `bfh_event.gd` and `bfh_request.gd` are built with `new(kind, body)` (an `_init` whose arguments both default, because dot-net's registry decodes with a bare `new()`) and neither preloads itself. `dedicated`'s last section reads every `DotNetMessage` script under `game/` as text and fails on a self-preload: the symptom is reported by the engine after `quit()`, where no assertion can run. The bisection is in [history.md](history.md#the-leak-that-was-one-line-of-a-message).
+
+## The module and the services
+
+`bfh_module.gd` subclasses `DotGameModule`, the first game to: the netcode's load-bearing settings, the bridge, the message seal, the identity layer, the roster, the authoritative tick and the reverse-order teardown are dot-game's. What is left is this game's: `bfh_status` and `bfh_net`, the operator cvars, and the bot seats. The identity layer is dot-platform's `DotPlatformIdentity` over `BfhAvatars.schema()`; ask the platform through its module's `player_for`, never the hub by `u<session>`, which finds nobody and reads as "no avatar".
+
+`bfh_services.gd` subclasses [DotGameServices](../../dot-game/docs/services.md), the first game to. The base owns the ordering that matters: moderation is built **before** chat, because moderation publishes `dot_mute_source` and both routers look it up when they start; a router built first finds nothing and enforces no gag for the life of the server. The channel and voice decisions are in [services.md](services.md).

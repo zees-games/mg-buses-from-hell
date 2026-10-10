@@ -15,7 +15,7 @@ const BfhNetBridge := preload("net/bfh_net_bridge.gd")
 ## [b]What dot-match scores in this game is rounds, per side.[/b] Its per-player records —
 ## kills, deaths, score — are never reported to (a runner cannot kill and a driver cannot
 ## die, so they would be one number and a column of zeros; see "What a player's numbers
-## are" in CLAUDE.md). The tallies are [method BfhGame.rounds_won], which is dot-match's
+## are" in docs/services.md). The tallies are [method BfhGame.rounds_won], which is dot-match's
 ## `rounds_won` on the authority and what the last CLOCK said on a client.
 ##
 ## [b]Drawn by dot-menu's `DotMenuScoreboard` since 2026-10-09[/b]; this file is what is this

@@ -1345,7 +1345,7 @@ func _test_the_throw() -> void:
 	# while the runner's arc passed over exactly where it had stood. So what is asserted
 	# is the throw: high enough for a stack of two, from the farthest a runner can set a
 	# barrel off, and survivable from there. That a loose stack is still there to land
-	# on is not true, and CLAUDE.md says so under "The barrel".
+	# on is not true, and docs/map.md says so under "What a runner can climb".
 	await _step(game, 30)
 
 	_put(runner, at + Vector3(stand, 0.05, 0.0))
@@ -2338,7 +2338,7 @@ func _test_the_courtyard_lanes() -> void:
 
 	# The east lane (1, 5.38 m) is the one narrow lane left, and the runner standing in it
 	# is on a knife edge: on 2026-09-30 the bus reached from 8.0 m out and was sent home
-	# from 8.1. Printed, not asserted; see CLAUDE.md, Decision 12.
+	# from 8.1. Printed, not asserted; see docs/map.md, "The tank farm".
 	for out_by: float in [8.1, 10.0]:
 		var r := await _drive_a_lane(1, out_by, true)
 		print("  ..    east lane, runner in it, %4.1f m out: %-9s %4.1f m/s peak %5.2f s nearest %4.1f"
@@ -2502,7 +2502,7 @@ func _line_room(arena: BfhArena, mouth: Vector3, out: Vector3, out_by: float) ->
 ## `sw` they were printed and not asserted for a week: the bus has to turn round in front
 ## of the foot, which the timed turn could not do, and `sw` came at the foot across the
 ## line and wedged on the ramp's edge. `BfhGame._turn_round_for_the_ramp` is the answer;
-## see CLAUDE.md, "Up the ramp".
+## see docs/bots.md, "Up the ramp".
 func _test_up_onto_the_deck() -> void:
 	print("up the ramp onto the deck, driven by a bot")
 	var asserted := ["spawn", "spawn_west", "foot8", "south20", "east", "ne", "sw", "west"]
@@ -3332,7 +3332,7 @@ func _drive_straight(game: BfhGame, driver: BfhPlayer, runner: BfhPlayer, bot: b
 ## driven with forward and jump held, and in the games with auto-hop that is a player who
 ## leaves the ground on the tick they land, never gets a ground tick to accelerate in, and
 ## bleeds to the air cap: 1 m/s of a 7 in one of them, behind checks that passed for as
-## long as they existed. This game has auto-hop OFF (CLAUDE.md, Decision 4), so the
+## long as they existed. This game has auto-hop OFF (docs/design.md, "No bunny hopping"), so the
 ## question is different and the answer has to be measured rather than assumed: a held
 ## jump here is ONE jump, and the route bot only presses it at a face. What is asserted is
 ## what the design says — a runner holding a key runs at `runner_speed`, and jumping does
@@ -3567,7 +3567,7 @@ func _test_spectating() -> void:
 ## — and a recipe for an id the catalogue lacks is a decision that reaches nothing. Then the
 ## world: every noise it is supposed to make, made, and heard by `BfhAudio` through the null
 ## sink a headless run gets (dot-audio's own honest device check). What no assertion here can
-## reach is whether a speaker moves; see CLAUDE.md.
+## reach is whether a speaker moves; see docs/client.md.
 func _test_the_sounds() -> void:
 	print("what the bowl sounds like")
 

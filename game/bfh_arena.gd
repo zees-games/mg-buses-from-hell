@@ -752,7 +752,7 @@ func _build_ledge() -> void:
 	# pointing away from the ledge it was meant to reach. Every number that places it is
 	# right, so no check about the ramp's position could see it — a runner walked under
 	# it and stopped against its underside, and the ledge had no way up at all. It was
-	# found by driving a runner at it; see CLAUDE.md, "The ramp went the
+	# found by driving a runner at it; see docs/history.md, "The ramp went the
 	# wrong way".
 	ramp.rotation = Vector3(deg_to_rad(RAMP_ANGLE), 0.0, 0.0)
 	_segment_collider(ramp, RAMP_SEGMENTS)

@@ -2050,8 +2050,8 @@ func _on_prop_exploded(
 		# UPWARD — two metres from the hammer's reach, past any jump, which is why a
 		# barrel is worth standing near as well as away from. NOT onto a loose stack
 		# of crates beside it, which this comment used to promise: the same blast
-		# shoves the stack further than it throws the runner. See CLAUDE.md, "The
-		# barrel".
+		# shoves the stack further than it throws the runner. See docs/map.md, "What a
+		# runner can climb".
 		var push := damage.direction * force * falloff * 0.004
 		push.y = 0.0
 		var state := player.controller.state
