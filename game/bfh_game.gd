@@ -1144,6 +1144,19 @@ func _step(delta: float) -> void:
 	match_node.tick(_tick)
 
 
+## How long a round lasts, from now on: the config AND dot-match's rule.
+##
+## [b]The rule is the clock that ends a round[/b]; `config.round_seconds` is only what it was
+## built from and what the HUD counts down. `bfh_round_seconds` used to write the config
+## alone, so an owner's 50 s was shown on the HUD while every round ran the built-in 180.
+## Read live by dot-match, so it applies to the round in progress too.
+func set_round_seconds(seconds: float) -> void:
+	config.round_seconds = seconds
+
+	if match_node != null and match_node.rules != null:
+		match_node.rules.time_limit_sec = seconds
+
+
 ## The fixed step. One place, because three files were about to compute it.
 func delta_for_tick() -> float:
 	return 1.0 / float(maxi(tick_rate, 1))

@@ -195,7 +195,7 @@ func _add_tunables(world: BfhGame) -> void:
 	var config := world.config
 
 	_tunable("bfh_round_seconds", config.round_seconds, "Seconds in a round",
-		func(value: float) -> void: config.round_seconds = value)
+		func(value: float) -> void: world.set_round_seconds(value))
 	_tunable("bfh_crates", float(config.crate_count), "Crates the next round is laid out with",
 		func(value: float) -> void: config.crate_count = int(value))
 	_tunable("bfh_barrels", float(config.barrel_count), "Barrels the next round is laid out with",

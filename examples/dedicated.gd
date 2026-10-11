@@ -25,7 +25,7 @@ const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 113
+const CHECKS := 114
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -724,6 +724,7 @@ func _test_the_tunables() -> void:
 	if cvar == null:
 		_check(false, "its default is the value the world was built with")
 		_check(false, "and setting it reaches the world")
+		_check(false, "and the match's round clock, which is what ends a round")
 		_check(false, "a bus's top speed is tunable too")
 		_done()
 		return
@@ -739,6 +740,13 @@ func _test_the_tunables() -> void:
 		absf(game.config.round_seconds - 90.0) < 0.01,
 		"and setting it reaches the world",
 		"%.1f" % game.config.round_seconds
+	)
+	# The config is what the HUD counts down; dot-match's rule is what ends the round. The cvar
+	# once wrote only the first, and an owner's short round ran the built-in 180 s.
+	_check(
+		absf(game.match_node.rules.time_limit_sec - 90.0) < 0.01,
+		"and the match's round clock, which is what ends a round",
+		"%.1f" % game.match_node.rules.time_limit_sec
 	)
 
 	_run_command("bfh_bus_top_speed 18")
