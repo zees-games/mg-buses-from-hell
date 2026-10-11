@@ -439,6 +439,12 @@ const CHAT_KEY_BYTES := 48
 const CHAT_KIND_BITS := 4
 
 
+## Whether every [enum DotChatMessage.Kind] fits in [constant CHAT_KIND_BITS]. dot-chat owns
+## that enum, so it can grow under this game; headless_net reads this.
+static func chat_kinds_fit() -> bool:
+	return DotChatMessage.KIND_NAMES.size() <= (1 << CHAT_KIND_BITS)
+
+
 ## One routed line, in [DotChatMessage]'s own wire shape.
 ##
 ## [b]Field by field rather than `var_to_bytes`, like every other message here.[/b] A

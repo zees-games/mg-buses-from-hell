@@ -54,6 +54,12 @@ func _validate() -> DotResult:
 	return DotResult.success(true)
 
 
+## Whether every [enum BfhEvents.Ask] fits in [constant KIND_BITS]. What a check reads; the
+## writer masks, so a kind past the field goes out as a smaller one and nothing errors.
+static func fits() -> bool:
+	return int(BfhEvents.Ask.values().max()) < (1 << KIND_BITS)
+
+
 func reader() -> DotNetReader:
 	return DotNetReader.new(body)
 

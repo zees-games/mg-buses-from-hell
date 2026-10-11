@@ -58,6 +58,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 
 **Netcode** ([netcode](docs/netcode.md))
 - Only a runner's own feet are predicted. Props and buses are server-authoritative rigid bodies; a driver's keys go round trip, by dot-vehicle's decision.
+- Event, request and chat kinds go out in fixed fields (`KIND_BITS`, `CHAT_KIND_BITS`) that the writer masks without a word, so a kind past the field aliases a smaller one; `fits()` on each and headless_net's wire section check every enum fits. Widen the field, never reuse a number.
 - The local mirror is owned through `_mirror_owner(session_id)`; owner 0 for it means nothing is predicted and every position check still passes.
 - A client world re-emits the server's signals (`noise`, `round_began`, `round_over`, `player_died`, `barrel_exploded`, `sides_swapped`); client-side code listens to its world and never asks which half it is in.
 - Owner-only state for anything that would tell the other side something: `net_blind`, `net_watch`. A spectate click names next/back/view, never a player.

@@ -6,7 +6,9 @@ const BfhAvatars := preload("../game/bfh_avatars.gd")
 const BfhFigure := preload("../game/bfh_figure.gd")
 const BfhBusNet := preload("../game/net/bfh_bus_net.gd")
 const BfhClient := preload("../game/bfh_client.gd")
+const BfhEvent := preload("../game/net/bfh_event.gd")
 const BfhEvents := preload("../game/net/bfh_events.gd")
+const BfhRequest := preload("../game/net/bfh_request.gd")
 const BfhFx := preload("../game/bfh_fx.gd")
 const BfhScoreboard := preload("../game/bfh_scoreboard.gd")
 const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
@@ -48,7 +50,7 @@ const BfhSpectate := preload("../game/bfh_spectate.gd")
 ## the wrong reason. A real client is a separate program with its own export and its own
 ## `user://` config. Make them disagree, and let HELLO correct it.
 
-const CHECKS := 188
+const CHECKS := 191
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -353,6 +355,15 @@ func _test_the_wire() -> void:
 		bool(watch["ok"]) and int(watch["ask"]) == BfhSpectate.ASK_VIEW,
 		"a spectator's click round-trips, and it is only the ask — never who to watch"
 	)
+
+	# The writer masks a value to its field, so a kind past the field goes out as a smaller
+	# one and nothing errors: game-zombie-zone sent HURT and AMMO as HELLO and MAP that way.
+	_check(BfhEvent.fits(), "every event kind fits the event's kind field",
+		"%d kinds in %d bits" % [BfhEvents.Kind.size(), BfhEvent.KIND_BITS])
+	_check(BfhRequest.fits(), "every request kind fits the request's kind field",
+		"%d kinds in %d bits" % [BfhEvents.Ask.size(), BfhRequest.KIND_BITS])
+	_check(BfhEvents.chat_kinds_fit(), "every chat kind fits the chat line's kind field",
+		"%d kinds in %d bits" % [DotChatMessage.KIND_NAMES.size(), BfhEvents.CHAT_KIND_BITS])
 	_done()
 
 
