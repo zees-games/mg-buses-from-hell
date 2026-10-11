@@ -19,9 +19,10 @@ const BfhPaths := preload("../game/bfh_paths.gd")
 ##
 ## The mesh still loads. The texture does not, so every crate in a delivered round is
 ## plain white — a game that works perfectly and looks like the art failed to ship. This
-## is the fifth form of the family's one delivery bug (script → class_name, scene →
-## ext_resource, script → `res://` string, `extends "res://…"`, and now an IMPORTED
-## asset's own external dependency), and it is the only one nothing rewrites: the
+## is the sixth form of the family's one delivery bug (script → class_name, scene →
+## ext_resource, script → `res://` string, `extends "res://…"`, an asset the engine has
+## to import, and now an IMPORTED asset's own external dependency; the table is in
+## dot-server-deploy's docs/delivery-constraint.md), and it is the only one nothing rewrites: the
 ## publisher rewrites text resources and a binary `.scn` is not one.
 ##
 ## [b]Surgical, not an override.[/b] It sets the atlas only on a material that has none,
