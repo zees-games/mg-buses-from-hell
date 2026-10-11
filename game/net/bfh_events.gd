@@ -50,6 +50,9 @@ enum Kind {
 	## [b]Appended, never inserted.[/b] A kind is its index on the wire, and the ones above
 	## are what every deployed client already decodes.
 	SOUND,
+	## The bowl was rebuilt between rounds, to the one the players voted for: the same three
+	## numbers the HELLO carries, so a client rebuilds exactly as it would on joining.
+	BOWL,
 }
 
 enum Ask {
@@ -144,6 +147,28 @@ static func write_hello(
 const LAYOUT_MAX := 64.0
 const LAYOUT_BITS := 16
 const LAYOUT_NAME_BYTES := 32
+
+
+## The map, as the HELLO's last three fields: what a client needs to rebuild the bowl when
+## the server rebuilds its own between rounds.
+static func write_bowl(arena_radius: float, hook_layout: String, courtyard_west_lane: float) -> PackedByteArray:
+	var w := _w()
+	w.write_float_range(arena_radius, 0.0, 512.0, 16)
+	w.write_string(hook_layout, LAYOUT_NAME_BYTES)
+	w.write_float_range(courtyard_west_lane, 0.0, LAYOUT_MAX, LAYOUT_BITS)
+	return w.to_bytes()
+
+
+static func read_bowl(r: DotNetReader) -> Dictionary:
+	var arena_radius := r.read_float_range(0.0, 512.0, 16)
+	var hook_layout := r.read_string(LAYOUT_NAME_BYTES)
+	var courtyard_west_lane := r.read_float_range(0.0, LAYOUT_MAX, LAYOUT_BITS)
+	return {
+		"arena_radius": arena_radius,
+		"hook_layout": hook_layout,
+		"courtyard_west_lane": courtyard_west_lane,
+		"ok": r.ok(),
+	}
 
 
 static func read_hello(r: DotNetReader) -> Dictionary:

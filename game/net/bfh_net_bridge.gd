@@ -229,6 +229,7 @@ func attach(p_game: Object, p_net: DotNetManager) -> DotResult:
 		game.ride.entered.connect(_on_ride_entered)
 		game.ride.exited.connect(_on_ride_exited)
 		game.round_began.connect(_on_round_began)
+		game.bowl_changed.connect(_on_bowl_changed)
 		game.round_over.connect(_on_round_over)
 		game.sides_swapped.connect(_on_sides_swapped)
 		game.player_died.connect(_on_player_died)
@@ -610,6 +611,14 @@ func _announce_seat(vehicle: DotVehicleInstance, rider_id: StringName, seated: b
 
 	_broadcast(BfhEvents.Kind.SEAT, BfhEvents.write_seat(
 		session_of(rider_id), net_id_of_node(vehicle.body()), seated
+	))
+
+
+## The bowl was rebuilt for the round about to begin. Told now, between the last round's
+## PROP_GONEs and this round's PROPs, so every crate lands on the floor it was laid on.
+func _on_bowl_changed(_bowl_id: StringName) -> void:
+	_broadcast(BfhEvents.Kind.BOWL, BfhEvents.write_bowl(
+		game.arena.radius, game.arena.hook_layout, game.arena.courtyard_west_lane
 	))
 
 
@@ -1254,6 +1263,11 @@ func _on_event(message: DotNetMessage) -> void:
 			if bool(blast["ok"]):
 				blast_received.emit(blast["position"], float(blast["radius"]))
 				game.barrel_exploded.emit(blast["position"], float(blast["radius"]))
+		BfhEvents.Kind.BOWL:
+			var bowl := BfhEvents.read_bowl(reader)
+			if bool(bowl["ok"]):
+				_adopt_map(float(bowl["arena_radius"]), str(bowl["hook_layout"]),
+					float(bowl["courtyard_west_lane"]))
 		BfhEvents.Kind.SOUND:
 			var sound := BfhEvents.read_sound(reader)
 			var id := BfhSounds.world_id(int(sound["index"]))
@@ -1294,6 +1308,21 @@ func _heard_a_swap() -> void:
 	game.sides_swapped.emit(game.round_number)
 
 
+## The server's bowl, built here if it is not the one this client has: from the HELLO on
+## joining, and from a BOWL when the players' vote changed it between rounds.
+##
+## And the two layout choices, which are as much the map as the radius is: a client on its
+## own default hook against a server on the tight one has a pillar where the server has
+## floor.
+func _adopt_map(radius: float, hook: String, west: float) -> void:
+	if game.arena != null and (absf(game.arena.radius - radius) > 0.01
+			or game.arena.hook_layout != hook
+			or absf(game.arena.courtyard_west_lane - west) > 0.005):
+		game.arena.hook_layout = hook
+		game.arena.courtyard_west_lane = west
+		game.arena.build(radius)
+
+
 func _apply_hello(reader: DotNetReader) -> void:
 	var hello := BfhEvents.read_hello(reader)
 
@@ -1321,19 +1350,8 @@ func _apply_hello(reader: DotNetReader) -> void:
 	# against a server running a smaller bowl would have its wall, its ledge and its stacks
 	# all in the wrong place, and would walk through the visible wall into the server's
 	# real one.
-	var radius := float(hello["arena_radius"])
-	var hook := str(hello["hook_layout"])
-	var west := float(hello["courtyard_west_lane"])
-
-	# And the two layout choices, which are as much the map as the radius is: a client on
-	# its own default hook against a server on the tight one has a pillar where the
-	# server has floor.
-	if game.arena != null and (absf(game.arena.radius - radius) > 0.01
-			or game.arena.hook_layout != hook
-			or absf(game.arena.courtyard_west_lane - west) > 0.005):
-		game.arena.hook_layout = hook
-		game.arena.courtyard_west_lane = west
-		game.arena.build(radius)
+	_adopt_map(float(hello["arena_radius"]), str(hello["hook_layout"]),
+		float(hello["courtyard_west_lane"]))
 
 	game.config.round_seconds = float(hello["round_seconds"])
 

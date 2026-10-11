@@ -22,6 +22,7 @@
 #   tools/shot.sh 5 settings.png --settings   # the settings screen Escape opens
 #   tools/shot.sh 5 blast.png --blast         # a barrel going off 12 m ahead, as the client draws it
 #   tools/shot.sh 12 board.png --scoreboard   # the scoreboard, Tab held, after a round the buses won
+#   tools/shot.sh 8 ballot.png --ballot       # the bowl vote's ballot, mid-vote, as the client shell draws it
 #   tools/shot.sh 6 net.png --net             # a CONNECTED client watching another runner:
 #                                             # four consecutive frames and a jitter probe
 #   tools/shot.sh 6 net.png --net --no-interp # the same with the client's interpolation off

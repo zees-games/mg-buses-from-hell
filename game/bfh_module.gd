@@ -7,6 +7,8 @@ const BfhPlayer := preload("bfh_player.gd")
 const BfhGame := preload("bfh_game.gd")
 const BfhStats := preload("bfh_stats.gd")
 const BfhAvatars := preload("bfh_avatars.gd")
+const BfhBowls := preload("bfh_bowls.gd")
+const BfhVote := preload("bfh_vote.gd")
 
 ## Where the services keep punishments. Empty is [DotGameServices]'s own default,
 ## `user://buses_punishments.json` — the store a real server enforces.
@@ -17,6 +19,12 @@ const BfhAvatars := preload("bfh_avatars.gd")
 ## every run appended the live tools' audit warnings to the real store, 134 of them by the
 ## time anybody counted.
 static var punishments_file: String = ""
+
+## The players' vote for the next bowl; null when it could not be built.
+var vote: BfhVote = null
+
+## The drawn ballot's notice topic. The client shell draws one menu per topic.
+const BOWL_BALLOT_TOPIC := &"map_ballot"
 
 ## This game, as a module a dedicated server loads.
 ##
@@ -140,6 +148,7 @@ func _game_load() -> DotResult:
 	_wire_identity(world)
 
 	_add_tunables(world)
+	_build_vote(world)
 
 	_bots = add_cvar(
 		"bfh_bots", "1",
@@ -263,7 +272,16 @@ func _tunable(
 ## tree before the module loaded and a server can unload and reload a game module without
 ## the bowl going away, which is what `module reload` is for.
 func _game_unload() -> void:
-	pass
+	if vote != null:
+		vote.queue_free()
+		vote = null
+
+
+## The server slept or woke. The vote's director follows it on its own (DotGameModule finds
+## it); the bowl ballot's timer is this game's, so it starts again here on waking.
+func _game_hibernation(hibernating: bool) -> void:
+	if not hibernating and vote != null:
+		vote.note_woke()
 
 
 ## Seconds between checks of who is driving. See [method _keep_the_seats_full].
@@ -290,6 +308,9 @@ var _since_bot_check: float = 0.0
 ## is the other half: the bots are there to make the game exist, not to take the fun half
 ## from the people who came to play it.
 func _game_tick(_tick: int, delta: float) -> void:
+	if vote != null:
+		vote.advance(delta)
+
 	_since_bot_check += delta
 
 	if _since_bot_check < BOT_INTERVAL:
@@ -366,6 +387,107 @@ func _keep_the_seats_full() -> void:
 ## the services layer knows the rules and nothing about the wire. That separation is the
 ## reason a client cannot send a line with somebody else's name on it: what crosses is a
 ## channel id and a string, and everything else is decided on this side.
+## The players' vote for the next bowl, over dot-vote: `!vote`, `!rtv`, `!nominate`.
+##
+## [b]Opened [member BfhVote.open_after_sec] into every round and applied when it ends[/b],
+## because the bowl is rebuilt only between rounds; see [code]game/bfh_vote.gd[/code] and
+## [code]game/bfh_bowls.gd[/code]. A server owner turns it off or reshapes it in
+## `user://cfg/buses_vote.json` or `game.yml`'s `metadata: bowl_vote:`, keyed as dot-vote's
+## [DotVoteRules]. A vote that cannot be built is a WARN and the server's own bowl, never a
+## server that will not start.
+func _build_vote(world: BfhGame) -> void:
+	vote = BfhVote.new()
+	vote.name = "BowlVote"
+	vote.bowls_fn = func() -> Array:
+		var out: Array = []
+
+		for bowl in BfhBowls.allowed(world.config):
+			out.append([bowl["id"], bowl["name"]])
+
+		return out
+	vote.apply_fn = func(id: StringName) -> DotResult:
+		world.next_bowl_id = id
+		return DotResult.success(id)
+	# People only: a bot is not a voter, and a ballot it could swing is not the players'.
+	vote.voters_fn = func() -> Array:
+		var out: Array = []
+
+		for id: Variant in world.players:
+			var player: BfhPlayer = world.players[id]
+
+			if player == null or player.is_bot:
+				continue
+
+			var userid := BfhNetBridge.session_of(StringName(str(id)))
+
+			if userid > 0:
+				out.append(StringName(str(userid)))
+
+		return out
+	vote.announce_fn = func(line: String) -> void:
+		var chat: Object = services.get("chat") if services != null else null
+
+		if chat != null:
+			var _said: Variant = chat.call("announce", line, BfhServices.CH_ALL)
+		elif server != null:
+			server.broadcast_message(line)
+	vote.is_admin_fn = func(voter: StringName) -> bool:
+		var session := server.session_by_userid(String(voter).to_int()) if server != null else null
+		return session != null and session.has_permission(DotAdminFlags.CHANGEMAP)
+	vote.ballot_fn = func(state: Dictionary) -> void:
+		if server == null:
+			return
+
+		for session in server.playing_sessions():
+			var data := state.duplicate()
+			data["you"] = str(session.userid)
+			server.send_notice(session, DotNotice.make(
+				&"", "", float(state.get("seconds", -1.0)), BOWL_BALLOT_TOPIC, data
+			))
+	vote.people_fn = func(voter: StringName) -> Dictionary:
+		var session := server.session_by_userid(String(voter).to_int()) if server != null else null
+
+		if session == null:
+			return {}
+
+		var avatar: Variant = session.identity.get("avatar_url") if session.identity != null else ""
+		return {"name": session.display_name, "avatar": avatar if avatar is String else ""}
+
+	add_child(vote)
+	var ready := vote.setup()
+
+	if not ready.ok:
+		DotLog.result(CHANNEL, "the bowl vote; the server's own bowl stays", ready)
+		vote.queue_free()
+		vote = null
+		return
+
+	var commanded := vote.install_commands(self)
+	DotLog.result(CHANNEL, "the bowl vote's commands", commanded)
+
+	_tunable("bfh_vote_after", vote.open_after_sec,
+		"Seconds into a round before the vote for the next bowl opens",
+		func(value: float) -> void:
+			if vote != null:
+				vote.open_after_sec = maxf(value, 0.0))
+
+	# Every round is one play of its bowl, changed or not; the warmup is none.
+	world.round_began.connect(func(_number: int) -> void:
+		if vote != null:
+			vote.note_bowl(world.bowl_id)
+	)
+	world.match_node.round_ended.connect(func(_number: int, _winner: int, _outcome: int) -> void:
+		if vote != null:
+			vote.note_round_end()
+	)
+
+	if server != null:
+		server.client_disconnected.connect(func(session: DotClientSession, _reason: String) -> void:
+			if vote != null:
+				vote.forget_voter(StringName(str(session.userid)))
+		)
+
+
 func _wire_chat() -> void:
 	if bridge == null or services == null:
 		return

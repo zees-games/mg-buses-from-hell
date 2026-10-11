@@ -48,11 +48,11 @@ const BfhSpectate := preload("../game/bfh_spectate.gd")
 ## the wrong reason. A real client is a separate program with its own export and its own
 ## `user://` config. Make them disagree, and let HELLO correct it.
 
-const CHECKS := 177
+const CHECKS := 181
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 21
+const SECTIONS := 22
 
 ## Who the client is, on both ends.
 const CLIENT_PEER := 7
@@ -124,6 +124,7 @@ func _run() -> void:
 		await _test_a_runner_who_is_out()
 		await _test_a_barrel_is_drawn()
 		await _test_the_scoreboard()
+		await _test_a_voted_bowl_crosses()
 		await _test_leaving()
 
 	print("")
@@ -206,6 +207,11 @@ func _test_the_wire() -> void:
 		"hello: and the layout an operator chose, the hook and the courtyard's west lane",
 		"%s, %.3f" % [str(hello["hook_layout"]), float(hello["courtyard_west_lane"])]
 	)
+
+	var bowl := BfhEvents.read_bowl(DotNetReader.new(BfhEvents.write_bowl(54.0, "tight", 7.6)))
+	_check(bool(bowl["ok"]) and absf(float(bowl["arena_radius"]) - 54.0) < 0.05
+			and str(bowl["hook_layout"]) == "tight" and absf(float(bowl["courtyard_west_lane"]) - 7.6) < 0.005,
+		"bowl round-trips: the map a vote changed between rounds", str(bowl))
 
 	var join := BfhEvents.read_join(DotNetReader.new(
 		BfhEvents.write_join(SESSION, 31, "Ada", BfhGame.TEAM_DRIVERS)
@@ -1990,6 +1996,37 @@ func _test_somebody_else_is_drawn() -> void:
 
 
 # --- Leaving ---------------------------------------------------------------
+
+## The players voted for another bowl: the server rebuilds its own at the next round's start
+## and the client rebuilds to match, from a BOWL sent between the last round's PROP_GONEs and
+## this round's PROPs. Without it the client keeps the bowl it joined on, with the wall where
+## the server has floor, which is the bug the HELLO's radius exists to prevent on joining.
+## Late in the run, because every section after it would be in a different bowl.
+func _test_a_voted_bowl_crosses() -> void:
+	_section("a voted bowl crosses the wire")
+	var before := _client_game.arena.radius
+	_server_game.next_bowl_id = &"bfh_big_bowl"
+	_server_game.call("_on_round_started", _server_game.round_number + 1)
+	await _steps(8)
+
+	_check(_server_game.bowl_id == &"bfh_big_bowl" and absf(_server_game.arena.radius - 54.0) < 0.05,
+		"the server rebuilt its bowl to the voted one", "%s at %.1f m" % [_server_game.bowl_id, _server_game.arena.radius])
+	var off := 0.0
+	var client_obstacles := _client_game.arena.obstacles()
+	var server_obstacles := _server_game.arena.obstacles()
+	for i in range(mini(client_obstacles.size(), server_obstacles.size())):
+		off = maxf(off, client_obstacles[i].distance_to(server_obstacles[i]))
+	_check(absf(_client_game.arena.radius - _server_game.arena.radius) < 0.05
+			and client_obstacles.size() == server_obstacles.size() and off < 0.01,
+		"and the client rebuilt its own to match, every obstacle where the server's is",
+		"client %.1f m (was %.1f), server %.1f m, furthest %.3f m apart" % [
+			_client_game.arena.radius, before, _server_game.arena.radius, off])
+	var server_bodies := int(_server_bridge.describe()["bodies"])
+	var client_bodies := int(_client_bridge.describe()["bodies"])
+	_check(client_bodies == server_bodies and client_bodies > 0,
+		"with the new round's crates mirrored in it", "client %d, server %d" % [client_bodies, server_bodies])
+	_done()
+
 
 func _test_leaving() -> void:
 	_section("leaving")

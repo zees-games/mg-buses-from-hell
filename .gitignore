@@ -37,6 +37,7 @@
 /addons/dot_user
 /addons/dot_user_avatar
 /addons/dot_platform
+/addons/dot_vote
 
 # Exports
 build/

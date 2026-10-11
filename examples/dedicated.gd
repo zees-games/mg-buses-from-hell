@@ -5,6 +5,7 @@ const BfhGame := preload("../game/bfh_game.gd")
 const BfhContent := preload("../game/bfh_content.gd")
 const BfhPlayer := preload("../game/bfh_player.gd")
 const BfhAvatars := preload("../game/bfh_avatars.gd")
+const BfhBowls := preload("../game/bfh_bowls.gd")
 
 ## Boots a real [DotServer], loads this game into it as a module, and runs the commands
 ## an operator would actually type.
@@ -23,7 +24,7 @@ const BfhAvatars := preload("../game/bfh_avatars.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 94
+const CHECKS := 111
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -36,7 +37,7 @@ const SERVER_DIR := "user://bfh_dedicated"
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 12
+const SECTIONS := 13
 
 ## The port this test listens on. Nothing else on a developer's machine is likely to be
 ## holding it, and a boot that failed on a busy 27015 would look like the module being
@@ -108,6 +109,7 @@ func _run() -> void:
 		await _test_the_live_tools()
 		await _test_progress_and_spectating()
 		await _test_who_they_are()
+		_test_the_bowl_vote()
 		await _test_it_unloads_cleanly()
 		_test_no_message_preloads_itself()
 
@@ -577,6 +579,114 @@ func _test_the_module_loads() -> void:
 	_check(moderation != null and int(moderation.call("count")) == 0,
 		"and it starts empty, so nothing a previous run did is in it",
 		"%d records" % int(moderation.call("count")) if moderation != null else "no moderation")
+	_done()
+
+
+## The players' vote decides the next bowl, end to end through what a player types: a
+## nomination, the ballot opening on its own clock with the nomination on it, a vote by
+## number, the round's end handing the winner to the world, and the next round REBUILDING
+## the bowl to it; then rock-the-vote opening a ballot early. Commands run at the console,
+## which is where a `!vote` typed in chat lands (`_on_chat_command` runs it as the player);
+## the console's voter is "console", so the voter list is that one name. Bots are not
+## voters, and a server of bots never opens a ballot by itself.
+##
+## Synchronous from the round's end to the round begun: the bots' rounds are running, and
+## one that started in a frame between would build the voted bowl itself and leave the
+## check reading nothing. Last before unloading, because it leaves the bowl a different size.
+func _test_the_bowl_vote() -> void:
+	print("the bowl vote")
+	var module := _module()
+	var vote: Node = module.get("vote") if module != null else null
+	_check(vote != null, "the module built a bowl vote")
+
+	if vote == null:
+		_done()
+		return
+
+	var commands_there := true
+
+	for name in ["vote", "rtv", "nominate"]:
+		commands_there = commands_there and server.console.find_command(name) != null
+
+	_check(commands_there, "and registered dot-vote's vote, rtv and nominate")
+
+	# Hibernation: DotGameModule hands the director the server, the ballot's timer waits with
+	# it, and waking starts both again from the top.
+	var director: DotVoteDirector = vote.get("director")
+	_check(server.hibernation_changed.is_connected(director.set_hibernating),
+		"the vote follows the server's hibernation without a line of this game's")
+	vote.set("_opened_this_bowl", true)
+	server.console.execute("sv_hibernate_when_empty 1")
+	_check(server.is_hibernating() and director.hibernating, "an empty server sleeps, and the vote with it",
+		server.state_name())
+	var on_bowl: float = vote.get("_on_bowl_sec")
+	vote.call("advance", 600.0)
+	_check(is_equal_approx(vote.get("_on_bowl_sec"), on_bowl), "ten minutes asleep do not count towards the ballot")
+	server.console.execute("sv_hibernate_when_empty 0")
+	_check(is_zero_approx(vote.get("_on_bowl_sec")) and not vote.get("_opened_this_bowl") and not director.hibernating,
+		"waking wakes the vote, and the bowl ballot is owed again from the top")
+
+	var ids: Array = []
+
+	for choice: DotVoteChoice in (vote.get("source") as DotVoteListSource).entries:
+		ids.append(String(choice.id))
+
+	_check(ids.size() == BfhBowls.all(game.config).size() and ids.has("bfh_small_bowl"),
+		"it offers every bowl", str(ids))
+
+	director.begin(game.bowl_id)
+	var wanted := &"bfh_small_bowl" if game.bowl_id != &"bfh_small_bowl" else &"bfh_big_bowl"
+	var radius := float(BfhBowls.by_id(game.config, wanted)["radius"])
+	var captured: Array = []
+	vote.set("voters_fn", func() -> Array: return [&"console"])
+	vote.set("ballot_fn", func(state: Dictionary) -> void: captured.append(state))
+
+	_check(_said(_run_command("nominate %s" % wanted), "Nominated"), "a player nominates a bowl", String(wanted))
+
+	vote.set("_on_bowl_sec", 0.0)
+	vote.set("_opened_this_bowl", false)
+	vote.call("advance", float(vote.get("open_after_sec")) + 0.1)
+	var options: Array[StringName] = director.ballot.option_ids() if director.is_voting() else ([] as Array[StringName])
+	_check(director.is_voting() and options.has(wanted),
+		"the ballot opens on its own clock, with the nomination on it", str(options))
+	# The feed is polled each tick before the ballot timer opens one, so it sees it next tick.
+	(vote.get("feed") as DotVoteBallotFeed).poll()
+	var drawn: Dictionary = captured.back() if not captured.is_empty() else {}
+	_check(bool(drawn.get("open", false)) and str(drawn.get("command", "")) == "vote" \
+			and (drawn.get("options", []) as Array).size() == options.size(),
+		"and the ballot a client draws says so, with the command that votes", str(drawn.keys()))
+
+	_check(_said(_run_command("vote %d" % (options.find(wanted) + 1)), "Voted"),
+		"a vote by the number on the ballot counts")
+	# Everybody has voted; the director closes on its next advance, which is the server's tick.
+	vote.call("advance", 0.05)
+	_check(director.pending_id() == wanted, "and decides it, waiting for the round's end",
+		str(director.pending_id()))
+
+	vote.call("note_round_end")
+	_check(game.next_bowl_id == wanted, "the round's end hands it to the world", str(game.next_bowl_id))
+
+	var changed: Array = []
+	var on_change := func(id: StringName) -> void: changed.append(id)
+	game.bowl_changed.connect(on_change)
+	game.call("_on_round_started", game.round_number + 1)
+	game.bowl_changed.disconnect(on_change)
+	_check(game.bowl_id == wanted and is_equal_approx(game.arena.radius, radius) and game.next_bowl_id == &"",
+		"and the next round is played in the bowl voted for, rebuilt to its radius, once",
+		"%s at %.0f m" % [game.bowl_id, game.arena.radius])
+	_check(changed == [wanted] and game.props.world_count() > 0,
+		"said once, with the round laid out in it", "%s, %d props" % [changed, game.props.world_count()])
+
+	# The round began, which starts the director over on the bowl; rocking the vote then
+	# brings the ballot forward instead of waiting for open_after_sec.
+	_check(director.current_id() == wanted and not director.is_voting(),
+		"the new round starts the vote over", str(director.current_id()))
+	# Past dot-vote's cooldown between two ballots, on the director alone so the round's own
+	# ballot timer does not open one first. In play a round outlasts it.
+	director.advance(director.rules.vote_cooldown_sec + 0.1)
+	var rocked := _run_command("rtv")
+	vote.call("advance", 0.05)
+	_check(director.is_voting(), "and rock-the-vote opens a ballot before its time", str(rocked))
 	_done()
 
 

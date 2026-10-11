@@ -1,6 +1,7 @@
 extends Node3D
 
 const BfhArena := preload("bfh_arena.gd")
+const BfhBowls := preload("bfh_bowls.gd")
 const BfhConfig := preload("bfh_config.gd")
 const BfhContent := preload("bfh_content.gd")
 const BfhReach := preload("bfh_reach.gd")
@@ -65,6 +66,11 @@ signal sides_swapped(round_number: int)
 
 ## A round began. The bowl has been re-laid by the time this fires.
 signal round_began(number: int)
+
+## The bowl was rebuilt at a round's start, to the one the players voted for. Emitted after
+## the last round's props are gone and before this round's are laid, so a bridge that tells
+## its clients now has them rebuild before the first crate arrives.
+signal bowl_changed(bowl_id: StringName)
 
 ## A round ended. [param winner] is one of the TEAM_* constants, or 0 for a draw.
 signal round_over(number: int, winner: int)
@@ -156,6 +162,14 @@ var players: Dictionary = {}
 var sides: Dictionary = {}
 
 var round_number: int = 0
+
+## Which of [code]BfhBowls[/code] the bowl is. The server's configured radius is
+## [constant BfhBowls.DEFAULT].
+var bowl_id: StringName = BfhBowls.DEFAULT
+
+## The bowl the next round is played in, set by the players' vote ([code]game/bfh_vote.gd[/code])
+## and used once. Empty keeps this one.
+var next_bowl_id: StringName = &""
 
 ## Simulated seconds since the round began. Never a wall clock.
 var round_elapsed: float = 0.0
@@ -830,6 +844,7 @@ func _on_round_started(number: int) -> void:
 		random.reseed(_layout_seed)
 
 	_clear_bowl()
+	_change_bowl()
 	_lay_out_bowl()
 	_place_players()
 	_place_buses()
@@ -915,6 +930,34 @@ func _clear_bowl() -> void:
 	_bus_inverted.clear()
 	_bus_backing.clear()
 	_bus_turning.clear()
+
+
+## The bowl the players voted for, built between one round's props going and the next's
+## arriving. Once: [member next_bowl_id] is cleared whether or not it was used, and a bowl
+## this server no longer offers (an operator narrowed `bowl_ids` since) is dropped.
+func _change_bowl() -> void:
+	var wanted := next_bowl_id
+	next_bowl_id = &""
+
+	if wanted == &"" or wanted == bowl_id or not authoritative:
+		return
+
+	var offered := false
+
+	for bowl in BfhBowls.allowed(config):
+		offered = offered or bowl["id"] == wanted
+
+	var chosen := BfhBowls.by_id(config, wanted)
+
+	if not offered or chosen.is_empty():
+		DotLog.warn(CHANNEL, "the voted bowl is not one this server offers; keeping this one",
+			{"wanted": String(wanted), "keeping": String(bowl_id)})
+		return
+
+	bowl_id = wanted
+	arena.build(float(chosen["radius"]))
+	bowl_changed.emit(bowl_id)
+	DotLog.info(CHANNEL, "the bowl changed", {"bowl": String(bowl_id), "radius": "%.0f m" % arena.radius})
 
 
 func _lay_out_bowl() -> void:

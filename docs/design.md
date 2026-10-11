@@ -51,3 +51,16 @@ dot-props' notes listed both as deliberately absent; they were right about the b
 ## How the map grew
 
 Each feature in [map.md](map.md) exists because the bowl had run out of something: the stacks (a turning circle, west), the hook (somewhere to lose a bus without crossing open floor), the tank farm (cover you cannot see through, east), the scaffold (height, made of crates so it is spent), the back yard and the stacks' second lane (covered ways to the height), and the colonnade (the drivers' empty quarter). Two halves of a bowl asking for different things is two things for a round to be about.
+
+## The bowl vote
+
+This game has no map files and no dot-map catalogue: its map is `BfhArena.build(radius)`. So the players vote between **bowls**, which are named radii (`game/bfh_bowls.gd`; see [map.md](map.md#minimum-radii)), over dot-vote (`game/bfh_vote.gd`, a `DotVoteDirector` over a `DotVoteListSource` of `BfhBowls.allowed`, narrowed by `bowl_ids`). The bowl is only ever rebuilt between rounds, so a ballot opens `bfh_vote_after` (20) seconds into every round (dot-vote's MANUAL trigger) and is applied at the round's end (`apply: END_OF_ROUND`), setting `BfhGame.next_bowl_id`, which the next round's start builds once (and drops, with a WARN, if the server no longer offers it). The module advances the director once a server tick (`self_advance` off, `round_based` on), calls `note_round_end` from `DotMatch.round_ended`, and starts the director over on every `round_began`; the warmup has no ballot. dot-vote's ROUND_END trigger would apply a choice one round late.
+
+- **Rock the vote opens the ballot in the game, not in dot-vote.** Under MANUAL the director hands every opening to its host, a passed rock-the-vote included: without `BfhVote`'s handler on `director.clock.expired` (reason `rtv`), `!rtv` answered "Rocked. 1 of 1." and nothing opened. A rocked vote still waits for the round's end (`rtv_apply`): a wall moving through the people beside it is not a map change. `rtv_delay_sec` is 0, because dot-vote's two minutes are most of a round.
+- The rebuild reaches clients as a BOWL event ([netcode.md](netcode.md#what-crosses)), and a client joining later gets the bowl in its HELLO as before, so `arena_radius` is still not a cvar: what changes the bowl is a round boundary, never a live setting.
+- No time limit (`duration_sec` 0), the current bowl is on the ballot, no cooldown in plays. Bots do not vote, so a server of bots never opens one.
+- dot-vote's commands (`vote`, `rtv`, `nominate`, …) are the module's, so `!vote 2` in chat reaches them through `_on_chat_command` as the player who typed it.
+- The client shell draws the ballot from the `map_ballot` notice (`DotVoteBallotFeed` → `DotBallotPanel` down the right-hand side); nothing of it is in this game's client. `tools/shot.sh 8 ballot.png --ballot` draws the same panel from this game's own vote.
+- An owner reshapes it in `user://cfg/buses_vote.json` or `game.yml`'s `metadata: bowl_vote:`, keyed as `DotVoteRules`; `{"enabled": false}` keeps the server's own bowl.
+
+`examples/dedicated`'s "the bowl vote" drives it through the console as a player's chat would, through to the next round rebuilt in the voted bowl. Not yet tried in a browser.

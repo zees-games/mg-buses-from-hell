@@ -3,6 +3,7 @@ extends Node
 const BfhArena := preload("../game/bfh_arena.gd")
 const BfhAudio := preload("../game/bfh_audio.gd")
 const BfhAwards := preload("../game/bfh_awards.gd")
+const BfhBowls := preload("../game/bfh_bowls.gd")
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhContent := preload("../game/bfh_content.gd")
 const BfhGame := preload("../game/bfh_game.gd")
@@ -33,11 +34,11 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 238
+const CHECKS := 240
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 29
+const SECTIONS := 30
 
 const TICK := 1.0 / 60.0
 
@@ -109,6 +110,7 @@ func _run() -> void:
 	_test_config()
 	await _test_world_builds()
 	await _test_bowl_layout()
+	_test_every_bowl()
 	await _test_the_stacks()
 	await _test_the_tank_farm()
 	await _test_reach()
@@ -573,6 +575,37 @@ func _test_world_builds() -> void:
 		"and the rule has been told how to ask who is alive")
 
 	await _dispose(game)
+	_done()
+
+
+## Every bowl the players can vote for holds the map-wide rules the shipped one is held to:
+## no gap under a bus's width between any two obstacles, nor between an obstacle and the
+## scaffold. A bowl is a radius, and the features are placed as fractions of it, so a new
+## radius is a new map nobody has measured until this has.
+func _test_every_bowl() -> void:
+	print("every bowl on the ballot")
+	var config := BfhConfig.new()
+	var tight := PackedStringArray()
+	var radii := {}
+
+	for bowl in BfhBowls.all(config):
+		var arena := BfhArena.new()
+		add_child(arena)
+		arena.build(float(bowl["radius"]))
+		var gap := arena.narrowest_gap()
+		var scaffold := arena.scaffold_clearance()
+		print("  ..    %-15s %4.0f m  tightest %.2f m, scaffold %.2f m, %d obstacles" % [
+			String(bowl["id"]), arena.radius, gap, scaffold, arena.obstacles().size()])
+		if minf(gap, scaffold) < BfhArena.BUS_GAP:
+			tight.append("%s (%.2f / %.2f m)" % [bowl["id"], gap, scaffold])
+		radii[snappedf(arena.radius, 0.5)] = true
+		remove_child(arena)
+		arena.free()
+
+	_check(tight.is_empty(), "no bowl on the ballot has a gap a bus cannot take",
+		"too tight: %s, against %.2f m" % [", ".join(tight), BfhArena.BUS_GAP])
+	_check(radii.size() == BfhBowls.all(config).size(),
+		"and every bowl is a different size: two of one radius are one map under two names", str(radii.keys()))
 	_done()
 
 

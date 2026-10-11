@@ -24,6 +24,8 @@ Two obstacles closer than a bus leave floor behind them where a runner is safe *
 
 Every feature is **placed** as a fraction of `arena_radius` but **spaced** for a bus, which is the same size in every bowl. So a smaller bowl walks the features towards each other and the binding limit is the floor between clusters closing. Below its minimum a feature is left out with a log line, never silently: `STACK_MIN_RADIUS` 36, `TANK_MIN_RADIUS`, `SCAFFOLD_MIN_RADIUS` 45, `COLONNADE_MIN_RADIUS` 45 (44 left a 6.996 m door). `headless_run` builds the arena at each minimum and asks the map-wide rules of it, because a constant nobody checks is a number somebody guessed. The shipped bowl is 46 m.
 
+**The bowls on the players' ballot** (`BfhBowls`) are radii for the same reason: `bfh_bowl` is the operator's `arena_radius`, `bfh_small_bowl` is 40 m (the tank farm's minimum: stacks and tanks, no scaffold or colonnade, open floor between), `bfh_big_bowl` 54 m. `headless_run`'s "every bowl on the ballot" builds each and holds it to the gap rule, and refuses two bowls of one radius. A bowl added there is a map: it gets that check, a `--plan` render (`tools/shot.sh 4 plan.png --plan --bfh-arena-radius=<r>`) and a look at what the bots do in it. The bots have not been measured in the small and big bowls the way they have in the shipped one.
+
 ## The stacks (west)
 
 Concrete pillars, 1.2 m across, 5.4 m tall, permanent. What a person on foot has against a vehicle is **a turning circle**: a bus is nine metres long and a runner turns on the spot, so a cylinder to orbit is cover that does not have to survive anything. A pillar is also the one obstacle a raycast vehicle handles honestly: taller than the hull, it simply stops the bus.

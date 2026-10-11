@@ -120,8 +120,13 @@ extends DotConfig
 
 @export_group("The arena")
 
-## Radius of the bowl floor, in metres.
+## Radius of the bowl floor, in metres. The bowl a server starts on, and `bfh_bowl` on the
+## players' ballot (see `BfhBowls`).
 @export_range(10.0, 200.0, 1.0) var arena_radius: float = 46.0
+
+## Which bowls the players may vote between, by id (`bfh_bowl`, `bfh_small_bowl`,
+## `bfh_big_bowl`; see `BfhBowls`). Empty offers all of them; one id is no vote at all.
+@export var bowl_ids: PackedStringArray = PackedStringArray()
 
 ## How many crates are scattered at the start of a round.
 @export_range(0, 200, 1) var crate_count: int = 34

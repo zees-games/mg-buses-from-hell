@@ -9,7 +9,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 | Read | Before |
 | --- | --- |
 | [docs/README.md](docs/README.md) | the index |
-| [docs/design.md](docs/design.md) | changing a rule of the game, the sides, the bus's damage, or why something is deliberately absent |
+| [docs/design.md](docs/design.md) | changing a rule of the game, the sides, the bus's damage, the bowl vote, or why something is deliberately absent |
 | [docs/map.md](docs/map.md) | touching `bfh_arena.gd`: any obstacle, lane, radius, the scaffold, the ramp, the scatter, a climb |
 | [docs/bots.md](docs/bots.md) | the autopilot, `steer_around`, the stuck rule, the ramp turn, bot knobs, route bots |
 | [docs/netcode.md](docs/netcode.md) | `game/net/`, the module, what is predicted, anything sent or replicated |
@@ -24,10 +24,10 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 | Path | What |
 | --- | --- |
 | `game/bfh_game.gd` | the simulation: rounds, sides, props, buses, damage, the autopilot. Headless |
-| `game/bfh_arena.gd`, `bfh_reach.gd`, `bfh_textures.gd` | the bowl in code and its one obstacle description; what a runner can reach; the generated metre grid |
+| `game/bfh_arena.gd`, `bfh_reach.gd`, `bfh_textures.gd`, `bfh_bowls.gd` | the bowl in code and its one obstacle description; what a runner can reach; the generated metre grid; the bowls (radii) on the players' ballot |
 | `game/bfh_config.gd`, `bfh_content.gd`, `bfh_paths.gd` | every setting (metres and seconds, layered like every DotConfig); prop and vehicle catalogues; `rebase` for pack delivery |
 | `game/bfh_player.gd`, `bfh_hammer.gd` | one person (controller, health, hammer, riding a crate); the only weapon |
-| `game/bfh_module.gd`, `bfh_server.gd`, `bfh_services.gd` | the dot-server module over `DotGameModule`, the game scene, chat/voice/moderation over `DotGameServices` |
+| `game/bfh_module.gd`, `bfh_server.gd`, `bfh_services.gd`, `bfh_vote.gd` | the dot-server module over `DotGameModule`, the game scene, chat/voice/moderation over `DotGameServices`, the bowl vote over dot-vote |
 | `game/net/` | the wire: codec, messages, link, net behaviours, and `bfh_net_bridge.gd`, the only file naming both halves |
 | `game/bfh_client.gd`, `bfh_client_chat.gd`, `bfh_hud.gd`, `bfh_beacon.gd`, `bfh_figure.gd`, `bfh_spectate.gd`, `bfh_audio.gd`, `bfh_sounds.gd`, `bfh_fx.gd`, `bfh_scoreboard.gd`, `bfh_settings.gd`, `bfh_avatars.gd`, `bfh.tscn` | the client: never built by a dedicated server |
 | `game/bfh_stats.gd`, `bfh_awards.gd`, `bfh_progress.gd` | per-player numbers and achievements, authority only |
@@ -63,12 +63,13 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 - The CLOCK carries crates left and both rounds-won tallies, and on a round's end it is sent **before** the ROUND.
 - A `DotNetMessage` script must never preload its own file (leaks the whole script graph at exit on a deployed server). `dedicated` checks the source.
 - `remove_player` forgets the entity in dot-combat and closes it before the node goes.
-- Layout settings that shape the map (`arena_radius`, `courtyard_west_lane`, `hook_layout`) travel in the HELLO and are not cvars; a live change would move geometry under connected players.
+- Layout settings that shape the map (`arena_radius`, `courtyard_west_lane`, `hook_layout`) travel in the HELLO and are not cvars; a live change would move geometry under connected players. A voted bowl is rebuilt only at a round's start and sent as BOWL between the PROP_GONEs and the PROPs. [netcode](docs/netcode.md#what-crosses)
 
 **The map** ([map](docs/map.md))
 - One obstacle description (`_obstacles`, from `PILLAR_LAYOUT`, `TANK_LAYOUT`, the colonnade); steering, scatter and gap rules read only that. Never add a second list.
 - Measure to surfaces, per obstacle radius, never centre distances against a constant.
 - No gap under `BUS_GAP` (4.8 m clear), checked by `narrowest_gap()` on the built arena at the shipped and every minimum radius. A lane under `LANE_THROUGH` (7.2 m) is a door the bot cannot follow through; a place where a runner standing still is never reached is a refuge, and no lane may be one.
+- Every bowl on the ballot (`BfhBowls`) is held to the gap rule by `headless_run`; a new bowl is a new map. [map](docs/map.md#minimum-radii)
 - Known refuge, pinned by the suite and left as Christian's call: the hook's two gaps against a bot (`hook_layout`, nightly `runner-standing-1`).
 - Spawn props dropped from a few centimetres, never touching the floor. The scatter keeps out of obstacles, the scaffold margin, and the bus start lanes.
 
@@ -81,6 +82,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 **The game** ([design](docs/design.md), [services](docs/services.md))
 - The hammer cannot hurt a person; it is not a `DotWeapon`. No auto-hop. Damage is by closing speed; nothing above the bus's roof is hit.
 - dot-match's teams: `max_difference` 0, swaps through `switch_team`, a leaver leaves dot-match too. A side with nobody in it must not start a round.
+- The bowl vote opens `bfh_vote_after` into a round and applies at its end (MANUAL, `END_OF_ROUND`), rocked votes too; under MANUAL `BfhVote` opens a passed rock-the-vote itself, or `!rtv` does nothing. [design](docs/design.md#the-bowl-vote)
 - `DotRandomManager` is not registered as a service (two worlds in one process).
 - Progress is counted on the authority only, never for a bot (`is_bot` is `add_player`'s argument), and kept in memory while guests' keys are session ids.
 - Team is the channel that matters: voice defaults to it, no backlog on it, push to talk. Refused moderation tools are refused for a reason `modtools` prints.
