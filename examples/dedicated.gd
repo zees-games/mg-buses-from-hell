@@ -24,7 +24,7 @@ const BfhBowls := preload("../game/bfh_bowls.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 111
+const CHECKS := 112
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -684,9 +684,18 @@ func _test_the_bowl_vote() -> void:
 	# Past dot-vote's cooldown between two ballots, on the director alone so the round's own
 	# ballot timer does not open one first. In play a round outlasts it.
 	director.advance(director.rules.vote_cooldown_sec + 0.1)
+	# Rocked in the warmup, which is what an empty current id means, so the same ballot also
+	# shows it is drawn there. The feed was polled after the warmup return, so a ballot opened
+	# in the warmup (rocked, or one the server's game vote made wait) was open and counted and
+	# no client ever drew it.
+	director.set("_current_id", &"")
+	captured.clear()
 	var rocked := _run_command("rtv")
 	vote.call("advance", 0.05)
 	_check(director.is_voting(), "and rock-the-vote opens a ballot before its time", str(rocked))
+	var warm: Dictionary = captured.back() if not captured.is_empty() else {}
+	_check(bool(warm.get("open", false)),
+		"a ballot opened in the warmup is sent to be drawn", "%d sent" % captured.size())
 	_done()
 
 

@@ -236,12 +236,16 @@ func advance(delta: float) -> void:
 
 	director.advance(delta)
 
+	# [b]Before the warmup return, not after it.[/b] A ballot can be open in the warmup: a
+	# rocked vote opens one, and so does a ballot the server's game vote made wait. Polled
+	# only once a round had begun, it was open, counted and never drawn, so the only sign
+	# of it was a line in chat.
+	if feed != null:
+		feed.poll()
+
 	# Before the first round there is nothing playing for a ballot to replace: the warmup.
 	if director.current_id() == &"":
 		return
-
-	if feed != null:
-		feed.poll()
 
 	# The ballot's own timer waits with the director's clock while the server hibernates
 	# (DotGameModule hands the director the server's hibernation). Counted on, it ran past
