@@ -48,7 +48,7 @@ const BfhSpectate := preload("../game/bfh_spectate.gd")
 ## the wrong reason. A real client is a separate program with its own export and its own
 ## `user://` config. Make them disagree, and let HELLO correct it.
 
-const CHECKS := 186
+const CHECKS := 188
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -1418,6 +1418,35 @@ func _test_voice() -> void:
 		not orphan.ok and orphan.error.code == DotError.CODE_FORBIDDEN,
 		"a frame from a peer with nobody in the world is refused"
 	)
+
+	# [b]The client's own talk key reaches the server.[/b] Armed: until 2026-10-11 the
+	# client chat never opened its microphone, so the key gated a capture that was not
+	# running and no buses player was ever heard; every check above hands the link bytes.
+	var heard_at_server: Array[int] = []
+	_server_bridge.voice_relay_fn = func(peer_id: int, _payload: PackedByteArray) -> void:
+		heard_at_server.append(peer_id)
+	var client_chat_script := preload("../game/bfh_client_chat.gd")
+	var client_chat: Node = client_chat_script.new()
+	client_chat.name = "VoiceClientChat"
+	add_child(client_chat)
+	var attached: DotResult = client_chat.call(&"attach", _client_bridge)
+	var talker: DotVoiceManager = client_chat.get(&"voice")
+	_check(attached.ok and talker != null and not talker.is_capturing(),
+		"the client's microphone is not open before the talk key")
+	if talker != null:
+		var mic := DotVoiceSourceBuffer.new()
+		mic.sample_rate = talker.config.sample_rate
+		mic.write(DotVoiceSourceBuffer.tone(440.0, 0.2, mic.sample_rate, 0.4))
+		talker.source = mic
+		Input.action_press(DotVoiceManager.TALK_ACTION)
+		await _steps(4)
+		_flush()
+		await _steps(2)
+		Input.action_release(DotVoiceManager.TALK_ACTION)
+	_check(talker != null and talker.frames_sent > 0 and heard_at_server.size() == talker.frames_sent,
+		"holding it sends the player's speech to the server (%d sent, %d relayed)" % [talker.frames_sent if talker != null else 0, heard_at_server.size()])
+	_server_bridge.voice_relay_fn = Callable()
+	client_chat.queue_free()
 
 	router.queue_free()
 	_done()

@@ -14,6 +14,10 @@ config/name="game-buses-from-hell"
 config/features=PackedStringArray("4.7")
 run/main_scene="res://game/bfh.tscn"
 
+[audio]
+
+driver/enable_input=true
+
 [physics]
 
 3d/default_gravity=20.0

@@ -19,7 +19,8 @@ const BfhServices := preload("bfh_services.gd")
 const CHANNEL := "bfh.chat"
 
 ## Push to talk. Bound to V, which is where twenty years of this genre put it.
-const TALK_ACTION := &"bfh_voice_talk"
+## dot-voice's action, so dot-menu's key table and every other game's talk key are one setting.
+const TALK_ACTION := DotVoiceManager.TALK_ACTION
 const TALK_KEY := KEY_V
 
 const OPEN_ACTION := &"bfh_chat"
@@ -147,6 +148,10 @@ func _build_voice() -> DotResult:
 	add_child(voice)
 	_register_talk_action()
 
+	# The menu's voice rows bind to it, and the server's sv_voice_enable reaches it.
+	voice.publish_as_client()
+	var _following := voice.follow_cvars(DotRegistry.get_service(&"dot_client_link"))
+
 	return DotResult.success(voice)
 
 
@@ -183,7 +188,12 @@ func _process(_delta: float) -> void:
 		return
 
 	_talking = wanted
-	voice.set_talking(wanted)
+	# The first press opens the microphone (dot-voice's update_talk). Nothing here called
+	# start_capture before, so the talk key gated a microphone that was never open and no
+	# player was ever heard.
+	var started := voice.update_talk(wanted)
+	if wanted and not started.ok:
+		DotLog.info(CHANNEL, "no microphone; listening only", {"why": started.error.message})
 
 
 func _on_submitted(text: String, channel: StringName) -> void:
