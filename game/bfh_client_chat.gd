@@ -57,6 +57,7 @@ func attach(p_bridge: BfhNetBridge) -> DotResult:
 	if bridge != null:
 		bridge.chat_received.connect(_on_chat_received)
 		bridge.voice_arrived.connect(_on_voice_arrived)
+		_watch_link()
 
 	return DotResult.success(self)
 
@@ -201,6 +202,24 @@ func _on_submitted(text: String, channel: StringName) -> void:
 		# The local pre-check refused it. Shown, because a line that silently does not
 		# appear is a client that looks broken.
 		window.add_text(composed.error.message, Color(0.95, 0.55, 0.45))
+
+
+## [b]The server's own lines arrive on the shell's client link, not on the bridge.[/b] A vote
+## between games, "Ada joined the game." and an admin's `say` are dot-server's chat manager,
+## sent as `chat.line` on `DotClientLink`; this box read only the bridge and never showed one.
+## Only those kinds are drawn (dot-game's `DotGameChatClient.draw_server_line`): what players
+## say comes over the bridge, and drawing it from both would be every line twice. A method
+## callable, so the connection goes with this node when a game switch frees it.
+func _watch_link() -> void:
+	var link := DotRegistry.get_service(&"dot_client_link")
+
+	if link != null and link.has_signal(&"chat_received") \
+			and not link.is_connected(&"chat_received", _on_server_line):
+		var _c := link.connect(&"chat_received", _on_server_line)
+
+
+func _on_server_line(payload: Dictionary) -> void:
+	var _drawn := DotGameChatClient.draw_server_line(window, payload)
 
 
 func _on_chat_received(wire: Dictionary) -> void:
