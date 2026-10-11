@@ -586,7 +586,24 @@ func ramp_foot() -> Vector3:
 	return Vector3(0.0, 0.5, -(radius - LEDGE_DEPTH) + run - RAMP_TUCK)
 
 
-## The sun and the sky.
+## The bowl's palette: a sunny sand bowl in the family's pastels (game-arena's built-in
+## maps), one colour per kind of thing so a runner can call a place out ("behind the blue
+## tanks", "up the lavender ramp"). Warm sand underfoot, a peach-pink wall, a lavender
+## ledge and ramp, sky-blue tanks with a deeper band, mint pillars with a darker cap. The
+## crates, barrels and buses are Kenney's art and keep their own colours, which are the
+## saturated things on screen: the cover and the threat. Each colour is the tint of the
+## one-metre grid (`BfhTextures`), so the grid stays the same on every surface.
+const SAND := Color(0.98, 0.84, 0.60)
+const WALL_COLOUR := Color(0.98, 0.72, 0.70)
+const LEDGE_COLOUR := Color(0.80, 0.70, 1.00)
+const RAMP_COLOUR := Color(0.86, 0.80, 1.00)
+const TANK_COLOUR := Color(0.62, 0.82, 1.00)
+const TANK_BAND := Color(0.40, 0.62, 0.92)
+const PILLAR_COLOUR := Color(0.58, 0.92, 0.78)
+const PILLAR_CAP := Color(0.36, 0.74, 0.62)
+
+
+## The sun and the sky, as a dot-lighting document.
 ##
 ## [b]Built here rather than left to the host scene, and the first render is why.[/b]
 ## A Godot scene with no [DirectionalLight3D] and no [WorldEnvironment] is not dark —
@@ -595,55 +612,69 @@ func ramp_foot() -> Vector3:
 ## and the depth a player judges a bus's distance by is simply absent. It looked like
 ## a fog bug and is the absence of any lighting at all.
 ##
-## Not dot-lighting: that addon reads a lighting document off imported map data, and
-## this map has no data because it is built in code. One sun and one sky is what a
-## document would have produced anyway.
+## A clear afternoon: a warm sun, a blue sky, a pale cool fill, a little haze on the far
+## wall, filmic tone map and glow. [b]The sun is lowish and from the side[/b]: high noon over
+## a flat disc gives every surface the same light, and a lower sun is what makes the crates
+## cast the shadows a runner reads cover off. The angles are dot-lighting's source
+## convention (a negative pitch is a sun in the sky); the brightness is divided by the
+## profile's reference and square-rooted. The ambient is the shade's light, a pale cool
+## grey: a blue fill at its strength turns every shaded face navy. `sky_top` is this
+## game's (the rig draws the zenith in the ambient colour). The fog distances are source
+## units (metres / 0.01905): haze from 60 m, so the far wall softens and a bus coming across
+## the bowl never hides in it (fog that lost the far wall hid the thing a player reads).
+const DAYLIGHT := {
+	"sun": {
+		"pitch_src": -42.0,
+		"yaw_src": -42.0,
+		"colour": [1.0, 0.93, 0.80],
+		"brightness": 380.0,
+		"spread_degrees": 1.0,
+		"ambient_colour": [0.74, 0.78, 0.92],
+	},
+	"fog": {
+		"enabled": true,
+		"colour": [0.84, 0.90, 1.0],
+		"start": 3150.0,
+		"end": 21000.0,
+		"max_density": 0.3,
+	},
+	"sky_top": [0.30, 0.56, 0.96],
+}
+
+
 func _build_light() -> void:
-	var sun := DirectionalLight3D.new()
-	sun.name = "Sun"
-	# Low and from the side. High noon over a flat disc gives every surface the same
-	# amount of light, which is the flat look again with extra steps; a low sun is
-	# what makes the crates cast the long shadows a runner reads cover off.
-	sun.rotation = Vector3(deg_to_rad(-38.0), deg_to_rad(48.0), 0.0)
-	sun.light_energy = 0.8
-	sun.light_color = Color(1.0, 0.94, 0.82)
-	sun.shadow_enabled = true
-	add_child(sun)
+	var holder := Node3D.new()
+	holder.name = "Lighting"
+	add_child(holder)
+	var sun := DotLightRig.apply(holder, DotLightDocument.from_dictionary(DAYLIGHT), light_profile())
+	if sun != null:
+		sun.shadow_blur = 1.5
+	for node in holder.get_children():
+		if node is WorldEnvironment and (node as WorldEnvironment).environment.sky != null:
+			var material := (node as WorldEnvironment).environment.sky.sky_material as ProceduralSkyMaterial
+			if material != null:
+				var top: Array = DAYLIGHT["sky_top"]
+				material.sky_top_color = Color(float(top[0]), float(top[1]), float(top[2]))
+				material.ground_bottom_color = material.sky_top_color
 
-	var env := Environment.new()
-	env.background_mode = Environment.BG_SKY
 
-	var sky := Sky.new()
-	var material := ProceduralSkyMaterial.new()
-	material.sky_top_color = Color(0.39, 0.55, 0.75)
-	material.sky_horizon_color = Color(0.75, 0.73, 0.66)
-	material.ground_bottom_color = Color(0.55, 0.48, 0.38)
-	material.ground_horizon_color = Color(0.75, 0.73, 0.66)
-	sky.sky_material = material
-	env.sky = sky
-
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.15
-
-	# Filmic rather than Godot's default, which is not a tone map at all — it is a
-	# clip. game-g2gfast measured the difference over imported maps and it is the
-	# single largest change for the cost.
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.tonemap_exposure = 0.75
-
-	# Enough to soften the far wall and give the bowl a sense of size, and far enough
-	# out that nothing a runner has to react to is hidden in it.
-	env.fog_enabled = true
-	env.fog_light_color = Color(0.77, 0.74, 0.67)
-	# 0.0025 lost the far wall entirely, which on a map whose whole tension is watching
-	# something approach from across the bowl is hiding the thing the player is meant
-	# to be reading.
-	env.fog_density = 0.0009
-
-	var world_env := WorldEnvironment.new()
-	world_env.name = "Environment"
-	world_env.environment = env
-	add_child(world_env)
+## What this machine draws of [constant DAYLIGHT].
+##
+## [b]Shadows stay on in the browser[/b], unlike dot-lighting's `web()`: the bowl is a few
+## hundred boxes and a crate's shadow is how a runner reads cover. [b]The Compatibility
+## renderer, which this game and the client shell use, has no headroom above white[/b]: at
+## Forward+'s numbers the sand clipped to flat yellow and the grid (the speed a runner reads
+## off the ground) was gone. So under `gl_compatibility` the sun is divided by 700 instead
+## of 200 and the fill is 0.62, game-arena's numbers, checked here in both renderers.
+static func light_profile() -> DotLightProfile:
+	var p := DotLightProfile.web() if OS.has_feature("web") else DotLightProfile.high()
+	p.sun_shadows = true
+	p.sky_below_horizon = true
+	p.ambient_energy = 1.0
+	if RenderingServer.get_current_rendering_method() == "gl_compatibility":
+		p.brightness_reference = 700.0
+		p.ambient_energy = 0.62
+	return p
 
 
 func _build_floor() -> void:
@@ -669,7 +700,7 @@ func _build_floor() -> void:
 	cylinder.radial_segments = 64
 	mesh.mesh = cylinder
 	mesh.position = Vector3(0.0, -1.0, 0.0)
-	mesh.material_override = BfhTextures.surface(Color(0.78, 0.68, 0.50))
+	mesh.material_override = BfhTextures.surface(SAND)
 	body.add_child(mesh)
 
 	add_child(body)
@@ -695,7 +726,7 @@ func _build_wall() -> void:
 			"Wall%d" % i,
 			at + Vector3(0.0, WALL_HEIGHT * 0.5, 0.0),
 			Vector3(WALL_THICKNESS, WALL_HEIGHT, chord),
-			Color(0.62, 0.55, 0.44),
+			WALL_COLOUR,
 			-angle,
 		)
 
@@ -712,7 +743,7 @@ func _build_ledge() -> void:
 		"Deck",
 		Vector3(0.0, LEDGE_HEIGHT, z),
 		Vector3(LEDGE_WIDTH, 1.0, LEDGE_DEPTH),
-		Color(0.55, 0.48, 0.40),
+		LEDGE_COLOUR,
 	)
 
 	# The way down. A bus drives off the ledge onto the floor, which is the only route
@@ -744,7 +775,7 @@ func _build_ledge() -> void:
 		# which is what it is for — the ledge is height for a runner to dodge from, and
 		# the buses start on the sand.
 		Vector3(RAMP_WIDTH, RAMP_THICKNESS, RAMP_LENGTH),
-		Color(0.50, 0.44, 0.36),
+		RAMP_COLOUR,
 	)
 	# [b]Positive, and for the game's first nine days it was negative.[/b] A rotation
 	# about +X by -18 degrees LIFTS the +Z end, so the ramp was built rising out of the
@@ -1034,7 +1065,7 @@ func _build_tank(parent: Node3D, node_name: String, at: Vector3, tank_radius: fl
 	# Paler and cooler than the concrete of the stacks. A player has to be able to tell
 	# at a glance which half of the bowl they are looking at, and the two features are
 	# the same shape from above.
-	mesh.material_override = BfhTextures.surface(Color(0.72, 0.74, 0.73))
+	mesh.material_override = BfhTextures.surface(TANK_COLOUR)
 	body.add_child(mesh)
 
 	# A band around the top and one around the waist, mesh only. A tank is a big smooth
@@ -1054,7 +1085,7 @@ func _build_tank(parent: Node3D, node_name: String, at: Vector3, tank_radius: fl
 		var ring_mesh := MeshInstance3D.new()
 		ring_mesh.mesh = ring
 		ring_mesh.position = Vector3(0.0, band.x, 0.0)
-		ring_mesh.material_override = BfhTextures.surface(Color(0.47, 0.50, 0.52))
+		ring_mesh.material_override = BfhTextures.surface(TANK_BAND)
 		body.add_child(ring_mesh)
 
 	parent.add_child(body)
@@ -1089,7 +1120,7 @@ func _build_pillar(parent: Node3D, node_name: String, at: Vector3) -> void:
 
 	var mesh := MeshInstance3D.new()
 	mesh.mesh = column
-	mesh.material_override = BfhTextures.surface(Color(0.66, 0.64, 0.60))
+	mesh.material_override = BfhTextures.surface(PILLAR_COLOUR)
 	body.add_child(mesh)
 
 	# [b]A capital, and it is mesh only.[/b] A bare cylinder against a bare disc gives a
@@ -1106,7 +1137,7 @@ func _build_pillar(parent: Node3D, node_name: String, at: Vector3) -> void:
 	var cap_mesh := MeshInstance3D.new()
 	cap_mesh.mesh = cap
 	cap_mesh.position = Vector3(0.0, PILLAR_HEIGHT * 0.5 - 0.22, 0.0)
-	cap_mesh.material_override = BfhTextures.surface(Color(0.47, 0.45, 0.42))
+	cap_mesh.material_override = BfhTextures.surface(PILLAR_CAP)
 	body.add_child(cap_mesh)
 
 	parent.add_child(body)

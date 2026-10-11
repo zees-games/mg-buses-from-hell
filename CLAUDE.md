@@ -53,6 +53,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 - `rebase` must stay idempotent: exported paths in a `.tscn` arrive already rewritten. Test the mounted case through `rebase_onto`, never `rebase` built in (a tautology).
 - Kenney art: each kit in its own folder, atlas beside the GLB at the path it names, `bfh_art.gd` paints only materials with no texture. Kenney models face +Z; this family's forward is -Z.
 - Gravity is `BfhConfig.gravity`, written onto the world's own physics space; the project renders with `gl_compatibility`, and lighting is tuned under it. Neither project setting travels in a pack.
+- Colour is `BfhArena`'s palette constants over the metre grid, and the light is `BfhArena.DAYLIGHT` (dot-lighting), turned down under Compatibility. [client](docs/client.md#lighting-and-the-grid)
 - Spell types explicitly in client scripts where `:=` would infer from a host class; inference fails inside a mount.
 
 **Netcode** ([netcode](docs/netcode.md))
