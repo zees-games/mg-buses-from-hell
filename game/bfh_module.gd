@@ -453,6 +453,12 @@ func _build_vote(world: BfhGame) -> void:
 		var avatar: Variant = session.identity.get("avatar_url") if session.identity != null else ""
 		return {"name": session.display_name, "avatar": avatar if avatar is String else ""}
 
+	# Whether a round is live, for `time_up: finish_round`: warmup and the gap between rounds
+	# have nothing to play out, so a limit that runs out there changes at once. No match is
+	# "cannot tell", which holds as before.
+	vote.round_in_progress_fn = func() -> bool:
+		return world.match_node == null or world.match_node.is_live()
+
 	add_child(vote)
 	var ready := vote.setup()
 

@@ -64,6 +64,11 @@ var ballot_fn: Callable = Callable()
 ## [code]func(voter: StringName) -> Dictionary[/code]: a voter's name and avatar, for the ballot.
 var people_fn: Callable = Callable()
 
+## [code]func() -> bool[/code]: whether a round is being played right now — not warmup, not
+## between rounds. Handed to dot-vote so [code]time_up: finish_round[/code] holds a change
+## only for a round in progress. The host's, because only the match knows.
+var round_in_progress_fn: Callable = Callable()
+
 var director: DotVoteDirector = null
 var source: DotVoteListSource = null
 var commands: DotVoteCommands = null
@@ -97,6 +102,14 @@ func setup() -> DotResult:
 	# The server's tick drives it, not the frame clock.
 	director.self_advance = false
 	director.round_based = true
+	# [b]Set by name, and only where it exists.[/b] A delivered pack runs on the shell's
+	# dot-vote, and one older than API 3 has no `round_in_progress_fn`: naming it would fail
+	# the pack's parse. There, a finish_round limit in warmup waits out finish_round_max_sec,
+	# which is what it did before. Read through this node's own field, so the order the host
+	# sets it in does not matter.
+	if "round_in_progress_fn" in director:
+		director.set(&"round_in_progress_fn", func() -> bool:
+			return not round_in_progress_fn.is_valid() or bool(round_in_progress_fn.call()))
 
 	director.player_count_fn = func() -> int:
 		return _voters().size()

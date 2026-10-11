@@ -83,7 +83,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 **The game** ([design](docs/design.md), [services](docs/services.md))
 - The hammer cannot hurt a person; it is not a `DotWeapon`. No auto-hop. Damage is by closing speed; nothing above the bus's roof is hit.
 - dot-match's teams: `max_difference` 0, swaps through `switch_team`, a leaver leaves dot-match too. A side with nobody in it must not start a round.
-- The bowl vote opens `bfh_vote_after` into a round and applies at its end (MANUAL, `END_OF_ROUND`), rocked votes too; under MANUAL `BfhVote` opens a passed rock-the-vote itself, or `!rtv` does nothing. [design](docs/design.md#the-bowl-vote)
+- The bowl vote opens `bfh_vote_after` into a round and applies at its end (MANUAL, `END_OF_ROUND`), rocked votes too; under MANUAL `BfhVote` opens a passed rock-the-vote itself, or `!rtv` does nothing. The match answers dot-vote's `round_in_progress_fn` (`world.match_node.is_live()`, set by name because an older shell's dot-vote lacks it), so a `time_up: finish_round` limit that runs out in warmup or between rounds changes at once instead of holding for `finish_round_max_sec`; `dedicated` checks both halves. [design](docs/design.md#the-bowl-vote)
 - `DotRandomManager` is not registered as a service (two worlds in one process).
 - Progress is counted on the authority only, never for a bot (`is_bot` is `add_player`'s argument), and kept in memory while guests' keys are session ids.
 - Team is the channel that matters: voice defaults to it, no backlog on it, push to talk. Refused moderation tools are refused for a reason `modtools` prints.
