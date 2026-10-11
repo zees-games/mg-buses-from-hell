@@ -2,6 +2,7 @@ extends CanvasLayer
 
 const BfhGame := preload("bfh_game.gd")
 const BfhPlayer := preload("bfh_player.gd")
+const BfhArena := preload("bfh_arena.gd")
 
 ## Health, the clock, and how much cover is left. Four numbers and a crosshair.
 ##
@@ -20,10 +21,12 @@ const BfhPlayer := preload("bfh_player.gd")
 var game: BfhGame = null
 var player: BfhPlayer = null
 
-var _clock: Label = null
-var _health: Label = null
+## The clock with the status line under it: dot-ui's [DotScoreStrip], clock alone (this
+## game's two sides keep their rounds-won on the scoreboard, not on the HUD).
+var strip: DotScoreStrip = null
+## Health: dot-ui's [DotVitals], bar and number on one plate, red at a quarter.
+var vitals: DotVitals = null
 var _cover: Label = null
-var _status: Label = null
 var _crosshair: Control = null
 var _root: Control = null
 
@@ -43,6 +46,24 @@ var blind_overlay: ColorRect = null
 const BLIND_FADE_SEC := 0.25
 
 const BLIND_COLOUR := Color(0.01, 0.01, 0.015)
+
+## Seconds left at which the clock turns red.
+const LOW_CLOCK_SEC := 10.0
+
+
+## The glance pieces' colours in this game's palette: a warm dark plate over the sand, the
+## sand as the highlight, a bus's red for low. The numbers stay white ringed in dark,
+## because this floor is pale sand in bright light. Static so a render tool can use it.
+static func piece_theme() -> Theme:
+	var t := Theme.new()
+	var type := DotHudPiece.THEME_TYPE
+	t.set_color(&"plate", type, Color(0.16, 0.09, 0.06, 0.62))
+	t.set_color(&"plate_edge", type, Color(BfhArena.SAND, 0.3))
+	t.set_color(&"ink", type, Color(0.10, 0.05, 0.03, 0.88))
+	t.set_color(&"highlight", type, BfhArena.SAND)
+	t.set_color(&"good", type, BfhArena.PILLAR_COLOUR)
+	t.set_color(&"low", type, Color(1.0, 0.36, 0.30))
+	return t
 
 
 func bind(p_game: BfhGame, p_player: BfhPlayer) -> void:
@@ -76,24 +97,32 @@ func _build() -> void:
 
 	var font_size := 22
 
-	_clock = _label(font_size + 12)
-	_clock.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	_clock.offset_top = 18.0
-	_clock.offset_bottom = 70.0
-	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# The glance pieces read their colours from the theme on the type DotHudPiece; set on
+	# the root, every piece under it inherits them. See [method piece_theme].
+	_root.theme = piece_theme()
 
-	_status = _label(font_size)
-	_status.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	_status.offset_top = 74.0
-	_status.offset_bottom = 110.0
-	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# The clock, and the status line ("waiting for both sides", whose eyes you are watching
+	# through, "blinded by an admin") as the line under it. Full width, because the strip
+	# centres itself on its own middle and the watching line is long.
+	strip = DotScoreStrip.new()
+	strip.name = "Clock"
+	strip.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	strip.offset_top = 16.0
+	strip.offset_bottom = 96.0
+	_root.add_child(strip)
 
-	_health = _label(font_size + 16)
-	_health.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	_health.offset_left = 30.0
-	_health.offset_right = 260.0
-	_health.offset_top = -86.0
-	_health.offset_bottom = -26.0
+	# Bottom left, under the chat box, which starts 120 pixels off the bottom
+	# (`BfhClientChat`): the plate is 56 tall and ends 26 off it.
+	vitals = DotVitals.new()
+	vitals.name = "Vitals"
+	vitals.bar_end = 220.0
+	vitals.fill_colour = BfhArena.PILLAR_COLOUR
+	vitals.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	vitals.offset_left = 24.0
+	vitals.offset_right = 24.0 + 340.0
+	vitals.offset_top = -82.0
+	vitals.offset_bottom = -26.0
+	_root.add_child(vitals)
 
 	_cover = _label(font_size)
 	_cover.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
@@ -139,15 +168,12 @@ func _process(delta: float) -> void:
 		return
 
 	var left := maxf(game.config.round_seconds - game.round_elapsed, 0.0)
-	_clock.text = "%d:%02d" % [int(left) / 60, int(left) % 60]
+	# Red for the last ten seconds: the runners are nearly through it.
+	strip.show_clock(DotScoreStrip.clock_text(left), left <= LOW_CLOCK_SEC, _status_line())
 
 	if player != null and player.health != null:
-		_health.text = "%d" % int(round(player.health.health))
-		# Red below a quarter, which is one bus bump from gone.
-		var hurt := player.health.health <= player.health.max_health * 0.25
-		_health.add_theme_color_override(
-			"font_color", Color(1.0, 0.35, 0.3) if hurt else Color(1, 1, 1)
-		)
+		# Red at a quarter (DotVitals.low_fraction), which is one bus bump from gone.
+		vitals.show_vitals(player.health.health, player.health.max_health)
 
 	_cover.text = "%d cover   %d alive" % [game.crates_left(), game.alive_runners()]
 
@@ -158,8 +184,6 @@ func _process(delta: float) -> void:
 			player != null and game.spectate != null
 			and game.spectate.is_spectating(player.player_id)
 		)
-
-	_status.text = _status_line()
 
 
 ## Fades [member blind_overlay] toward whether this HUD's player is blinded.

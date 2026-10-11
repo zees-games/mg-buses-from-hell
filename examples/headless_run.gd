@@ -4,6 +4,7 @@ const BfhArena := preload("../game/bfh_arena.gd")
 const BfhAudio := preload("../game/bfh_audio.gd")
 const BfhAwards := preload("../game/bfh_awards.gd")
 const BfhBowls := preload("../game/bfh_bowls.gd")
+const BfhClientChat := preload("../game/bfh_client_chat.gd")
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhContent := preload("../game/bfh_content.gd")
 const BfhGame := preload("../game/bfh_game.gd")
@@ -34,7 +35,7 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 242
+const CHECKS := 245
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -283,6 +284,40 @@ func _test_blind_and_beacon_drawn() -> void:
 	runner.blinded = false
 	hud.present_blind(BfhHud.BLIND_FADE_SEC + 0.05)
 	_check(not hud.blind_overlay.visible, "and lifting it takes it away again")
+
+	# Health and the clock are dot-ui's glance pieces, handed this world's numbers.
+	runner.health.health = 17.4
+	await get_tree().process_frame
+	var left := maxf(game.config.round_seconds - game.round_elapsed, 0.0)
+	_check(
+		hud.vitals.number_text() == "18" and hud.vitals.is_low()
+		and hud.strip.clock == DotScoreStrip.clock_text(left),
+		"the HUD hands health and the clock to DotVitals and DotScoreStrip, red at a quarter",
+		"%s low=%s, clock %s for %.1f s" % [hud.vitals.number_text(), str(hud.vitals.is_low()), hud.strip.clock, left]
+	)
+	runner.health.health = runner.health.max_health
+
+	# Both bottom-anchored, so the arithmetic holds at any height: the health plate ends
+	# below where the chat box starts.
+	var chat_box: Node = BfhClientChat.new()
+	add_child(chat_box)
+	chat_box.call("_build_window")
+	var chat_bottom: float = chat_box.get("window").margin_bottom
+	_check(
+		-hud.vitals.offset_top <= chat_bottom,
+		"the health plate stays under the chat box",
+		"plate top %.0f px off the bottom, chat from %.0f" % [-hud.vitals.offset_top, chat_bottom]
+	)
+	chat_box.queue_free()
+
+	# A pack naming these classes does not parse on a shell whose dot-ui predates them, so
+	# the requires.json dot-ci derives must ask for dot-ui 4, and nothing may lower it.
+	var asks := DotAddonApi.derive()
+	_check(
+		int(asks.get("dot_ui", 0)) >= 4 and not FileAccess.file_exists("res://" + DotAddonApi.FLOOR_FILE),
+		"the pack asks a shell for dot-ui level 4, the glance pieces",
+		str(asks.get("dot_ui"))
+	)
 
 	runner.beacon = true
 	runner.present_beacon(0.0, false)

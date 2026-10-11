@@ -76,7 +76,7 @@ func _build_window() -> void:
 	window.team_action = TEAM_ACTION
 	window.default_open_binding = "Y"
 	window.default_team_binding = "U"
-	# Clear of the health number, which `BfhHud` puts 86 pixels off the bottom left.
+	# Clear of the health plate (`BfhHud.vitals`), which ends 82 pixels off the bottom left.
 	window.margin_left = 30.0
 	window.margin_bottom = 120.0
 	window.max_length = 140
