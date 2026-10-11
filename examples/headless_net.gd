@@ -48,11 +48,11 @@ const BfhSpectate := preload("../game/bfh_spectate.gd")
 ## the wrong reason. A real client is a separate program with its own export and its own
 ## `user://` config. Make them disagree, and let HELLO correct it.
 
-const CHECKS := 181
+const CHECKS := 186
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 22
+const SECTIONS := 23
 
 ## Who the client is, on both ends.
 const CLIENT_PEER := 7
@@ -93,6 +93,9 @@ var _snapshot_count: int = 0
 ## Drop one snapshot in this many. Zero for a perfect link.
 var _drop_every: int = 0
 
+## The largest snapshot payload the server has sent since this was last zeroed.
+var _largest_snapshot: int = 0
+
 
 func _ready() -> void:
 	DotLog.set_level(DotLog.Level.ERROR)
@@ -118,6 +121,7 @@ func _run() -> void:
 		await _test_voice()
 		await _test_a_gag()
 		await _test_a_lossy_link()
+		await _test_a_snapshot_in_parts()
 		await _test_blind_and_beacon()
 		await _test_somebody_else_is_drawn()
 		await _test_who_somebody_is_crosses()
@@ -549,6 +553,7 @@ func _build() -> bool:
 func _on_server_send(method: StringName, peer_id: int, payload: PackedByteArray) -> void:
 	if method == &"snapshot":
 		_snapshot_count += 1
+		_largest_snapshot = maxi(_largest_snapshot, payload.size())
 
 		if _drop_every > 0 and _snapshot_count % _drop_every == 0:
 			return
@@ -1547,6 +1552,90 @@ func _test_a_lossy_link() -> void:
 	_check(
 		_corrections() >= before,
 		"with the corrections counted rather than hidden"
+	)
+	_done()
+
+
+# --- A snapshot over the MTU ----------------------------------------------
+
+## A snapshot bigger than [member DotNetConfig.mtu] arrives in parts, through this game's
+## own link and bridge, and every body ends up where the server's is.
+##
+## [b]The round's spawn is the snapshot that needed it.[/b] A full bowl is about 88 crates,
+## barrels and buses, all new and all falling at once, at about 16.6 bytes each: 1450 to
+## 1478 bytes, over the 1392 that Godot's ENet peer carries in one unreliable packet, so ENet
+## fragmented it and a native client lost it whenever it lost either fragment. This suite's
+## bowl is ten crates, so the MTU is lowered to give the same shape here: every body thrown
+## up at once, more state than one packet holds.
+func _test_a_snapshot_in_parts() -> void:
+	_section("a snapshot over the MTU arrives in parts")
+
+	const MTU := 160
+	var split_before := _server_net.snapshots_split
+	var failures_before := _client_net.stats.decode_failures
+	var shipped_mtu := _server_net.config.mtu
+	_server_net.config.mtu = MTU
+	_largest_snapshot = 0
+
+	var bodies: Dictionary = _server_bridge.get("_bodies")
+	var thrown := 0
+	for prop in _server_game.props.all_props():
+		var body := prop.body() as RigidBody3D
+		if body == null:
+			continue
+		body.sleeping = false
+		body.linear_velocity = Vector3(0.0, 8.0, 0.0)
+		thrown += 1
+
+	await _steps(9)
+
+	var split := _server_net.snapshots_split - split_before
+	_check(
+		thrown > 0 and split > 0,
+		"a snapshot over the MTU is sent in parts",
+		"%d bodies thrown, %d snapshots split" % [thrown, split]
+	)
+	_check(
+		_largest_snapshot <= MTU,
+		"and no part is bigger than the MTU",
+		"largest %d of %d" % [_largest_snapshot, MTU]
+	)
+	_check(
+		_client_net.ack_tick() >= _tick - 3,
+		"the client acknowledges the split snapshots, so nothing is re-sent for ever",
+		"acked %d at tick %d" % [_client_net.ack_tick(), _tick]
+	)
+
+	# In flight, against what the client was last SENT (the property itself holds the
+	# interpolator's blend): every part was applied, not only the first.
+	var apart := 0
+	var compared := 0
+	var worst := 0.0
+	for net_id in bodies:
+		var on_server: BfhPropNet = bodies[net_id]
+		var on_client: BfhPropNet = _client_bodies().get(net_id)
+		if on_server == null or on_client == null:
+			continue
+		var sent: Variant = on_client.received_values().get(&"net_position")
+		if sent == null:
+			continue
+		compared += 1
+		var gap := (sent as Vector3).distance_to(on_server.net_position)
+		worst = maxf(worst, gap)
+		if gap > 0.5:
+			apart += 1
+	_check(
+		compared >= thrown and apart == 0,
+		"every body is where the server put it, whichever part carried it",
+		"%d of %d over 50 cm, worst %.2f m" % [apart, compared, worst]
+	)
+
+	_server_net.config.mtu = shipped_mtu
+	await _steps(30)
+	_check(
+		_client_net.stats.decode_failures == failures_before,
+		"and every part decodes",
+		"%d failures" % (_client_net.stats.decode_failures - failures_before)
 	)
 	_done()
 
