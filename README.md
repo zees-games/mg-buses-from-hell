@@ -1,6 +1,6 @@
 This is a game to demonstrate the capabilities of the [**Dot collection**](https://moddingcommunity.com/co/4-dot-assets) built on-top of [Godot 4](https://godotengine.org/) and [TMC's gaming platform](https://moddingcommunity.com/play). In this 3D game, one or two players are the bus driver(s) while all other players are on foot trying to survive. The bus driver's job is to run over the runners. This is heavily inspired off of a classic Counter-Strike: Source MiniGames map called [**buses_from_hell**](https://gamebanana.com/mods/127607) ([gameplay video](https://www.youtube.com/watch?v=wnY1eu890k4)).
 
-![Preview](https://github.com/gamemann/mg-buses-from-hell/blob/main/images/preview.gif?raw=true)
+![Preview](https://github.com/zees-games/mg-buses-from-hell/blob/main/images/preview.gif?raw=true)
 
 *Play on my test server [here](https://moddingcommunity.com/godot/s/bfh01/play)!*
 
