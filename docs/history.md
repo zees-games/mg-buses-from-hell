@@ -64,3 +64,7 @@ Wiring the barrel's blast found that four other games declared dot-fx scenes und
 ## The scaffold was never held to the gap rule below 46 m
 
 Its clearance was measured inline at the shipped radius only; at the then-minimum 40 m it was 1.2 m from a hook pillar. `scaffold_clearance()` now, asked at the minimum, which rose to 45.
+
+## Warmup for ever with one person on the server (2026-10-11)
+
+Found by dot-server-deploy's game-vote harness, which joins one real client to a dedicated server: the match stayed in WARMUP past its ten seconds with two players. The person had joined before the module's first bot check and taken the first driving seat (`_side_for_new_player` filled seats first), the bot quota put a bot in the second, and with nobody on foot `sides_are_playable` refused every tick. The offline client never showed it because it puts its player on foot by hand. The same shape came back after any side swap on a server whose seats were all bots: the people became drivers, the bots became runners and were removed. The bus seen falling at y=-2000 in the same run is a separate harness artefact: the shell's copy of the bowl shares the server's World3D in that one-process harness, and the two buses overlap.

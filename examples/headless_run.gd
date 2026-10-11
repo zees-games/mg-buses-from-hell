@@ -34,7 +34,7 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 240
+const CHECKS := 242
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -2709,6 +2709,12 @@ func _test_sides() -> void:
 
 	var game := _world(func(c: BfhConfig) -> void: c.driver_count = 2)
 	game.add_player(&"a", "A")
+	# A round needs a runner and a bot only drives, so the first person in takes the side
+	# nothing else can fill. When they took a seat, the module's bot took the other and a
+	# dedicated server sat in warmup for ever with nobody on foot.
+	_check(game.team_of(&"a") == BfhGame.TEAM_RUNNERS,
+		"the first person on a server runs, because a bot cannot",
+		"a is on %d" % game.team_of(&"a"))
 	game.add_player(&"b", "B")
 	game.add_player(&"c", "C")
 	game.add_player(&"d", "D")
@@ -3106,6 +3112,32 @@ func _test_round_ends() -> void:
 	)
 
 	await _dispose(game)
+
+	# [b]Nobody driving is a person: no swap.[/b] The module removes a bot that ends up on
+	# foot, so swapping a bot's seat with the only person running left nobody to run,
+	# and the next round never started.
+	var lone := _world(func(c: BfhConfig) -> void:
+		c.crate_count = 0
+		c.barrel_count = 0
+		c.driver_count = 1
+		c.rounds_before_swap = 1)
+	lone.add_player(&"bot", "Bus driver", BfhGame.TEAM_DRIVERS, false, true)
+	var person := lone.add_player(&"p", "Person")
+	lone.start()
+	await _step(lone, 10)
+	var lone_round := lone.round_number
+	person.health.alive = false
+	person.health.health = 0.0
+	await _step(lone, 30)
+	_check(
+		lone.round_number > lone_round and lone.team_of(&"p") == BfhGame.TEAM_RUNNERS
+			and lone.team_of(&"bot") == BfhGame.TEAM_DRIVERS,
+		"a swap with only a bot driving keeps the person on foot",
+		"round %d -> %d, p on %d, bot on %d" % [
+			lone_round, lone.round_number, lone.team_of(&"p"), lone.team_of(&"bot")
+		]
+	)
+	await _dispose(lone)
 	_done()
 
 

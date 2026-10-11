@@ -34,6 +34,7 @@ A runner sprinting into a parked bus is not run over; nor is one running away fr
 - **A swap goes through `switch_team`**; flipping `sides` alone scored every later round on the old sides.
 - A player who leaves leaves dot-match too.
 - **A round with one side empty is an infinite loop**: elimination ends a round when a side has nobody alive, and a side with nobody at all satisfies that on the first tick.
+- **Somebody has to be on foot, and only a person can be.** Bots only drive, and the module removes one that ends up on foot. So the first person on a server runs (`_side_for_new_player`), and a swap is skipped while nobody driving is a person (`_swap_sides`). Before, the first joiner of a dedicated server took a seat, a bot took the other, and the match sat in warmup for ever.
 
 `headless_run` checks a 2-against-4 server and the round after a swap, the two shapes that show these; an exactly balanced four-player test shows neither.
 

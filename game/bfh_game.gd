@@ -648,11 +648,24 @@ func _seat_in_an_empty_bus(player: BfhPlayer) -> void:
 ## There are `driver_count` buses and a driver without one is a person standing on a
 ## ledge watching, so the cap is the number of seats rather than a fraction of the
 ## server.
+##
+## [b]Except that somebody has to be on foot, and only a person can be.[/b] A round needs a
+## runner ([method sides_are_playable]) and a bot only ever drives, so the first person on
+## a server took a seat, the module put a bot in the other one, and the match sat in warmup
+## for ever with two drivers and nobody to run over. The offline client always put its
+## player on foot; a dedicated server's first joiner now gets the same.
 func _side_for_new_player() -> int:
 	var drivers := 0
+	var runners := 0
 	for id: StringName in sides:
 		if int(sides[id]) == TEAM_DRIVERS:
 			drivers += 1
+		else:
+			runners += 1
+
+	if runners == 0:
+		return TEAM_RUNNERS
+
 	return TEAM_DRIVERS if drivers < config.driver_count else TEAM_RUNNERS
 
 
@@ -871,6 +884,20 @@ func _on_round_ended(number: int, winner: int, _outcome: int) -> void:
 ## swaps is a server where the same two people drive all night, which is the failure
 ## this game has that a symmetric one does not.
 func _swap_sides() -> void:
+	# [b]Not when nobody driving is a person.[/b] Bots only drive, and the module removes a
+	# bot that finds itself on foot, so swapping a server whose seats are all bots put every
+	# person in a bus and left nobody to run: the next round never started. The people keep
+	# running until one of them is driving.
+	var person_driving := false
+	for driver in drivers():
+		if not driver.is_bot:
+			person_driving = true
+			break
+
+	if not person_driving:
+		DotLog.debug(CHANNEL, "sides not swapped: nobody driving is a person", {"round": round_number})
+		return
+
 	for id: StringName in sides:
 		var was := int(sides[id])
 		var now := TEAM_RUNNERS if was == TEAM_DRIVERS else TEAM_DRIVERS

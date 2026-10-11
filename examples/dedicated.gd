@@ -6,6 +6,7 @@ const BfhContent := preload("../game/bfh_content.gd")
 const BfhPlayer := preload("../game/bfh_player.gd")
 const BfhAvatars := preload("../game/bfh_avatars.gd")
 const BfhBowls := preload("../game/bfh_bowls.gd")
+const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 
 ## Boots a real [DotServer], loads this game into it as a module, and runs the commands
 ## an operator would actually type.
@@ -24,7 +25,7 @@ const BfhBowls := preload("../game/bfh_bowls.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 112
+const CHECKS := 113
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -839,8 +840,9 @@ func _test_the_bots() -> void:
 	# [b]A person who takes a seat takes it from a bot, and leaving gives it back[/b]:
 	# DotBotQuota's fill mode, counted in driving seats. One bot in two seats leaves one
 	# free, so a person added through the bridge (peer zero, the way a test's player is)
-	# joins into it as a driver. The roster check is called rather than waited for, so
-	# nothing else moves under the count.
+	# joins into it as a driver, once somebody is already on foot: the first person on a
+	# server runs, because a bot cannot. The roster check is called rather than waited for,
+	# so nothing else moves under the count.
 	_check(server.console.find_cvar("bot_quota") != null and server.console.find_cvar("bot_quota_mode") != null,
 		"the shared bot_quota cvars are registered")
 
@@ -850,6 +852,10 @@ func _test_the_bots() -> void:
 		var _one := _run_command("bot_quota 1")
 		module.call("_keep_the_seats_full")
 		var bots_before := _bot_drivers()
+		var on_foot: DotResult = bridge.call("add_player", 0, 9002, "On foot")
+		var first_runs: bool = on_foot.ok and game.team_of(BfhNetBridge.player_key(9002)) == BfhGame.TEAM_RUNNERS
+		_check(first_runs, "the first person on a server of bots runs, because a bot cannot",
+			"a server with only bots driving and a person in a seat never starts a round")
 		var joined: DotResult = bridge.call("add_player", 0, 9001, "Person")
 		module.call("_keep_the_seats_full")
 		var bots_with := _bot_drivers()
@@ -857,12 +863,14 @@ func _test_the_bots() -> void:
 			and game.drivers().size() == 1 and not game.drivers()[0].is_bot,
 			"a person taking a seat takes it from a bot", "%d -> %d" % [bots_before, bots_with])
 		bridge.call("remove_player", 9001)
+		bridge.call("remove_player", 9002)
 		module.call("_keep_the_seats_full")
 		var bots_after := _bot_drivers()
 		_check(bots_after == bots_before, "and the bot comes back when they leave",
 			"%d -> %d" % [bots_with, bots_after])
 		var _all := _run_command("bot_quota %d" % game.config.driver_count)
 	else:
+		_check(false, "the first person on a server of bots runs, because a bot cannot", "no module")
 		_check(false, "a person taking a seat takes it from a bot", "no module")
 		_check(false, "and the bot comes back when they leave", "no module")
 
