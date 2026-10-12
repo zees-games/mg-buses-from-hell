@@ -166,6 +166,11 @@ var _net_of: Dictionary = {}
 var _player_of_peer: Dictionary = {}
 var _peer_of_player: Dictionary = {}
 var _ready_peers: Dictionary = {}
+## Server: peers whose READY came before their seat ([method add_player]). A client sends READY
+## when its link says PLAYING, which the link decides itself after sending `loaded` on another
+## channel; over ENet with loss the READY can overtake `loaded`, and a READY dropped here left
+## that client waiting for a world for ever. Admitted when seated.
+var _ready_unseated: Dictionary = {}
 
 var _tick: int = 0
 var _game_ticked_for: int = -1
@@ -310,6 +315,10 @@ func add_player(peer_id: int, session_id: int, display_name: String) -> DotResul
 		_peer_of_player.erase(session_id)
 		return DotResult.fail(DotError.CODE_STATE, "The game refused the player.")
 
+	if _ready_unseated.has(peer_id):
+		_ready_unseated.erase(peer_id)
+		_admit(peer_id)
+
 	return DotResult.success(player)
 
 
@@ -337,6 +346,8 @@ func add_bot(display_name: String, team: int = 0) -> BfhPlayer:
 
 
 func remove_peer(peer_id: int) -> void:
+	_ready_unseated.erase(peer_id)
+
 	if _player_of_peer.has(peer_id):
 		remove_player(int(_player_of_peer[peer_id]))
 
@@ -1056,7 +1067,11 @@ func _answer_watch(peer_id: int, asked: Dictionary) -> void:
 ## server that started talking at connect is one whose JOIN, PROP and CLOCK land on a node
 ## that does not exist yet and are lost, one "Node not found" per call.
 func _admit(peer_id: int) -> void:
-	if peer_id <= 0 or not _player_of_peer.has(peer_id):
+	if peer_id <= 0:
+		return
+
+	if not _player_of_peer.has(peer_id):
+		_ready_unseated[peer_id] = true
 		return
 
 	_ready_peers[peer_id] = true

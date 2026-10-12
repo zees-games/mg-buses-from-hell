@@ -68,6 +68,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 - The local mirror is owned through `_mirror_owner(session_id)`; owner 0 for it means nothing is predicted and every position check still passes.
 - A client world re-emits the server's signals (`noise`, `round_began`, `round_over`, `player_died`, `barrel_exploded`, `sides_swapped`); client-side code listens to its world and never asks which half it is in.
 - Owner-only state for anything that would tell the other side something: `net_blind`, `net_watch`. A spectate click names next/back/view, never a player.
+- **A READY before the player is seated is kept** (`_ready_unseated` in the bridge) and answered by `add_player`: over ENet with loss it overtakes the link's `loaded`, and a dropped READY left the client waiting for ever. `headless_net` sends it first (armed). [history](docs/history.md)
 - The CLOCK carries crates left and both rounds-won tallies, and on a round's end it is sent **before** the ROUND.
 - A `DotNetMessage` script must never preload its own file (leaks the whole script graph at exit on a deployed server). `dedicated` checks the source.
 - `remove_player` forgets the entity in dot-combat and closes it before the node goes.

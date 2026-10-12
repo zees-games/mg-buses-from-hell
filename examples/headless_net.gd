@@ -50,7 +50,7 @@ const BfhSpectate := preload("../game/bfh_spectate.gd")
 ## the wrong reason. A real client is a separate program with its own export and its own
 ## `user://` config. Make them disagree, and let HELLO correct it.
 
-const CHECKS := 192
+const CHECKS := 193
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -660,6 +660,13 @@ func _client_player() -> BfhPlayer:
 func _test_a_client_joins() -> void:
 	_section("a client joins")
 
+	# The READY first, as over ENet with loss: a client is PLAYING by its own reckoning once it has
+	# sent `loaded`, on another channel, so its READY can reach the server before its seat. Kept,
+	# and answered by the seat; a bridge that drops it never tells this client who it is.
+	_client_bridge.ask_ready()
+	_exchange()
+	_check(_client_bridge.local_player_id != SESSION, "a READY before the seat is told nothing yet")
+
 	var added := _server_bridge.add_player(CLIENT_PEER, SESSION, "Ada")
 	_check(added.ok, "the server adds the player", str(added.error) if not added.ok else "")
 	_check(_server_player() != null, "and the world has them")
@@ -669,7 +676,6 @@ func _test_a_client_joins() -> void:
 		"%d entities" % int(_server_bridge.describe()["players"])
 	)
 
-	_client_bridge.ask_ready()
 	_exchange()
 	await _steps(4)
 
