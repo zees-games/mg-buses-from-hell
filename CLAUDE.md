@@ -84,6 +84,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 - A bus "sent home" is almost always a steering wedge read by the stuck rule; look at `steer_around` first.
 - `steer_around` is a nudge, not a path; its ceiling is `LANE_THROUGH`. A lane-threading exemption was tried and wedges the stacks.
 - A detour is passed as a route `[detour, past the quarry]`, never as the driver's last waypoint (it brakes into it).
+- A bus's brakes are newtons (dot-vehicle 4f4afaf): 30 kN foot brake (the bot's), 40 kN handbrake (a person's Ctrl); a person's S is reverse thrust. `headless_run`'s "a bus's brakes" measures all three from 15 m/s; the deck chase is what a weaker foot brake slows. [history](docs/history.md#the-brakes-were-a-wall-2026-10-12)
 - Bot knobs (`bfh_bot_aim_past`, `bfh_bot_steer_clearance`, `bfh_bus_stuck_break`, `bfh_bus_stuck_reset`) are authority-only live cvars.
 
 **The game** ([design](docs/design.md), [services](docs/services.md))

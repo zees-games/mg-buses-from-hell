@@ -124,7 +124,13 @@ static func vehicles(config: BfhConfig) -> DotVehicleCatalogue:
 	tunables.mass = 2000.0
 	tunables.engine_force = 26000.0
 	tunables.top_speed = config.bus_top_speed
-	tunables.brake_force = 22000.0
+	# Newtons since dot-vehicle 4f4afaf (they were an impulse per step, and the bus stopped
+	# from 15 m/s in 1.9 m on the foot brake and 4.5 m on the handbrake). 30 kN is 15 m/s²,
+	# three quarters of this bowl's gravity: 7.6 m from 15 m/s. 22 kN, the old figure as a
+	# force, made the bot's three-point turn under the deck settle between legs slowly enough
+	# to give a runner up there a second and a half more (the deck chase in headless_run).
+	# The handbrake is a person's Ctrl and stops in 6.3 m; S is reverse thrust, 21 m.
+	tunables.brake_force = 30000.0
 	tunables.handbrake_force = 40000.0
 	tunables.steering_limit_deg = 26.0
 	tunables.steering_rate_deg = 90.0

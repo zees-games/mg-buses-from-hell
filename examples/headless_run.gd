@@ -37,11 +37,11 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 261
+const CHECKS := 264
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 32
+const SECTIONS := 33
 
 const TICK := 1.0 / 60.0
 
@@ -135,6 +135,7 @@ func _run() -> void:
 	await _test_a_driver_arrives_mid_round()
 	await _test_bus_propulsion()
 	await _test_what_a_bot_travels_at()
+	await _test_bus_brakes()
 	await _test_a_rolled_bus()
 	await _test_blind_and_beacon_drawn()
 	await _test_spectating()
@@ -3438,6 +3439,87 @@ func _test_bus_propulsion() -> void:
 
 
 # --- What a bot actually travels at -----------------------------------------
+
+## How far a bus takes to stop, three ways, from 15 m/s on the south straight.
+##
+## [b]Distances, because "it stopped" passed for the bug.[/b] dot-vehicle handed Godot's
+## wheels the brake in newtons where Godot reads an impulse per step, so the handbrake (Ctrl)
+## stopped a 2 t bus from 15 m/s in about a metre and the bot's foot brake almost as hard: a
+## bus that can stop dead is a bus a runner cannot read. Since dot-vehicle 4f4afaf they are
+## forces. What a person's S does is reverse thrust, not the brake (`_drive_buses`), and was
+## never touched by it; it is measured beside them so the three can be compared.
+func _test_bus_brakes() -> void:
+	print("a bus's brakes")
+
+	var game := _world(func(c: BfhConfig) -> void:
+		c.crate_count = 0
+		c.barrel_count = 0
+		c.driver_count = 1)
+	game.add_player(&"d", "Driver", BfhGame.TEAM_DRIVERS)
+	game.add_player(&"r", "Runner", BfhGame.TEAM_RUNNERS)
+	game.start()
+	await _step(game, 30)
+
+	var driver: BfhPlayer = game.players[&"d"]
+	var handbrake: float = await _bus_stop(game, driver, "handbrake")
+	var foot: float = await _bus_stop(game, driver, "brake")
+	var reverse: float = await _bus_stop(game, driver, "reverse")
+
+	print("  ..    from 15 m/s: handbrake (Ctrl) %.2f m, the bot's foot brake %.2f m, S (reverse thrust) %.2f m" % [handbrake, foot, reverse])
+
+	_check(handbrake > 5.2 and handbrake < 10.0,
+		"the handbrake stops a bus from 15 m/s in metres, not on the spot",
+		"%.2f m; 40 kN on 2 t is about 5 m" % handbrake)
+	_check(foot > 5.5 and foot < 12.0,
+		"and the foot brake the bot uses in about seven and a half",
+		"%.2f m; 30 kN on 2 t is about 7.5 m" % foot)
+	_check(reverse > foot,
+		"and both stop it sooner than reverse thrust",
+		"%.2f m against %.2f m" % [reverse, foot])
+
+	await _dispose(game)
+	_done()
+
+
+## Metres the bus takes from 15 m/s to a standstill on the south straight, by [param how]:
+## "handbrake" (Ctrl held), "brake" (the foot brake, as the bot's autopilot uses it) or
+## "reverse" (S held).
+func _bus_stop(game: BfhGame, driver: BfhPlayer, how: String) -> float:
+	var bus := game.vehicles.get_vehicle(game._bus_ids[0])
+	var body := bus.body()
+	body.linear_velocity = Vector3.ZERO
+	body.angular_velocity = Vector3.ZERO
+	body.global_transform = Transform3D(Basis.looking_at(Vector3(1.0, 0.0, 0.0)), Vector3(-30.0, 1.4, 32.0))
+	await _step(game, 20)
+
+	var guard := 300
+	while bus.forward_speed() < 15.0 and guard > 0:
+		var keys := DotFpsCommand.new()
+		keys.move = Vector2(0.0, 1.0)
+		driver.controller.apply_command(keys)
+		game.simulate(TICK)
+		await get_tree().physics_frame
+		guard -= 1
+
+	var start := bus.position()
+	guard = 600
+	while bus.forward_speed() > 0.3 and guard > 0:
+		var keys := DotFpsCommand.new()
+		if how == "reverse":
+			keys.move = Vector2(0.0, -1.0)
+		keys.set_button(DotFpsCommand.BUTTON_CROUCH, how == "handbrake")
+		driver.controller.apply_command(keys)
+		game.simulate(TICK)
+		if how == "brake":
+			# After the game's own drive from the driver's (empty) keys, so this is the
+			# command the physics step sees: the foot brake, which only the bot presses.
+			(bus.chassis as DotVehicleChassis).drive(DotVehicleCommand.make(0.0, 0.0, 1.0), TICK)
+		await get_tree().physics_frame
+		guard -= 1
+
+	var at := bus.position()
+	return Vector2(at.x - start.x, at.z - start.z).length()
+
 
 ## A runner holding one key across open sand, [param ticks] long, facing +Z.
 ## [param jump] is 0 for no jump, 1 for jump held the whole way, 2 for jump pressed
