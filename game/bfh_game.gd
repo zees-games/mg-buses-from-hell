@@ -1289,6 +1289,11 @@ func _drive_buses(delta: float) -> void:
 			command.handbrake = pending.is_pressed(DotFpsCommand.BUTTON_CROUCH)
 			command.aim_yaw = pending.yaw
 			command.aim_pitch = pending.pitch
+			# S brakes while the bus is still rolling forward and reverses once it has
+			# (nearly) stopped, as the key list says; W while rolling back brakes too.
+			# Reverse thrust stopped a bus from 15 m/s in 21 m against the foot brake's
+			# 7.6. A person's keys only: the autopilot's reverse legs mean reverse.
+			command.brake_then_reverse(bus.forward_speed())
 
 		bus.command = command
 

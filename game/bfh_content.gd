@@ -129,9 +129,16 @@ static func vehicles(config: BfhConfig) -> DotVehicleCatalogue:
 	# three quarters of this bowl's gravity: 7.6 m from 15 m/s. 22 kN, the old figure as a
 	# force, made the bot's three-point turn under the deck settle between legs slowly enough
 	# to give a runner up there a second and a half more (the deck chase in headless_run).
-	# The handbrake is a person's Ctrl and stops in 6.3 m; S is reverse thrust, 21 m.
+	# The handbrake is a person's Ctrl and stops in 6.3 m in a straight line. A person's S is
+	# this foot brake until the bus has stopped and reverse after (`_drive_buses`), 7.5 m.
 	tunables.brake_force = 30000.0
 	tunables.handbrake_force = 40000.0
+	# The rear tyres' grip while Ctrl is held, so a handbrake turn slides. Measured from 12 m/s
+	# at full lock for a second (headless_run's "a handbrake turn"): at 1.0 (no change) the bus
+	# turned 14 degrees and stopped dead, the handbrake only a brake; at 0.25 and 0.2 still
+	# under the plain turn's 41; at 0.15 the back end steps out, 71 degrees with 7 m/s left;
+	# at 0.1 it spins round. The change between 0.2 and 0.15 is a threshold, not a slope.
+	tunables.handbrake_grip_fraction = 0.15
 	tunables.steering_limit_deg = 26.0
 	tunables.steering_rate_deg = 90.0
 	# [b]Low, and it is the single most important number in the file.[/b] A bus that

@@ -37,11 +37,11 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 264
+const CHECKS := 268
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 33
+const SECTIONS := 34
 
 const TICK := 1.0 / 60.0
 
@@ -136,6 +136,7 @@ func _run() -> void:
 	await _test_bus_propulsion()
 	await _test_what_a_bot_travels_at()
 	await _test_bus_brakes()
+	await _test_handbrake_turn()
 	await _test_a_rolled_bus()
 	await _test_blind_and_beacon_drawn()
 	await _test_spectating()
@@ -3440,14 +3441,16 @@ func _test_bus_propulsion() -> void:
 
 # --- What a bot actually travels at -----------------------------------------
 
-## How far a bus takes to stop, three ways, from 15 m/s on the south straight.
+## How far a bus takes to stop, three ways, from 15 m/s on the south straight, and that S
+## then reverses.
 ##
 ## [b]Distances, because "it stopped" passed for the bug.[/b] dot-vehicle handed Godot's
 ## wheels the brake in newtons where Godot reads an impulse per step, so the handbrake (Ctrl)
 ## stopped a 2 t bus from 15 m/s in about a metre and the bot's foot brake almost as hard: a
 ## bus that can stop dead is a bus a runner cannot read. Since dot-vehicle 4f4afaf they are
-## forces. What a person's S does is reverse thrust, not the brake (`_drive_buses`), and was
-## never touched by it; it is measured beside them so the three can be compared.
+## forces. A person's S was reverse thrust until 2026-10-12 and took 21 m; it is the foot
+## brake now until the bus has stopped (`DotVehicleCommand.brake_then_reverse`), so it is
+## measured as the foot brake and then as reverse.
 func _test_bus_brakes() -> void:
 	print("a bus's brakes")
 
@@ -3461,30 +3464,42 @@ func _test_bus_brakes() -> void:
 	await _step(game, 30)
 
 	var driver: BfhPlayer = game.players[&"d"]
-	var handbrake: float = await _bus_stop(game, driver, "handbrake")
-	var foot: float = await _bus_stop(game, driver, "brake")
-	var reverse: float = await _bus_stop(game, driver, "reverse")
+	var handbrake: Dictionary = await _bus_stop(game, driver, "handbrake")
+	var foot: Dictionary = await _bus_stop(game, driver, "brake")
+	var back: Dictionary = await _bus_stop(game, driver, "back")
 
-	print("  ..    from 15 m/s: handbrake (Ctrl) %.2f m, the bot's foot brake %.2f m, S (reverse thrust) %.2f m" % [handbrake, foot, reverse])
+	print("  ..    from 15 m/s: handbrake (Ctrl) %.2f m, the bot's foot brake %.2f m, S %.2f m and then %.2f m back at %.2f m/s after 2 s more" % [
+		handbrake["stop"], foot["stop"], back["stop"], back["back"], back["speed"]])
 
-	_check(handbrake > 5.2 and handbrake < 10.0,
-		"the handbrake stops a bus from 15 m/s in metres, not on the spot",
-		"%.2f m; 40 kN on 2 t is about 5 m" % handbrake)
-	_check(foot > 5.5 and foot < 12.0,
+	# Longer than the foot brake, on purpose: Ctrl lets the rear tyres go (0.15 of their grip,
+	# for the slide in "a handbrake turn"), and a sliding tyre stops a bus worse than a gripping
+	# one. 6.3 m with the grip left alone; S is the brake a person stops with.
+	_check(handbrake["stop"] > 10.0 and handbrake["stop"] < 22.0,
+		"the handbrake slides a bus to a stop from 15 m/s, further than the foot brake and not on the spot",
+		"%.2f m; with its rear tyres let go, about 16 m" % handbrake["stop"])
+	_check(foot["stop"] > 5.5 and foot["stop"] < 12.0,
 		"and the foot brake the bot uses in about seven and a half",
-		"%.2f m; 30 kN on 2 t is about 7.5 m" % foot)
-	_check(reverse > foot,
-		"and both stop it sooner than reverse thrust",
-		"%.2f m against %.2f m" % [reverse, foot])
+		"%.2f m; 30 kN on 2 t is about 7.5 m" % foot["stop"])
+	# Within a metre of the foot brake: S IS the foot brake until the bus has stopped. Reverse
+	# thrust took 21 m, nearly three times as far.
+	_check(back["stop"] < foot["stop"] + 1.0,
+		"and S brakes like the foot brake while the bus rolls forward, rather than reverse thrust's 21 m",
+		"%.2f m against the foot brake's %.2f m" % [back["stop"], foot["stop"]])
+	# A direction, not "it moved": a bus still rolling forward also moves.
+	_check(back["speed"] < -1.0 and back["back"] > 1.0,
+		"and once it has stopped, S held reverses it",
+		"%.2f m/s, %.2f m back behind where it stopped" % [back["speed"], back["back"]])
 
 	await _dispose(game)
 	_done()
 
 
-## Metres the bus takes from 15 m/s to a standstill on the south straight, by [param how]:
+## How far the bus takes from 15 m/s to a standstill on the south straight, by [param how]:
 ## "handbrake" (Ctrl held), "brake" (the foot brake, as the bot's autopilot uses it) or
-## "reverse" (S held).
-func _bus_stop(game: BfhGame, driver: BfhPlayer, how: String) -> float:
+## "back" (S held, which then goes on holding it two seconds more). `stop` is metres to the
+## standstill; for "back", `back` is metres behind that point after the two seconds and
+## `speed` the forward speed then.
+func _bus_stop(game: BfhGame, driver: BfhPlayer, how: String) -> Dictionary:
 	var bus := game.vehicles.get_vehicle(game._bus_ids[0])
 	var body := bus.body()
 	body.linear_velocity = Vector3.ZERO
@@ -3502,10 +3517,22 @@ func _bus_stop(game: BfhGame, driver: BfhPlayer, how: String) -> float:
 		guard -= 1
 
 	var start := bus.position()
+	var nose := -body.global_transform.basis.z
+	nose = Vector3(nose.x, 0.0, nose.z).normalized()
+	var stopped_at := Vector3.ZERO
+	var stopped := false
+	var after := 0
 	guard = 600
-	while bus.forward_speed() > 0.3 and guard > 0:
+	while guard > 0:
+		if not stopped and bus.forward_speed() <= (0.0 if how == "back" else 0.3):
+			stopped = true
+			stopped_at = bus.position()
+		if stopped:
+			if how != "back" or after >= 120:
+				break
+			after += 1
 		var keys := DotFpsCommand.new()
-		if how == "reverse":
+		if how == "back":
 			keys.move = Vector2(0.0, -1.0)
 		keys.set_button(DotFpsCommand.BUTTON_CROUCH, how == "handbrake")
 		driver.controller.apply_command(keys)
@@ -3517,8 +3544,115 @@ func _bus_stop(game: BfhGame, driver: BfhPlayer, how: String) -> float:
 		await get_tree().physics_frame
 		guard -= 1
 
+	if not stopped:
+		stopped_at = bus.position()
 	var at := bus.position()
-	return Vector2(at.x - start.x, at.z - start.z).length()
+	return {
+		"stop": Vector2(stopped_at.x - start.x, stopped_at.z - start.z).length(),
+		"back": -(at - stopped_at).dot(nose),
+		"speed": bus.forward_speed(),
+	}
+
+
+## A handbrake turn: the back end steps out. Godot's raycast vehicle never locks a wheel, so
+## before `handbrake_grip_fraction` a bus turning with Ctrl held turned LESS than without it
+## (dot-vehicle's driving.md measured the same on a car). Measured as the heading turned and
+## the slip angle (between where the nose points and where the bus is going) over the same
+## second of full lock from 12 m/s, with and without the handbrake, through a person's keys.
+func _test_handbrake_turn() -> void:
+	print("a handbrake turn")
+
+	var game := _world(func(c: BfhConfig) -> void:
+		c.crate_count = 0
+		c.barrel_count = 0
+		c.driver_count = 1)
+	game.add_player(&"d", "Driver", BfhGame.TEAM_DRIVERS)
+	game.add_player(&"r", "Runner", BfhGame.TEAM_RUNNERS)
+	game.start()
+	await _step(game, 30)
+
+	var driver: BfhPlayer = game.players[&"d"]
+	var plain: Dictionary = await _bus_turn(game, driver, false)
+	var slid: Dictionary = await _bus_turn(game, driver, true)
+
+	print("  ..    1 s of full lock from 12 m/s: %.0f deg turned, %.0f deg nose-in without the handbrake; %.0f deg turned, %.0f deg nose-in, %.1f m/s left with it" % [
+		plain["yaw"], plain["slip"], slid["yaw"], slid["slip"], slid["speed"]])
+
+	_check(slid["slip"] > 8.0 and plain["slip"] < 3.0,
+		"with the handbrake the back end steps out: the nose swings inside where the bus is going",
+		"%.0f deg with it against %.0f deg without" % [slid["slip"], plain["slip"]])
+	_check(slid["yaw"] > plain["yaw"] * 1.3 and slid["speed"] > 3.0,
+		"and the bus turns further in the same second and keeps moving, which is what a handbrake turn is for",
+		"%.0f deg against %.0f deg" % [slid["yaw"], plain["yaw"]])
+	# Grip comes back the tick Ctrl is released: a bus left sliding would never drive straight.
+	var wheel := _rear_wheel(game)
+	_check(wheel != null and is_equal_approx(wheel.wheel_friction_slip,
+			game.vehicles.get_vehicle(game._bus_ids[0]).chassis.tunables.friction_slip
+			* game.vehicles.get_vehicle(game._bus_ids[0]).chassis.tunables.rear_grip_fraction),
+		"and letting go of Ctrl gives the rear wheels their grip back",
+		"%.2f" % (wheel.wheel_friction_slip if wheel != null else -1.0))
+
+	await _dispose(game)
+	_done()
+
+
+## One of the bus's rear (non-steering) wheels.
+func _rear_wheel(game: BfhGame) -> VehicleWheel3D:
+	var bus := game.vehicles.get_vehicle(game._bus_ids[0])
+	for child in bus.node.get_children():
+		if child is VehicleWheel3D and not (child as VehicleWheel3D).use_as_steering:
+			return child
+	return null
+
+
+## One second of D held at full lock from 12 m/s, heading +X on the south straight (D turns
+## it towards the middle of the bowl), with or without Ctrl; then a second with neither key so
+## the grip comes back. `yaw` is the degrees the bus turned in that second, `slip` the most
+## its nose pointed INSIDE its direction of travel (the back end out; a gripping turn's nose
+## points a few degrees outside it, which reads negative), `speed` what was left.
+func _bus_turn(game: BfhGame, driver: BfhPlayer, handbrake: bool) -> Dictionary:
+	var bus := game.vehicles.get_vehicle(game._bus_ids[0])
+	var body := bus.body()
+	body.linear_velocity = Vector3.ZERO
+	body.angular_velocity = Vector3.ZERO
+	body.global_transform = Transform3D(Basis.looking_at(Vector3(1.0, 0.0, 0.0)), Vector3(-30.0, 1.4, 32.0))
+	await _step(game, 20)
+
+	var guard := 300
+	while bus.forward_speed() < 12.0 and guard > 0:
+		var keys := DotFpsCommand.new()
+		keys.move = Vector2(0.0, 1.0)
+		driver.controller.apply_command(keys)
+		game.simulate(TICK)
+		await get_tree().physics_frame
+		guard -= 1
+
+	var yaw := 0.0
+	var slip := -INF
+	for i in range(60):
+		var keys := DotFpsCommand.new()
+		keys.move = Vector2(1.0, 0.0)
+		keys.set_button(DotFpsCommand.BUTTON_CROUCH, handbrake)
+		driver.controller.apply_command(keys)
+		game.simulate(TICK)
+		await get_tree().physics_frame
+		yaw += body.angular_velocity.y * TICK
+		var v := Vector2(body.linear_velocity.x, body.linear_velocity.z)
+		if v.length() > 2.0:
+			var nose := -body.global_transform.basis.z
+			# Signed in the X/Z plane, whose sense is the opposite of a yaw about +Y: a
+			# nose turned further than the velocity, the way the bus is turning, is
+			# opposite in sign to the yaw.
+			var angle := v.angle_to(Vector2(nose.x, nose.z)) * -signf(yaw)
+			slip = maxf(slip, angle)
+	var speed := bus.speed()
+
+	for i in range(60):
+		driver.controller.apply_command(DotFpsCommand.new())
+		game.simulate(TICK)
+		await get_tree().physics_frame
+
+	return {"yaw": rad_to_deg(absf(yaw)), "slip": rad_to_deg(slip), "speed": speed}
 
 
 ## A runner holding one key across open sand, [param ticks] long, facing +Z.
