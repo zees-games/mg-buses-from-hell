@@ -712,6 +712,12 @@ static func present_spectator_camera(p_game: BfhGame, own: BfhPlayer, eye: Camer
 	if not p_game.spectate.is_spectating(own.player_id):
 		return false
 
+	# The chase and death cameras pulled out of the bowl by dot-spectate, given the level.
+	var manager: DotSpectatorManager = p_game.spectate.manager
+	if manager != null and manager.camera_world == null:
+		manager.camera_world = eye.get_world_3d()
+		manager.camera_mask = 1
+
 	var view := p_game.spectate.camera_for(own.player_id)
 
 	# Identity is dot-spectate's "no pose to give", which is a target that has not been drawn
