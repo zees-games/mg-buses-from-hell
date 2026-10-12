@@ -142,7 +142,7 @@ Five numbers are counted per player (runners flattened, rounds survived, seconds
 [`CLAUDE.md`](CLAUDE.md) has the design decisions and the reasoning behind them.
 
 ## Credits
-The bus, crate, barrel and character are from [Kenney](https://kenney.nl) (CC0), in `assets/kenney/`. Each kit's licence is next to its files. The bowl and everything else is drawn in code, and every sound is generated, so there are no audio files.
+The bus, crate and barrel are from [Kenney](https://kenney.nl) (CC0), in `assets/kenney/`; the runners are the family's animated people from Quaternius' [Zombie Apocalypse Kit](https://quaternius.com/packs/zombieapocalypsekit.html) (CC0 1.0, credited in dot-player-char), chosen by Kenney's character skins. Each kit's licence is next to its files. The bowl and everything else is drawn in code, and every sound is generated, so there are no audio files.
 
 ## License
 MIT. See [LICENSE](LICENSE). The Kenney art is CC0, which is public domain.

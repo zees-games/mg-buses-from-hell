@@ -4,7 +4,7 @@ Everything here is built only by `BfhClient`; a dedicated server draws and plays
 
 ## Bodies
 
-`bfh_figure.gd` is Kenney's Blocky Character: six ordinary skins for runners, chosen by face (or by player id), and a uniform (`DRIVER_ATLAS`) for a driver on foot. It is scaled from its **measured** bounds to the runner's 1.8 m hull (the kit is 2.7 m) and turned half round, because the kit faces +Z and this family's forward is -Z (the bus had exactly that bug). Every surface gets its atlas explicitly, through `BfhPaths.rebase`, for the pack reason in [delivery.md](delivery.md).
+`bfh_figure.gd` is one of the family's animated people (dot-player-char's `DotHumanoidFigure`): six ordinary people for runners, chosen by face (or by player id) through the blocky kit's skin letters (`DotHumanoidLook.from_letter`, so every avatar document dresses the same person as before), and the uniform's colours (`DRIVER_ATLAS`, skin j) for a driver on foot, at the runner's 1.8 m hull. It animates from how far its node moves each frame (`auto_animate`), because the interpolator moves it and nothing here knows a speed.
 
 **Who is drawn** is `BfhPlayer.present_body`: everybody except the player the camera belongs to (first person), a driver (drawn AS the bus: nothing moves a rider, so a body would stand where they sat down, which is also why `drawn_position` answers with the bus), and a runner who is out.
 
