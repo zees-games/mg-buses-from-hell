@@ -592,8 +592,11 @@ func ramp_foot() -> Vector3:
 ## ledge and ramp, sky-blue tanks with a deeper band, mint pillars with a darker cap. The
 ## crates, barrels and buses are Kenney's art and keep their own colours, which are the
 ## saturated things on screen: the cover and the threat. Each colour is the tint of the
-## one-metre grid (`BfhTextures`), so the grid stays the same on every surface.
-const SAND := Color(0.98, 0.84, 0.60)
+## one-metre grid (`BfhTextures`), so the grid stays the same on every surface. The sand is
+## a mid tone, not a pale one: it fills half of every frame, and at (0.98, 0.84, 0.60) the
+## sunlit half rendered at 0.88 luminance under Compatibility, white enough that a crate's
+## shadow was the only thing on it.
+const SAND := Color(0.90, 0.74, 0.50)
 const WALL_COLOUR := Color(0.98, 0.72, 0.70)
 const LEDGE_COLOUR := Color(0.80, 0.70, 1.00)
 const RAMP_COLOUR := Color(0.86, 0.80, 1.00)
@@ -636,7 +639,7 @@ const DAYLIGHT := {
 		"colour": [0.84, 0.90, 1.0],
 		"start": 3150.0,
 		"end": 21000.0,
-		"max_density": 0.3,
+		"max_density": 0.2,
 	},
 	"sky_top": [0.30, 0.56, 0.96],
 }
@@ -658,22 +661,19 @@ func _build_light() -> void:
 				material.ground_bottom_color = material.sky_top_color
 
 
-## What this machine draws of [constant DAYLIGHT].
+## What this machine draws of [constant DAYLIGHT]: dot-lighting's `painted()`.
 ##
 ## [b]Shadows stay on in the browser[/b], unlike dot-lighting's `web()`: the bowl is a few
-## hundred boxes and a crate's shadow is how a runner reads cover. [b]The Compatibility
-## renderer, which this game and the client shell use, has no headroom above white[/b]: at
-## Forward+'s numbers the sand clipped to flat yellow and the grid (the speed a runner reads
-## off the ground) was gone. So under `gl_compatibility` the sun is divided by 700 instead
-## of 200 and the fill is 0.62, game-arena's numbers, checked here in both renderers.
+## hundred boxes and a crate's shadow is how a runner reads cover. `painted()` is the
+## family's profile for a world of flat colours, matched to the renderer: under the
+## hand-set numbers it replaced (the sun divided by 700, a fill of 0.62) a runner's frame
+## was still 40 % flat white sand and the grid (the speed a runner reads off the ground) was
+## gone. It lowers the exposure, lengthens the tone map's shoulder, grades, and adds a
+## shadowless fill so a crate's two shaded faces are two shades.
 static func light_profile() -> DotLightProfile:
-	var p := DotLightProfile.web() if OS.has_feature("web") else DotLightProfile.high()
+	var p := DotLightProfile.painted()
 	p.sun_shadows = true
 	p.sky_below_horizon = true
-	p.ambient_energy = 1.0
-	if RenderingServer.get_current_rendering_method() == "gl_compatibility":
-		p.brightness_reference = 700.0
-		p.ambient_energy = 0.62
 	return p
 
 
