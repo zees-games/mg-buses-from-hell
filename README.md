@@ -38,7 +38,8 @@ When you are run over, you watch the bus that got you for a moment, then whoever
 | **Tab** (hold) | Scoreboard | Scoreboard |
 | **Y** / **U** | Chat / chat to your side | Chat / chat to your side |
 | **V** | Push to talk (to your side) | Push to talk |
-| **Esc** | Settings | Settings |
+| **H** | Help: the rules and every key as you have it bound | Help |
+| **Esc** | Menu: settings (every key can be rebound), help, and leave | Menu |
 
 While you are out: **Mouse 1** / **Mouse 2** watch the next or previous player, and **Space** switches between their eyes and behind them.
 

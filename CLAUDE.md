@@ -48,6 +48,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 ## Rules
 
 **Delivery** ([delivery](docs/delivery.md))
+- **Every key is a `BfhBindings` row read through its action** (the board's Tab and the spectator's jump fall back to the keycode only with no table, for the suites); H is help (dot-menu's stock key; `BfhSettings._fill_help` writes the rules), so no row may default to H. `headless_run` checks it and the Escape menu's Help and Leave.
 - No `class_name` anywhere in this repository; scripts are reached by relative `preload`. `dot-server-deploy/tools/check.sh` refuses one.
 - Every `res://` path of this game's own goes through `BfhPaths.rebase()` **where it is defined** (`static var X := BfhPaths.rebase(...)`), never a bare `const`. `headless_run` fails on a bare one.
 - `rebase` must stay idempotent: exported paths in a `.tscn` arrive already rewritten. Test the mounted case through `rebase_onto`, never `rebase` built in (a tautology).

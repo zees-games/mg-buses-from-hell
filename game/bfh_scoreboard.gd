@@ -1,5 +1,6 @@
 extends Node
 
+const BfhBindings := preload("bfh_bindings.gd")
 const BfhGame := preload("bfh_game.gd")
 const BfhPlayer := preload("bfh_player.gd")
 const BfhNetBridge := preload("net/bfh_net_bridge.gd")
@@ -94,10 +95,16 @@ func bind(p_game: BfhGame, own: Callable = Callable(), p_board: DotMenuScoreboar
 	refresh()
 
 
-## Tab, held. Returns whether the event was the scoreboard's.
+## The board's key (Tab), held. Returns whether the event was the scoreboard's. The key is
+## [BfhBindings]' row, as the player has it bound; Tab itself only where no table put the
+## action on the InputMap (a suite with no settings).
 func handle_key(event: InputEvent) -> bool:
 	var key := event as InputEventKey
-	if key == null or key.echo or key.physical_keycode != KEY_TAB:
+	if key == null or key.echo:
+		return false
+	var mine := event.is_action(BfhBindings.SCOREBOARD) if InputMap.has_action(BfhBindings.SCOREBOARD) \
+		else key.physical_keycode == KEY_TAB
+	if not mine:
 		return false
 	held = key.pressed
 	refresh()

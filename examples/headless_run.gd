@@ -35,11 +35,11 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 245
+const CHECKS := 250
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 30
+const SECTIONS := 31
 
 const TICK := 1.0 / 60.0
 
@@ -140,6 +140,7 @@ func _run() -> void:
 	await _test_progress()
 	_test_settings()
 	_test_pack_paths()
+	await _test_help_and_menu()
 
 	# Anything a section did not take down itself, before the counts are printed: a world
 	# freed after `quit()` is a world the engine reports as a leak.
@@ -229,6 +230,36 @@ func _test_a_rolled_bus() -> void:
 	)
 
 	await _dispose(game)
+	_done()
+
+
+## The family's rule since the first play test: H opens help in every game, nothing else in
+## the table is on H, and the Escape menu has Help & commands and Leave.
+func _test_help_and_menu() -> void:
+	print("H opens help, and the Escape menu has Help and Leave")
+	var settings := BfhSettings.new()
+	add_child(settings)
+	var built: DotResult = settings.setup(DotSettingsStoreMemory.new())
+	var keys: DotMenuBindings = settings.bindings
+	_check(built.ok and keys != null and keys.key_for(DotMenuBindings.HELP_ACTION) == "H", "help is on H")
+	_check(keys.defaults_on("H").size() == 1, "and nothing else in the table defaults to H",
+		str(keys.defaults_on("H").map(func(r: Dictionary) -> String: return str(r["label"]))))
+	var h := InputEventKey.new()
+	h.physical_keycode = KEY_H
+	h.keycode = KEY_H
+	h.pressed = true
+	_check(settings.menu.handle_event(h) and settings.menu.help.is_open(), "H opens the help screen")
+	_check(settings.menu.help.about != "" and settings.menu.help.heading() == "How to play Buses from Hell",
+		"which says what the game is before the keys")
+	settings.menu.help.close()
+	settings.open()
+	var help_button := settings.menu.screen.find_child("Action_help", true, false) as Button
+	var leave_button := settings.menu.screen.find_child("Action_leave", true, false) as Button
+	_check(help_button != null and leave_button != null and leave_button.visible,
+		"the Escape menu has Help & commands and Leave")
+	settings.close()
+	settings.queue_free()
+	await get_tree().process_frame
 	_done()
 
 

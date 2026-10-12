@@ -23,6 +23,7 @@ const CHANNEL := "bfh.chat"
 const TALK_ACTION := DotVoiceManager.TALK_ACTION
 const TALK_KEY := KEY_V
 
+## Rows of `BfhBindings`, which puts them on the InputMap when the settings load.
 const OPEN_ACTION := &"bfh_chat"
 const TEAM_ACTION := &"bfh_chat_team"
 

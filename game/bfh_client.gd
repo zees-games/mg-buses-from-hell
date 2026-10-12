@@ -710,7 +710,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 ## Which spectator request an input event is, or -1. Left click is next, right click is
-## back, and jump changes between their eyes and behind them.
+## back, and the jump key changes between their eyes and behind them.
 static func spectator_ask(event: InputEvent) -> int:
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
 		match (event as InputEventMouseButton).button_index:
@@ -721,9 +721,11 @@ static func spectator_ask(event: InputEvent) -> int:
 			MOUSE_BUTTON_MIDDLE:
 				return BfhSpectate.ASK_VIEW
 
+	# The jump key, as bound ([BfhBindings]); Space where nothing put the action on the map.
 	if event is InputEventKey and (event as InputEventKey).pressed \
 			and not (event as InputEventKey).echo \
-			and (event as InputEventKey).physical_keycode == KEY_SPACE:
+			and (event.is_action(&"dot_fps_jump") if InputMap.has_action(&"dot_fps_jump")
+				else (event as InputEventKey).physical_keycode == KEY_SPACE):
 		return BfhSpectate.ASK_VIEW
 
 	return -1

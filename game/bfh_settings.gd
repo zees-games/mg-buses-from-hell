@@ -1,5 +1,7 @@
 extends DotMenuSettings
 
+const BfhBindings := preload("bfh_bindings.gd")
+
 ## A player's own settings and the menu that changes them: how fast the view turns, how wide
 ## it is, how loud things are, the window, and the look of the menu itself.
 ##
@@ -46,9 +48,10 @@ func _init() -> void:
 	schema = schema_for()
 	config = DotMenuConfig.new()
 	config.brand_name = "Buses from Hell"
-	# Nothing to leave to and no keys table to help with; Escape and Resume close the menu.
-	config.show_help = false
-	config.show_leave = false
+	# Help and Leave are dot-menu's stock: H opens help, Leave leaves the server or quits a
+	# solo game. Every game in the family has both (the first play test found this one with
+	# neither). The keys are a table now ([BfhBindings]), so the help screen lists them.
+	bindings = BfhBindings.make()
 	var _layered := config.load_layered()
 
 
@@ -61,3 +64,11 @@ static func schema_for() -> DotSettingsSchema:
 		DotSettingsDef.Scope.SERVER_CLAMPED
 	))
 	return DotMenuStock.declare(s, DotMenuStock.DEFAULT_GROUPS, null, NOT_APPLIED)
+
+
+## The help screen's goal and rules; the keys come from [BfhBindings].
+func _fill_help(help: DotMenuHelp) -> void:
+	help.about = "Two players drive buses; everybody else runs. Drivers win by flattening every runner before the clock runs out; runners win if anybody is still standing when it does."
+	help.add_text("Running", "Your hammer cannot hurt a bus. Use it to break and shove crates into cover and walls, and keep moving. Barrels explode when anything hits them, throwing runners into the air and crates across the bowl. Concrete blocks never move.")
+	help.add_text("Driving", "Steer with the movement keys and run the runners over. A crate breaks under one hit at speed, and the left mouse button sounds the horn. Sides swap every three rounds, so everybody gets a turn driving.")
+	help.add_section("Mouse", [["Left", "Swing the hammer, or the horn in a bus; watch the next player while out"], ["Right", "Watch the one before while out"], ["Middle", "Their eyes or behind them, while out"]], &"keys")
