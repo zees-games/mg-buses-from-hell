@@ -53,6 +53,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 - `rebase` must stay idempotent: exported paths in a `.tscn` arrive already rewritten. Test the mounted case through `rebase_onto`, never `rebase` built in (a tautology).
 - Kenney art: each kit in its own folder, atlas beside the GLB at the path it names, `bfh_art.gd` paints only materials with no texture. Kenney models face +Z; this family's forward is -Z.
 - Gravity is `BfhConfig.gravity`, written onto the world's own physics space; the project renders with `gl_compatibility`, and lighting is tuned under it. Neither project setting travels in a pack.
+- `project.godot` carries no comments: the editor drops them, and any key left at its default, the first time it saves the file, so the reasons for its settings live here (the line above; `gl_compatibility` was set after a delivered client showed the bowl blown out to white under it while it looked like sand under Forward+). Texture imports keep `detect_3d/compress_to=0` (`[importer_defaults]` starts new ones that way) so the editor never re-imports one VRAM-compressed on a first open.
 - Colour is `BfhArena`'s palette constants over the metre grid, and the light is `BfhArena.DAYLIGHT` (dot-lighting), turned down under Compatibility. [client](docs/client.md#lighting-and-the-grid)
 - Spell types explicitly in client scripts where `:=` would infer from a host class; inference fails inside a mount.
 
