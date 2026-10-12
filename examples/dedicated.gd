@@ -25,7 +25,7 @@ const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 118
+const CHECKS := 121
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -635,6 +635,30 @@ func _test_the_bowl_vote() -> void:
 
 	_check(ids.size() == BfhBowls.all(game.config).size() and ids.has("bfh_small_bowl"),
 		"it offers every bowl", str(ids))
+
+	# The map menu's server half (M): the owner's flag changes the bowl now, anybody else
+	# gets a nomination and a rock-the-vote. Contexts as dot-server makes them for a chat line.
+	var menu_half: Object = vote.get("commands").get("map_menu")
+	_check(menu_half != null and server.console.find_command("mapmenu") != null
+		and server.console.find_cvar("sv_map_menu_flag").get_string() == "generic"
+		and (menu_half.get("change_fn") as Callable).is_valid(),
+		"the map menu is there, staff-only by default, changing the bowl now")
+	var staff := DotCmdContext.new()
+	staff.source = DotCmdContext.Source.CHAT
+	staff.permissions = PackedStringArray(["generic"])
+	var player := DotCmdContext.new()
+	player.source = DotCmdContext.Source.CHAT
+	var offered: Dictionary = menu_half.call("offer", player)
+	_check((offered["maps"] as Array).size() > 1 and not bool(offered["allowed"]) and bool(offered["vote"]),
+		"a player is offered every bowl, as a vote")
+	var target: StringName = &""
+	for row: Dictionary in offered["maps"]:
+		if not bool(row["current"]):
+			target = StringName(str(row["id"]))
+			break
+	var menu_changed: Dictionary = await menu_half.call("choose", staff, target)
+	_check(bool(menu_changed["ok"]) and game.bowl_id == target, "staff choosing one changes the bowl on the spot",
+		"%s: %s" % [target, menu_changed.get("text", "")])
 
 	director.begin(game.bowl_id)
 	var wanted := &"bfh_small_bowl" if game.bowl_id != &"bfh_small_bowl" else &"bfh_big_bowl"

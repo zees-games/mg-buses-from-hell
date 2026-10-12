@@ -964,6 +964,32 @@ func _clear_bowl() -> void:
 	_bus_turning.clear()
 
 
+## Every bowl this server plays, as the map menu (M) lists them: `{id, name, detail, current}`,
+## its size under the name. Solo the client's list, online the server's (the module hands it
+## to dot-vote's map menu), so both say the same.
+func bowl_rows() -> Array:
+	var out: Array = []
+	for bowl in BfhBowls.allowed(config):
+		out.append({"id": String(bowl["id"]), "name": str(bowl["name"]),
+			"detail": "%d m across" % int(round(float(bowl["radius"]) * 2.0)), "current": bowl["id"] == bowl_id})
+	return out
+
+
+## The map menu's change: [param id] now, not after this round. The next bowl is set and a
+## fresh round begins in it (dot-match's `begin_round_now`: the round called off has no
+## winner); with no match running yet it is simply built. Authority only.
+func change_bowl_now(id: StringName) -> DotResult:
+	if not authoritative:
+		return DotResult.fail(DotError.CODE_STATE, "Only the server changes the bowl.")
+	if not BfhBowls.allowed(config).any(func(b: Dictionary) -> bool: return b["id"] == id):
+		return DotResult.fail(DotError.CODE_INVALID, "There is no bowl called '%s' here." % id)
+	next_bowl_id = id
+	if match_node == null or not match_node.begin_round_now(_tick):
+		_change_bowl()
+	DotLog.info(CHANNEL, "bowl changed from the map menu", {"bowl": String(id)})
+	return DotResult.success(id)
+
+
 ## The bowl the players voted for, built between one round's props going and the next's
 ## arriving. Once: [member next_bowl_id] is cleared whether or not it was used, and a bowl
 ## this server no longer offers (an operator narrowed `bowl_ids` since) is dropped.

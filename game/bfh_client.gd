@@ -446,6 +446,22 @@ func _build_settings() -> void:
 		# the server's console when one runs in this process. One of the menu's overlays, so
 		# opening it stops the player and frees the pointer exactly as the menu does.
 		console = DotConsoleKit.build(self, settings.settings, settings.menu)
+		_wire_maps()
+
+
+## M: the bowl list (dot-menu's map menu). Solo a choice changes the bowl here at once;
+## connected the server decides, by the owner's `sv_map_menu_flag`, and anybody without it
+## gets a vote instead (dot-vote's map menu, wired in [BfhModule]). By name, so a client shell
+## older than the map menu still runs the game without it.
+func _wire_maps() -> void:
+	if not settings.has_method(&"use_maps"):
+		return
+	var maps: Variant = settings.call(&"use_maps",
+		func() -> Array: return game.bowl_rows() if game != null else [],
+		func(id: StringName) -> DotResult: return game.change_bowl_now(id))
+	if maps is Object:
+		(maps as Object).set(&"title", "Change bowl")
+		(maps as Object).set(&"noun", "bowls")
 
 
 func _suspend_input(value: bool) -> void:
