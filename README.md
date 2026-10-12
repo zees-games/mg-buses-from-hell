@@ -84,6 +84,7 @@ bfh_bus_lane_width 6         // metres kept clear in front of each bus start (0 
 bfh_bots 1                   // 0 = no automatic bots at all
 bot_quota 2                  // driving seats kept full: bots + people driving; a person who takes a seat replaces a bot
 bot_quota_mode fill          // fill (as above), fixed (that many bots), per_player (that many per driver) or off
+bot_difficulty medium        // easy, medium, hard or nightmare: how far ahead of a runner a bot bus aims and how fast it drives (every bot_* setting is a cvar too; solo: the console, or -- --bot_difficulty)
 bfh_bot_aim_past 8           // metres past a runner a bot bus aims, so it arrives at speed
 bfh_bot_steer_clearance 3.6  // metres a bot bus keeps off a pillar's or drum's surface
 bfh_bus_stuck_break 1        // seconds a bus may push against something before what is under it breaks

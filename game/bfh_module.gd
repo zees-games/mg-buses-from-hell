@@ -178,6 +178,10 @@ func _game_load() -> DotResult:
 	# bot. `bfh_drivers` is still how many seats there are and caps whatever the quota says.
 	_quota = DotBotQuota.install(self, world.config.driver_count)
 
+	# How well the bots drive: dot-bot's `bot_difficulty` and its `bot_*` settings, held on
+	# the world (`BfhGame._autopilot` reads `bot_prediction` and `bot_aggression`).
+	var _bot_cvars := DotBotSettings.of(world).bind_cvars(add_cvar, DotConVar.FLAG_NOTIFY, add_command)
+
 	# [b]Started here and not in the world's own `_ready`.[/b] `start()` lays the bowl out
 	# and puts the buses on it, and a world that did that before the bridge existed would
 	# have spawned every crate with nothing listening to `props.spawned` — thirty-four
@@ -379,7 +383,7 @@ func _keep_the_seats_full() -> void:
 			wanted = mini(wanted, maxi(server.config.max_players - people, 0))
 
 	for _i in range(maxi(wanted - bots.size(), 0)):
-		var bot: BfhPlayer = bridge.call("add_bot", "Bus driver", BfhGame.TEAM_DRIVERS)
+		var bot: BfhPlayer = bridge.call("add_bot", _bot_name(world), BfhGame.TEAM_DRIVERS)
 
 		if bot == null:
 			break
@@ -390,6 +394,15 @@ func _keep_the_seats_full() -> void:
 	while bots.size() > wanted:
 		var leaving: BfhPlayer = bots.pop_back()
 		bridge.call("remove_player", BfhNetBridge.session_of(leaving.player_id))
+
+
+## A bot's name from dot-bot's pool that nobody in [param world] has (it was "Bus driver"
+## for every bot, so a board of three read as one name three times).
+static func _bot_name(world: BfhGame) -> String:
+	var taken: Array = []
+	for player in world.runners() + world.drivers():
+		taken.append(player.display_name)
+	return DotBotNames.pick(taken, taken.size())
 
 
 ## Joins the bridge's two chat seams to the services layer's router.

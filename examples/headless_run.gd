@@ -37,7 +37,7 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 268
+const CHECKS := 270
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -1022,6 +1022,25 @@ func _test_driving_the_stacks() -> void:
 
 	var bus := game.vehicles.get_vehicle(game._bus_ids[0])
 	var body := bus.body()
+
+	# bot_difficulty at the wheel: how far ahead of a running target a bus aims, relative to
+	# medium (which aims where this game always did) -- ahead of the run at nightmare, behind
+	# it at easy -- and how fast it drives.
+	var running: BfhPlayer = null
+	for p in game.runners():
+		running = p
+	if running != null and running.controller != null:
+		running.controller.state.velocity = Vector3(6.0, 0.0, 0.0)
+	var leads := {}
+	for preset in ["easy", "medium", "nightmare"]:
+		var s := DotBotSettings.new()
+		var _p := s.set_difficulty(preset)
+		leads[preset] = game._bot_lead(bus, running, s.profile).x if running != null else NAN
+	_check(is_zero_approx(float(leads["medium"])) and float(leads["nightmare"]) > 0.0 and float(leads["easy"]) < 0.0,
+		"a bot bus leads a runner at nightmare, trails one at easy, and aims as before at medium", str(leads))
+	_check(DotBotSettings.of(game).difficulty() == "medium", "and the world's bots are medium unless told otherwise")
+	if running != null and running.controller != null:
+		running.controller.state.velocity = Vector3.ZERO
 
 	# Lined up on the pillar with the quarry directly behind it, which is the geometry
 	# a runner using one for cover creates and the one the bot has no answer to.

@@ -214,11 +214,28 @@ func _start_offline() -> void:
 	# A driver and a runner, because a round needs both sides and there is one person
 	# here. What the bot is for is having a bus on the floor to run away from, which is
 	# the thing worth looking at.
+	# Named from dot-bot's pool, as a server's are.
+	var roster := DotBotRoster.new()
+	var taken: Array = ["You"]
 	for i in range(offline_bots):
+		var bot_name := roster.next_name(taken)
+		taken.append(bot_name)
 		var _bot := game.add_player(
-			StringName("bot%d" % i), "Bus driver %d" % (i + 1), BfhGame.TEAM_DRIVERS,
+			StringName("bot%d" % i), bot_name, BfhGame.TEAM_DRIVERS,
 			false, true
 		)
+
+	# How well they drive: `bot_difficulty` and every `bot_*` at the console, or
+	# `-- --bot_difficulty <preset>` at launch; the settings a server binds as cvars.
+	var skill := DotBotSettings.of(game)
+	var args := OS.get_cmdline_user_args()
+	var at := args.find("--bot_difficulty")
+	if at >= 0 and at + 1 < args.size():
+		DotLog.result(CHANNEL, "bot difficulty from the command line", skill.set_difficulty(args[at + 1]))
+	if console != null:
+		var local := DotConsoleLocal.new()
+		console.add_source(local)
+		var _bound := skill.bind_console(local)
 
 	_adopt(game.add_player(&"local", "You", BfhGame.TEAM_RUNNERS, true))
 	game.start()

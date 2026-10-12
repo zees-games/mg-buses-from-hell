@@ -1344,12 +1344,20 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 	# reached — the bus arrives gently. A point eight metres beyond them, along the
 	# line the bus is already on, keeps the throttle down through the moment that
 	# matters and is what makes a near miss look like one.
-	var line := quarry.global_position - bus.position()
+	# [b]How well it drives is dot-bot's `bot_difficulty`[/b] (the module binds the cvars, the
+	# offline client the console variables). Two of its settings mean something at a wheel:
+	# `bot_prediction` is how far ahead of a running target it aims, and `bot_aggression` how
+	# close to top speed it drives. Both are taken relative to medium, so medium is exactly
+	# the bus this game always had: a nightmare bus cuts a runner off, an easy one trails
+	# where they were and comes in slower.
+	var skill := DotBotSettings.of(self).profile
+	var target := quarry.global_position + _bot_lead(bus, quarry, skill)
+	var line := target - bus.position()
 	line.y = 0.0
 
 	var beyond := (
-		quarry.global_position + line.normalized() * config.bot_aim_past if line.length() > 0.5
-		else quarry.global_position
+		target + line.normalized() * config.bot_aim_past if line.length() > 0.5
+		else target
 	)
 
 	# The horn, when somebody is lined up in front of it. Not every tick — see
@@ -1370,9 +1378,8 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 	# side, and at full speed the line-up overshoots the middle. See
 	# [method BfhArena._up_the_ramp].
 	var bound := arena.ramp_bound(bus.position(), beyond)
-	player.autopilot.target_speed = (
-		minf(config.bus_top_speed, RAMP_SPEED) if bound else config.bus_top_speed
-	)
+	var pace := config.bus_top_speed * clampf(1.0 + 0.4 * (skill.aggression - _MEDIUM.aggression), 0.5, 1.0)
+	player.autopilot.target_speed = minf(pace, RAMP_SPEED) if bound else pace
 	# Written every tick rather than once, so `bfh_bot_steer_clearance` takes effect on the
 	# next tick. Only the bots read it; see [member BfhArena.steer_clearance].
 	arena.steer_clearance = config.bot_steer_clearance
@@ -1824,6 +1831,22 @@ const RAMP_BACK_LONGEST := 2.5
 const RAMP_FORWARD_LONGEST := 1.5
 const RAMP_TURN_THROTTLE := 0.7
 
+
+
+## The preset a bot's numbers are taken relative to, so medium drives as before presets.
+static var _MEDIUM: DotBotProfile = DotBotProfile.new()
+
+
+## Where a bot aims past a runner, from where they are now: their run times the seconds the
+## bus needs to get there (capped at two), by how much more (or less) than medium this bot
+## reads a moving target. Zero at medium.
+func _bot_lead(bus: DotVehicleInstance, quarry: BfhPlayer, skill: DotBotProfile) -> Vector3:
+	if quarry.controller == null:
+		return Vector3.ZERO
+	var run: Vector3 = quarry.controller.state.velocity
+	run.y = 0.0
+	var seconds := minf(quarry.global_position.distance_to(bus.position()) / maxf(config.bus_top_speed, 1.0), 2.0)
+	return run * seconds * (skill.prediction - _MEDIUM.prediction)
 
 
 func _nearest_runner(to: Vector3) -> BfhPlayer:

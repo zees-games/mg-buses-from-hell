@@ -25,7 +25,7 @@ const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 121
+const CHECKS := 123
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -989,10 +989,23 @@ func _test_the_bots() -> void:
 		_check(bots_after == bots_before, "and the bot comes back when they leave",
 			"%d -> %d" % [bots_with, bots_after])
 		var _all := _run_command("bot_quota %d" % game.config.driver_count)
+		module.call("_keep_the_seats_full")
+		var names: Array = []
+		for driver in game.drivers():
+			if driver.is_bot:
+				names.append(driver.display_name)
+		_check(not names.is_empty() and names.all(func(n: String) -> bool: return DotBotNames.POOL.has(n)),
+			"bots are named from dot-bot's pool, not \"Bus driver\"", str(names))
+		var picked := _run_command("bot_difficulty nightmare")
+		var reached := DotBotSettings.of(game).difficulty() == "nightmare"
+		var _back := _run_command("bot_difficulty medium")
+		_check(reached, "bot_difficulty is a cvar, and reaches the world the bots drive from", str(picked))
 	else:
 		_check(false, "the first person on a server of bots runs, because a bot cannot", "no module")
 		_check(false, "a person taking a seat takes it from a bot", "no module")
 		_check(false, "and the bot comes back when they leave", "no module")
+		_check(false, "bots are named from dot-bot's pool, not \"Bus driver\"", "no module")
+		_check(false, "bot_difficulty is a cvar, and reaches the world the bots drive from", "no module")
 
 	_run_command("bfh_bots 0")
 
