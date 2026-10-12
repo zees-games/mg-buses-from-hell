@@ -37,7 +37,7 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 258
+const CHECKS := 261
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -344,6 +344,22 @@ func _test_blind_and_beacon_drawn() -> void:
 	var hud := BfhHud.new()
 	add_child(hud)
 	hud.bind(game, runner)
+
+	# Christian's first play test: a darker HUD by default, restyled live by the menu's theme.
+	var settings := BfhSettings.new()
+	add_child(settings)
+	var _built: Variant = settings.setup(DotSettingsStoreMemory.new())
+	hud.follow_menu(settings.menu)
+	var plate := hud.vitals.colour(&"plate")
+	_check(plate.get_luminance() < 0.1 and plate.a >= 0.7, "the HUD is dark by default, in the menu's theme", str(plate))
+	var _t := settings.settings.set_value(&"ui_theme", &"contrast")
+	var contrast: DotMenuPalette = settings.menu.palette()
+	_check(contrast.id == &"contrast" and hud.vitals.colour(&"plate") == contrast.hud_plate and hud.vitals.colour(&"text") == contrast.hud_text,
+		"a theme picked in the menu reaches the pieces at once")
+	_check(hud.vitals.colour(&"highlight") == BfhArena.SAND and hud._cover.get_theme_color(&"font_color") == contrast.hud_text,
+		"keeping this game's accent, and the HUD's own lines follow it too")
+	_t = settings.settings.set_value(&"ui_theme", &"midnight")
+	settings.queue_free()
 	await get_tree().process_frame
 
 	runner.blinded = true

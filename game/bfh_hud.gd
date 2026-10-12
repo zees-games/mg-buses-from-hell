@@ -51,19 +51,33 @@ const BLIND_COLOUR := Color(0.01, 0.01, 0.015)
 const LOW_CLOCK_SEC := 10.0
 
 
-## The glance pieces' colours in this game's palette: a warm dark plate over the sand, the
-## sand as the highlight, a bus's red for low. The numbers stay white ringed in dark,
-## because this floor is pale sand in bright light. Static so a render tool can use it.
+## This game's accent over whichever theme the player picked in the menu (its highlight and
+## the plates' edge). The plates, the words and their outline are the theme's, dark by default,
+## so a light or high-contrast theme can change them. Static so a render tool can use it.
 static func piece_theme() -> Theme:
 	var t := Theme.new()
 	var type := DotHudPiece.THEME_TYPE
-	t.set_color(&"plate", type, Color(0.16, 0.09, 0.06, 0.62))
 	t.set_color(&"plate_edge", type, Color(BfhArena.SAND, 0.3))
-	t.set_color(&"ink", type, Color(0.10, 0.05, 0.03, 0.88))
 	t.set_color(&"highlight", type, BfhArena.SAND)
 	t.set_color(&"good", type, BfhArena.PILLAR_COLOUR)
-	t.set_color(&"low", type, Color(1.0, 0.36, 0.30))
 	return t
+
+
+## The Escape menu, whose theme this HUD follows (dot-menu's `follow_hud`): the menu sets the
+## theme on the HUD's root now and at every theme change, and applies the player's HUD size.
+## Christian's first play test (2026-10-11) asked for a darker HUD a player can restyle in
+## the menu. Duck-typed and called by name, for a client shell older than dot-menu 7.
+var _menu: Object = null
+
+
+func follow_menu(menu: Object) -> void:
+	_menu = menu
+	_follow()
+
+
+func _follow() -> void:
+	if _root != null and _menu != null and _menu.has_method(&"follow_hud"):
+		_menu.call(&"follow_hud", _root, piece_theme())
 
 
 func bind(p_game: BfhGame, p_player: BfhPlayer) -> void:
@@ -100,6 +114,7 @@ func _build() -> void:
 	# The glance pieces read their colours from the theme on the type DotHudPiece; set on
 	# the root, every piece under it inherits them. See [method piece_theme].
 	_root.theme = piece_theme()
+	_follow()
 
 	# The clock, and the status line ("waiting for both sides", whose eyes you are watching
 	# through, "blinded by an admin") as the line under it. Full width, because the strip
@@ -150,11 +165,9 @@ func _build() -> void:
 func _label(size: int) -> Label:
 	var label := Label.new()
 	label.add_theme_font_size_override("font_size", size)
-	label.add_theme_color_override("font_color", Color(1, 1, 1))
 	# An outline rather than a panel behind it. A HUD over a sand-coloured bowl in
 	# bright light is unreadable in white and unreadable in black; an outline is
 	# readable over both and costs nothing.
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	label.add_theme_constant_override("outline_size", 6)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(label)
