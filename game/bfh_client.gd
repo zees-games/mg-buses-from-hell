@@ -1,6 +1,7 @@
 extends Node
 
 const BfhAudio := preload("bfh_audio.gd")
+const BfhBindings := preload("bfh_bindings.gd")
 const BfhClientChat := preload("bfh_client_chat.gd")
 const BfhFx := preload("bfh_fx.gd")
 const BfhNetBridge := preload("net/bfh_net_bridge.gd")
@@ -67,6 +68,19 @@ var console: DotConsoleController = null
 
 ## Whether the camera was last put on somebody else's eyes. See [method _process].
 var _spectating: bool = false
+
+## Third person: the camera swept back from the eye by dot-core's probe, the own runner
+## drawn. Presentation only; the server's `mp_forceview` decides whether the key may.
+var third_person: bool = false
+var _probe: DotCameraProbe = null
+var _fade: DotCameraFade = null
+
+## Behind the eye, in the view's axes (right, up, back); further back from over a bus.
+const THIRD_PERSON_OFFSET := Vector3(0.45, 0.35, 2.8)
+const THIRD_PERSON_BUS_OFFSET := Vector3(0.0, 0.8, 8.0)
+## Metres over a seated driver's eye the sweep starts from: above the bus's roof, so the bus
+## they are driving is not what stops it.
+const BUS_PIVOT_RISE := 2.6
 
 var net: DotNetManager = null
 var bridge: BfhNetBridge = null
@@ -231,6 +245,8 @@ func _build_netcode() -> DotResult:
 	# The server's sv_ragdoll* set: this end draws the bodies.
 	if link != null:
 		var _bodies := game.ragdoll_rules.follow_cvars(link)
+		# The server's mp_forceview: this end places its own camera.
+		var _view := game.view_rules.follow_cvars(link)
 
 	net = DotNetManager.new()
 	net.name = "Net"
@@ -379,6 +395,14 @@ func _build_camera() -> void:
 	camera.current = true
 	player.add_child(camera)
 	camera.position = Vector3(0.0, BfhPlayer.EYE_HEIGHT, 0.0)
+
+	# Other runners and drivers: hidden when one is at the lens, faded in third person when
+	# one stands between the camera and you.
+	_fade = DotCameraFade.new()
+	_fade.name = "Fade"
+	_fade.bodies_fn = _other_players
+	camera.add_child(_fade)
+	third_person = game.view_rules.resolve(third_person)
 
 
 func _build_hud() -> void:
@@ -572,7 +596,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
-	var _shown := present_frame(net, game, player, delta)
+	third_person = game.view_rules.resolve(third_person)
+	var _shown := present_frame(net, game, player, delta, -1.0, third_person)
 
 	# Before the early return, so an effect is retired on time even before there is a
 	# camera; culled from where the camera was last frame, which is one frame's error.
@@ -625,8 +650,53 @@ func _process(delta: float) -> void:
 		camera.global_position = player.controller.render_state().position \
 			+ Vector3(0.0, BfhPlayer.EYE_HEIGHT, 0.0)
 
+	_place_third_person(delta)
+
 	if audio != null:
 		audio.present(delta, camera.global_position)
+
+
+## Moves the camera from the eye to behind it in third person, swept by dot-core's
+## [DotCameraProbe] so a wall, a bowl's rim or a bus between stops it short; from over the
+## roof when driving, so the bus being driven is not what stops it.
+func _place_third_person(delta: float) -> void:
+	if not third_person:
+		if _probe != null:
+			_probe.reset()
+		if _fade != null:
+			_fade.focus = null
+		return
+	if _probe == null:
+		_probe = DotCameraProbe.new(camera.get_world_3d(), 1)
+		_probe.add_excluded_object(player.get_rid())
+	var pivot := camera.global_position + (Vector3.UP * BUS_PIVOT_RISE if player.riding else Vector3.ZERO)
+	var offset := THIRD_PERSON_BUS_OFFSET if player.riding else THIRD_PERSON_OFFSET
+	camera.global_position = _probe.resolve(pivot, pivot + camera.global_basis * offset, delta)
+	if _fade != null:
+		_fade.focus = player
+
+
+## The view key: the other view if the server's `mp_forceview` allows it.
+func toggle_view() -> void:
+	var wanted := game.view_rules.toggled(third_person)
+	if wanted == third_person:
+		var menu: Object = settings.menu if settings != null else null
+		if menu != null and game.view_rules.refusal() != "" and menu.has_method(&"toast"):
+			menu.call(&"toast", game.view_rules.refusal())
+		return
+	third_person = wanted
+
+
+## Everybody else, for the camera fade.
+func _other_players() -> Array:
+	var out: Array = []
+	if game == null:
+		return out
+	for id in game.players:
+		var other: Node3D = game.players[id]
+		if other != player and is_instance_valid(other):
+			out.append(other)
+	return out
 
 
 ## Puts [param eye] where a runner who is out is looking. Returns whether it did.
@@ -669,7 +739,8 @@ static func present_spectator_camera(p_game: BfhGame, own: BfhPlayer, eye: Camer
 ## which is what a real frame wants. A suite passes it explicitly, because a suite's frames
 ## are not an engine's.
 static func present_frame(
-	p_net: DotNetManager, p_game: BfhGame, own: BfhPlayer, delta: float, alpha: float = -1.0
+	p_net: DotNetManager, p_game: BfhGame, own: BfhPlayer, delta: float, alpha: float = -1.0,
+	own_seen: bool = false
 ) -> int:
 	var networked := p_net != null and p_net.is_running()
 
@@ -696,7 +767,8 @@ static func present_frame(
 		if body == null or not is_instance_valid(body):
 			continue
 
-		if body.present_body(body == own, p_game.team_of(id) == BfhGame.TEAM_DRIVERS):
+		# Your own runner is drawn when the camera is behind you ([param own_seen]).
+		if body.present_body(body == own and not own_seen, p_game.team_of(id) == BfhGame.TEAM_DRIVERS):
 			shown += 1
 
 		# Every player's beacon, this client's own included — somebody who has been
@@ -748,6 +820,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		var ask := spectator_ask(event)
 		if ask >= 0:
 			_ask_to_watch(ask)
+		return
+
+	if event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo \
+			and InputMap.has_action(BfhBindings.VIEW) and event.is_action(BfhBindings.VIEW):
+		toggle_view()
 		return
 
 	if event is InputEventMouseButton:

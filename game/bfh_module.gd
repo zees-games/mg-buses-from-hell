@@ -156,6 +156,12 @@ func _game_load() -> DotResult:
 		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
 	)
 
+	# dot-player-controller's mp_forceview: first or third person, the player's choice or one
+	# held. REPLICATED, because each client places its own camera under it.
+	var _views := world.view_rules.bind_cvars(
+		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
+	)
+
 	_bots = add_cvar(
 		"bfh_bots", "1",
 		"Bots in empty driving seats: 1 keeps as many as bot_quota and bot_quota_mode say, 0 none at all."

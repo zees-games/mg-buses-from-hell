@@ -14,6 +14,8 @@ extends RefCounted
 ## so nothing here may default to it; the talk key is dot-menu's row too (V).
 
 const SCOREBOARD := &"bfh_scoreboard"
+## First or third person (the family's F5), under the server's `mp_forceview`.
+const VIEW := &"bfh_view"
 ## The chat box's actions (`BfhClientChat`), which dot-ui's window creates only if missing.
 const CHAT := &"bfh_chat"
 const CHAT_TEAM := &"bfh_chat_team"
@@ -30,4 +32,5 @@ static func make() -> DotMenuBindings:
 	keys.add(CHAT, &"bind_chat", "Chat", "Y", "Communication")
 	keys.add(CHAT_TEAM, &"bind_chat_team", "Chat to your side", "U", "Communication")
 	keys.add(SCOREBOARD, &"bind_scoreboard", "Scoreboard (hold)", "Tab", "General")
+	keys.add(VIEW, &"bind_view", "First or third person, where the server allows it", "F5", "General")
 	return keys

@@ -148,6 +148,12 @@ var random: DotRandomManager = null
 ## client's world mirrors what it is told. See [BfhSpectate].
 var spectate: BfhSpectate = null
 
+## dot-player-controller's `mp_forceview`: whether a player may switch to third person (0),
+## or is held in first (1) or third (2). Bound by the module (REPLICATED) and followed by a
+## client through its link. (No `mp_solidplayers` here: runners and buses share layer one,
+## and a hull on it would be something every bus hits.)
+var view_rules: DotPlayerViewRules = DotPlayerViewRules.new()
+
 ## Statistics and achievements. The authority's only; null on a connected client and
 ## when [member track_progress] is off. See [BfhProgress].
 var progress: BfhProgress = null
