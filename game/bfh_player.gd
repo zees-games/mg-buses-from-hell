@@ -351,7 +351,9 @@ func present_beacon(delta: float, own_view: bool) -> void:
 ##
 ## - [b]the one the camera belongs to[/b] ([param own_view]), whose view is first person —
 ##   a body drawn round a camera is the inside of somebody's head;
-## - [b]a driver[/b], who is drawn AS their bus. Nothing moves a rider (see [member ridden]),
+## - [b]a driver[/b], who is drawn AS their bus (not sat in it: the cab is solid, its windows
+##   painted on, so a seated person inside is never seen and one tall enough to be seen sits
+##   through the roof). Nothing moves a rider (see [member ridden]),
 ##   so a body left standing would be a person frozen on the spot where they got in for the
 ##   rest of the round, while the thing they are actually steering chases people. That is
 ##   the same reason [method drawn_position] answers with the bus;
@@ -386,6 +388,10 @@ func present_body(own_view: bool, driver_side: bool = false) -> bool:
 
 	if shown and controller != null:
 		figure.face(deg_to_rad(controller.state.yaw))
+		if figure.person != null:
+			# The view's pitch: the head and the upper body follow where they look. The rest
+			# of the motion the person measures itself (`auto_animate`).
+			figure.person.set_motion({"aim": deg_to_rad(controller.state.pitch)})
 
 	return shown
 
