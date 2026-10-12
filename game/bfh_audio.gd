@@ -79,8 +79,9 @@ func setup(world: Node3D, own: Callable = Callable()) -> DotResult:
 	audio.voices = 24
 	# Measured toward the family's -17 LUFS (dot-audio docs/loudness.md): a 40 s stand-in round
 	# read -25.4 LUFS integrated with the wind and the steps in (-20.1 before them, on a run
-	# with a crash in it); -19.9 at +6, -18.1 and -19.1 at +8.
-	audio.loudness_trim_db = 8.0
+	# with a crash in it); -19.9 at +6, -18.1 and -19.1 at +8. Once the stand-in turned off
+	# walls (2026-10-12, camera over 150 m a run): -19.0 at +8, -17.5 and -17.6 at +9.
+	audio.loudness_trim_db = 9.0
 	add_child(audio)
 
 	var built := audio.setup()
