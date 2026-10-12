@@ -50,7 +50,7 @@ const BfhSpectate := preload("../game/bfh_spectate.gd")
 ## the wrong reason. A real client is a separate program with its own export and its own
 ## `user://` config. Make them disagree, and let HELLO correct it.
 
-const CHECKS := 191
+const CHECKS := 192
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -471,6 +471,12 @@ func _build() -> bool:
 	_client_net = _make_manager(
 		false, &"client", CLIENT_PEER, client_side, _client_game.tick_rate
 	)
+	# This harness stamps every command itself (`_tick + INPUT_LEAD`), not from the client's
+	# clock, so the client must not ask for dot-net's input-lead report: steered by reports
+	# about commands it never stamped, the clock runs away from them (only dot-net's cap
+	# holds it). By the constant map, so this parses against a dot-net from before the report.
+	var lead_bit := int((DotNetMessageRegistry as Script).get_script_constant_map().get("FEATURE_INPUT_LEAD", 0))
+	_client_net.messages.features &= ~lead_bit
 
 	_server_bridge = BfhNetBridge.new()
 	_server_bridge.name = "Bridge"
@@ -1943,6 +1949,14 @@ func _test_somebody_else_is_drawn() -> void:
 	var mine := _client_player()
 	var theirs: BfhPlayer = _client_game.players.get(key)
 	var shown := BfhClient.present_frame(_client_net, _client_game, mine, 1.0 / 60.0, 0.0)
+
+	# Your own runner is drawn at the clock's render alpha (dot-player-controller's
+	# `render_clock`), so a clock slip does not stall or double the eye.
+	_check(
+		mine != null and mine.controller != null
+			and mine.controller.get(&"render_clock") == _client_net.clock,
+		"your own runner is drawn on the client clock's render alpha"
+	)
 
 	_check(
 		theirs != null and theirs.figure != null

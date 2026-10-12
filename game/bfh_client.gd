@@ -608,8 +608,19 @@ static func present_spectator_camera(p_game: BfhGame, own: BfhPlayer, eye: Camer
 static func present_frame(
 	p_net: DotNetManager, p_game: BfhGame, own: BfhPlayer, delta: float, alpha: float = -1.0
 ) -> int:
-	if p_net != null and p_net.is_running():
+	var networked := p_net != null and p_net.is_running()
+
+	if networked:
 		p_net.interpolate_frame(alpha)
+
+	# Your own runner is drawn at the clock's render alpha, not the engine's fraction: the
+	# clock stretches and shrinks its ticks while it settles on the server, so a physics frame
+	# now and then runs no tick or two, and drawn at the engine's fraction the eye stood still
+	# on one frame and moved double on the next. `DotFpsController.render_state` reads it from
+	# `render_clock` (dot-player-controller); by name both ways, so a shell older than either
+	# draws as before. Null offline, where every physics frame is one tick.
+	if own != null and own.controller != null:
+		own.controller.set(&"render_clock", p_net.clock if networked else null)
 
 	if p_game == null:
 		return 0
