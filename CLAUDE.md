@@ -44,6 +44,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 - `headless_run -- --only=<method>` runs one section. [testing](docs/testing.md)
 - After touching a camera or the view key: `tools/camera_check.sh` (cameras round the bowl, armed; `--render` for both views). [client](docs/client.md#first-and-third-person)
 - **Render after any change to what is drawn** (`tools/shot.sh`, flags per feature). Four bugs here were only visible in a picture. [testing](docs/testing.md#renders-what-no-assertion-reaches)
+- **Runners step and the bowl has wind** (dot-audio's stock, `BfhAudio`); drivers make the engine instead. Levels are measured with `addons/dot_audio/tools/loudness.sh` (−17 LUFS band, `loudness_trim_db`); stock ids have files, so the suite's stand-in checks skip them.
 - **The loopback suites cannot see delivery.** After touching paths, art, scripts' types or project settings, pack it and join with a real client. [testing](docs/testing.md#the-deployment-is-the-only-test-of-this)
 
 ## Rules

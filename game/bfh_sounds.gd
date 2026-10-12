@@ -115,6 +115,10 @@ static func catalogue(root: String = "") -> DotAudioCatalogue:
 	var dir := sound_dir(root)
 	var c := DotAudioCatalogue.new()
 
+	# Runners' footsteps in the sand and the bowl's wind: dot-audio's stock (CC0, the addon's
+	# stock/CREDITS.md), under the addon's own path, which an addon pack overlays at boot.
+	DotAudioStock.add_to(c)
+
 	# The engine is the most important sound in the game and the most frequent, so it is
 	# capped harder than anything else: two buses, and a pulse each that overlaps its
 	# neighbour at speed. Far-reaching, because a bus you can hear coming from across the

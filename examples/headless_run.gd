@@ -4028,9 +4028,11 @@ func _test_the_sounds() -> void:
 	var recipes := BfhSounds.sound_recipes()
 	_check(catalogue.validate().ok, "the catalogue is a document dot-audio accepts")
 
+	# dot-audio's stock footsteps and beds are files the addon ships, so they need no stand-in.
+	var stock := DotAudioStock.ids()
 	var silent := PackedStringArray()
 	for id in catalogue.ids():
-		if not recipes.has(id):
+		if not recipes.has(id) and not stock.has(id):
 			silent.append(String(id))
 	_check(silent.is_empty(), "every sound has a stand-in voice, so none is silent for ever", str(silent))
 
@@ -4067,7 +4069,7 @@ func _test_the_sounds() -> void:
 	var bank := DotAudioSynth.bank(catalogue, recipes)
 	var unbaked := PackedStringArray()
 	for id in catalogue.ids():
-		if not bank.has(id):
+		if not bank.has(id) and not stock.has(id):
 			unbaked.append(String(id))
 	_check(unbaked.is_empty(), "the synthesiser bakes a stand-in for every one", str(unbaked))
 

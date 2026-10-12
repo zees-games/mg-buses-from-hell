@@ -56,6 +56,11 @@ var _own: Callable = Callable()
 ## bus node instance id -> {"at": Vector3, "speed": float, "phase": float}.
 var _engines: Dictionary = {}
 
+## Runners' footsteps (sand, so dot-audio's grass set) and the bowl's wind, from dot-audio's
+## stock. Drivers are in a bus and make the engine instead.
+var steps: DotAudioFootsteps = null
+var ambience: DotAudioAmbience = null
+
 
 ## Builds the manager and listens to [param world]. [param own] returns this client's
 ## player, or null before there is one.
@@ -72,6 +77,10 @@ func setup(world: Node3D, own: Callable = Callable()) -> DotResult:
 	audio.register_as_service = false
 	# Two buses pulsing and a crowd of hammers is the busiest this game gets.
 	audio.voices = 24
+	# Measured toward the family's -17 LUFS (dot-audio docs/loudness.md): a 40 s stand-in round
+	# read -25.4 LUFS integrated with the wind and the steps in (-20.1 before them, on a run
+	# with a crash in it); -19.9 at +6, -18.1 and -19.1 at +8.
+	audio.loudness_trim_db = 8.0
 	add_child(audio)
 
 	var built := audio.setup()
@@ -87,6 +96,18 @@ func setup(world: Node3D, own: Callable = Callable()) -> DotResult:
 		DotLog.info(CHANNEL, "no audio files; synthesised stand-ins are in use", {
 			"ids": BfhSounds.sound_recipes().size(), "dir": BfhSounds.sound_dir(),
 		})
+
+	steps = DotAudioFootsteps.new()
+	steps.name = "Footsteps"
+	steps.manager = audio
+	steps.default_surface = &"sand"
+	add_child(steps)
+	ambience = DotAudioAmbience.new()
+	ambience.name = "Ambience"
+	ambience.manager = audio
+	add_child(ambience)
+	# A walled bowl of sand in the open: the wind over its rim.
+	ambience.set_map_bed(&"amb_wind")
 
 	world.connect("noise", _on_noise)
 	world.connect("barrel_exploded", _on_blast)
@@ -108,6 +129,8 @@ func present(delta: float, listener: Vector3) -> void:
 
 	audio.listener_position = listener
 	_present_engines(delta)
+	if steps != null and _world.has_method("runners"):
+		steps.keep(_world.call("runners"))
 
 
 ## A bus's engine, from the bus this client is drawing.
