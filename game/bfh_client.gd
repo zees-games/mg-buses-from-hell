@@ -112,6 +112,7 @@ func _ready() -> void:
 		ProjectSettings.get_setting("physics/common/physics_ticks_per_second", 60)
 	)
 	add_child(game)
+	_build_ragdolls()
 
 	# The sampler lives HERE and not on the player, because on a connected client the
 	# local player does not exist yet: they arrive in a JOIN, several frames after the
@@ -151,6 +152,48 @@ func _ready() -> void:
 		_capture()
 
 
+# --- Dead bodies -----------------------------------------------------------
+
+## Where the dead lie: dot-player-char's ragdolls under the game's (the server's) rules.
+var ragdolls: DotPlayerRagdolls = null
+
+
+## [b]From the world's `player_died`, in both halves[/b]: offline the world is the authority and
+## says so itself; connected, the bridge re-emits it from DEATH after putting the server's fall
+## on the player.
+func _build_ragdolls() -> void:
+	ragdolls = DotPlayerRagdolls.new()
+	ragdolls.name = "Ragdolls"
+	ragdolls.rules = game.ragdoll_rules
+	ragdolls.sound_fn = _ragdoll_sound
+	add_child(ragdolls)
+	game.player_died.connect(_on_player_down)
+	game.round_began.connect(_on_round_for_bodies)
+
+
+func _on_round_for_bodies(_number: int) -> void:
+	ragdolls.clear()
+
+
+func _on_player_down(id: StringName, _by: StringName) -> void:
+	_fall(game.players.get(id))
+
+
+func _ragdoll_sound(id: StringName, at: Vector3, volume: float) -> void:
+	if audio != null and audio.audio != null:
+		var _played := audio.audio.play_at(id, at, clampf(volume, 0.3, 1.0))
+
+
+## [param who]'s body falls the way the server picked ([member BfhPlayer.death]), copied from the
+## figure this client draws; the figure stays hidden while they are dead
+## ([method BfhPlayer.present_body]). Nobody's figure, nothing: a player this client never drew.
+func _fall(who: BfhPlayer) -> void:
+	if who == null or ragdolls == null or who.figure == null or not who.figure.is_inside_tree():
+		return
+	var velocity := who.controller.state.velocity if who.controller != null else Vector3.ZERO
+	var _body := ragdolls.spawn(who.figure, who.death if who.death != null else DotPlayerDeath.new(), velocity)
+
+
 # --- Offline ---------------------------------------------------------------
 
 func _start_offline() -> void:
@@ -185,6 +228,10 @@ func _start_offline() -> void:
 # --- Connected -------------------------------------------------------------
 
 func _build_netcode() -> DotResult:
+	# The server's sv_ragdoll* set: this end draws the bodies.
+	if link != null:
+		var _bodies := game.ragdoll_rules.follow_cvars(link)
+
 	net = DotNetManager.new()
 	net.name = "Net"
 	net.is_server = false

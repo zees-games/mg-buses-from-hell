@@ -47,6 +47,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 
 ## Rules
 
+- A dead body falls as dot-player-char's ragdoll: the server picks the fall (`BfhGame.decide_death`, on `player.death`; a bus or a barrel always throws it), it rides DEATH last and optional, and the client copies it from the figure it draws (`BfhClient._fall`, from the world's `player_died` in both halves). The `sv_ragdoll*` cvars are bound in the module, REPLICATED, and followed by the client. Sounds in a pack are under its root except an addon's own (`res://addons/`). See dot-player-char's [docs/ragdolls.md](../dot-player-char/docs/ragdolls.md).
 **Delivery** ([delivery](docs/delivery.md))
 - **Every key is a `BfhBindings` row read through its action** (the board's Tab and the spectator's jump fall back to the keycode only with no table, for the suites); H is help (dot-menu's stock key; `BfhSettings._fill_help` writes the rules), so no row may default to H. `headless_run` checks it and the Escape menu's Help and Leave.
 - No `class_name` anywhere in this repository; scripts are reached by relative `preload`. `dot-server-deploy/tools/check.sh` refuses one.

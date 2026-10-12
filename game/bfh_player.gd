@@ -120,6 +120,10 @@ var beacon_marker: BfhBeacon = null
 ## [method present_body], never on a server, which draws nothing.
 var figure: BfhFigure = null
 
+## How this player's body falls on their death: the server's pick ([method BfhGame.decide_death]),
+## carried on DEATH and set here before anybody hears of it. Null before a first death.
+var death: DotPlayerDeath = null
+
 ## This bot's driver, built on first use. Null for a person.
 var autopilot: DotVehicleDriver = null
 

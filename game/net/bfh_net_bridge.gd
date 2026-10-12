@@ -661,8 +661,10 @@ func _on_sides_swapped(_number: int) -> void:
 
 
 func _on_player_died(player_id: StringName, by: StringName) -> void:
+	var who: BfhPlayer = game.players.get(player_id) if game != null else null
 	_broadcast(BfhEvents.Kind.DEATH, BfhEvents.write_death(
-		session_of(player_id), session_of(by) if by != &"" else 0
+		session_of(player_id), session_of(by) if by != &"" else 0,
+		who.death if who != null else null
 	))
 
 
@@ -1253,6 +1255,12 @@ func _on_event(message: DotNetMessage) -> void:
 		BfhEvents.Kind.DEATH:
 			var death := BfhEvents.read_death(reader)
 			if bool(death["ok"]):
+				# The fall goes on the player before anybody hears of the death, so the client
+				# that draws it reads the server's pick.
+				var fell: BfhPlayer = game.players.get(player_key(int(death["player_id"]))) \
+					if game != null else null
+				if fell != null and death.has("death"):
+					fell.death = death["death"]
 				death_received.emit(int(death["player_id"]), int(death["by"]))
 				game.player_died.emit(
 					player_key(int(death["player_id"])),

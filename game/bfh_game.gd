@@ -206,6 +206,11 @@ var _started: bool = false
 ## deleted objects for the life of the process. `forget()` is called now, from the one
 ## place that knows a player has gone.
 var entities := DotEntityTable.new()
+
+## What a dead body does, and which death reactions the server allows: dot-player-char's
+## `sv_ragdoll*` cvars, bound by the module (REPLICATED) and followed by a client through its
+## link, because the client draws the bodies.
+var ragdoll_rules: DotPlayerRagdollRules = DotPlayerRagdollRules.new()
 var _layout_seed: int = 0
 var _bus_ids: Array[int] = []
 
@@ -1894,6 +1899,8 @@ func _bus_hit(player: BfhPlayer, by: StringName, closing: float, offset: Vector3
 	var damage := DotDamage.make(attacker, player.entity_id, amount, null)
 	damage.point = player.global_position
 	damage.direction = offset.normalized()
+	# What killed them, for how the body falls (`decide_death`): a bus throws it.
+	damage.context = {"why": KILLED_BY_BUS}
 	combat.apply_damage(damage)
 
 	# Whether it put them down, from the health rather than from `lethal`: a runner in an
@@ -2127,6 +2134,7 @@ func _on_prop_exploded(
 		)
 		damage.point = player.global_position
 		damage.direction = offset.normalized() if distance > 0.01 else Vector3.UP
+		damage.context = {"why": KILLED_BY_BARREL}
 		combat.apply_damage(damage)
 
 		# Thrown, and a barrel is the only thing in the game that throws a runner
@@ -2151,6 +2159,25 @@ func _on_prop_exploded(
 		state.time_since_grounded = 1000.0
 
 
+## What a lethal hit was, on [member DotDamage.context] as `why`: run over, or thrown by a blast.
+const KILLED_BY_BUS := &"bus"
+const KILLED_BY_BARREL := &"barrel"
+
+
+## The fall a death gets: dot-player-char's reaction rule over the server's weights, seeded from
+## the player and the tick. [b]A bus or a barrel always throws the body[/b] (the power launch,
+## unless the server turned it off): being run over by a bus from hell is the one death this
+## game is named for, and a body that just slumped in front of the grille would undersell it.
+func decide_death(player: BfhPlayer, damage: DotDamage) -> DotPlayerDeath:
+	var why: StringName = damage.context.get("why", &"")
+	var thrown := why == KILLED_BY_BUS or why == KILLED_BY_BARREL
+	return DotPlayerDeath.decide(
+		ragdoll_rules.reactions(), damage.is_headshot(), damage.amount, damage.direction,
+		DotPlayerDeath.seed_of(player.entity_id, _tick), null,
+		1.0 if thrown else 0.0, DotPlayerDeathReactions.POWER_LAUNCH if thrown else &""
+	)
+
+
 func _on_player_died(player: BfhPlayer, damage: DotDamage) -> void:
 	# One dictionary read. This walked every player on the server comparing ints,
 	# which is the reverse index [DotEntityTable] keeps so nobody has to -- and it
@@ -2160,6 +2187,10 @@ func _on_player_died(player: BfhPlayer, damage: DotDamage) -> void:
 	# a fall -- and the table returns an empty key for it, which is the same answer
 	# the scan gave and means the same thing.
 	var by := entities.key_for_id(damage.attacker)
+
+	# How the body falls, picked once, here, and carried on DEATH to every client.
+	if authoritative:
+		player.death = decide_death(player, damage)
 
 	player_died.emit(player.player_id, by)
 	DotLog.debug(CHANNEL, "player died", {"id": String(player.player_id), "by": String(by)})

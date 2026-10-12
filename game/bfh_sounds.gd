@@ -188,6 +188,24 @@ static func catalogue(root: String = "") -> DotAudioCatalogue:
 	c.find(SIDE_SWAP).pitch_max = 0.75
 	# A click is a click, and two in one frame is one.
 	c.find(UI_CLICK).cooldown_ms = 60
+
+	# A body landing: dot-player-char's stock death sounds (Kenney, CC0), shipped in the addon,
+	# so their paths are the addon's own whatever the game's root.
+	for row: Dictionary in DotPlayerDeathSounds.rows():
+		var fall := DotAudioDef.new()
+		fall.id = row["id"]
+		fall.path = row["path"]
+		fall.variants = row["variants"]
+		fall.kind = DotAudioDef.Kind.POSITIONAL_3D
+		fall.bus = &"SFX"
+		fall.gain_db = float(row["gain_db"])
+		fall.pitch_min = float(row["pitch_min"])
+		fall.pitch_max = float(row["pitch_max"])
+		fall.cooldown_ms = int(row["cooldown_ms"])
+		fall.max_distance = 60.0
+		fall.max_concurrent = 3
+		fall.priority = 50
+		c.add(fall)
 	return c
 
 
@@ -217,6 +235,11 @@ static func sound_recipes() -> Dictionary:
 		SIDE_SWAP: DotAudioSynth.Voice.SPAWN,
 		UI_CLICK: DotAudioSynth.Voice.CLICK,
 		UI_NOTICE: DotAudioSynth.Voice.BLIP,
+		# Stand-ins only for a build without dot-player-char's files.
+		DotPlayerDeathReactions.SOUND_THUD: DotAudioSynth.Voice.IMPACT,
+		DotPlayerDeathReactions.SOUND_FACE_PLANT: DotAudioSynth.Voice.IMPACT,
+		DotPlayerDeathReactions.SOUND_SLUMP: DotAudioSynth.Voice.STEP,
+		DotPlayerDeathReactions.SOUND_WHOOSH: DotAudioSynth.Voice.SPAWN,
 	}
 
 

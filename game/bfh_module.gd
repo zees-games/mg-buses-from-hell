@@ -150,6 +150,12 @@ func _game_load() -> DotResult:
 	_add_tunables(world)
 	_build_vote(world)
 
+	# Dead bodies: dot-player-char's sv_ragdoll* set. The server only picks each death's reaction
+	# from them; REPLICATED, because the clients draw the bodies (see the client's _build_netcode).
+	var _ragdolls := world.ragdoll_rules.bind_cvars(
+		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
+	)
+
 	_bots = add_cvar(
 		"bfh_bots", "1",
 		"Bots in empty driving seats: 1 keeps as many as bot_quota and bot_quota_mode say, 0 none at all."

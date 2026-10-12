@@ -4,9 +4,11 @@ const BfhArena := preload("../game/bfh_arena.gd")
 const BfhAudio := preload("../game/bfh_audio.gd")
 const BfhAwards := preload("../game/bfh_awards.gd")
 const BfhBowls := preload("../game/bfh_bowls.gd")
+const BfhClient := preload("../game/bfh_client.gd")
 const BfhClientChat := preload("../game/bfh_client_chat.gd")
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhContent := preload("../game/bfh_content.gd")
+const BfhEvents := preload("../game/net/bfh_events.gd")
 const BfhGame := preload("../game/bfh_game.gd")
 const BfhHud := preload("../game/bfh_hud.gd")
 const BfhPaths := preload("../game/bfh_paths.gd")
@@ -35,7 +37,7 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 250
+const CHECKS := 253
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -3070,10 +3072,31 @@ func _test_bus() -> void:
 	runner.health.alive = true
 	runner.controller.state.velocity = Vector3.ZERO
 	bus.body().linear_velocity = Vector3(0.0, 0.0, 18.0)
+	# Drawn while alive, as a client draws everybody it can see: the body is copied from this.
+	var _drawn := runner.present_body(false)
 
 	game._check_bus_impacts(TICK)
 
 	_check(not runner.health.alive, "and a bus at speed kills outright")
+
+	# How the body falls: a bus always throws it, along the way it was going.
+	_check(runner.death != null and runner.death.reaction == DotPlayerDeathReactions.POWER_LAUNCH
+		and runner.death.direction.z > 0.5, "and throws the body, away from the grille",
+		str(runner.death.describe()) if runner.death != null else "none")
+	var carried := BfhEvents.read_death(DotNetReader.new(BfhEvents.write_death(2, 1, runner.death)))
+	_check(bool(carried["ok"]) and carried.has("death") and (carried["death"] as DotPlayerDeath).reaction == runner.death.reaction
+		and not BfhEvents.read_death(DotNetReader.new(BfhEvents.write_death(2, 1))).has("death"),
+		"DEATH carries the fall, and one without it still reads")
+	var client := BfhClient.new()
+	client.game = game
+	client._build_ragdolls()
+	client.remove_child(client.ragdolls)
+	add_child(client.ragdolls)
+	client._fall(runner)
+	_check(client.ragdolls.live().size() == 1 and client.ragdolls.rules == game.ragdoll_rules,
+		"a client builds the body from the figure it draws, under the game's rules")
+	client.ragdolls.queue_free()
+	client.free()
 
 	# Closing speed, not the bus's speed: a runner sprinting into a parked bus is not
 	# being run over, and taking the bus's own number makes that a kill.
@@ -3730,6 +3753,10 @@ func _test_the_sounds() -> void:
 	var mount := "res://dot_cloud/buses/9"
 	var outside := PackedStringArray()
 	for def in BfhSounds.catalogue(mount).defs:
+		# Except an addon's own files (dot-player-char's death sounds): an addon is the host's,
+		# delivered as an addon pack under its own res://addons/ path, never inside this one.
+		if def.path.begins_with("res://addons/"):
+			continue
 		if not def.path.begins_with(mount + "/audio/"):
 			outside.append(def.path)
 	_check(

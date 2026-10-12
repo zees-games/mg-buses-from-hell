@@ -90,6 +90,8 @@ bfh_bus_stuck_break 1        // seconds a bus may push against something before 
 bfh_bus_stuck_reset 5        // seconds before a stuck bus is put back on its start line
 ```
 
+Runners who are run over or blown up fly as ragdolls ([dot-player-char](https://github.com/modcommunity/dot-player-char)); the server picks how each one goes down and everybody sees the same fall. `sv_ragdoll 0` makes it a quick fall with no physics, `sv_ragdoll_style` picks ragdoll, stiff, topple or hide, `sv_ragdoll_time` and `sv_ragdoll_max` say how long and how many, and `sv_ragdoll_reactions` weights the falls (`limp`, `face_plant`, `crumple`, `headshot_launch`, `power_launch`; 0 turns one off).
+
 The bot cvars are the family's shared ones (dot-server's `DotBotQuota`), counted here in driving seats because a bot only ever drives: `bfh_drivers` is how many seats there are and caps the quota.
 
 Two settings are the map itself, so they are read when the bowl is built and are not cvars: set them in the JSON config, the environment (`BFH_HOOK_LAYOUT`, `BFH_COURTYARD_WEST_LANE`) or the command line (`--bfh-hook-layout`, `--bfh-courtyard-west-lane`) and restart. Connected clients are told them when they join.

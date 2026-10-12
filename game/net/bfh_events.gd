@@ -396,17 +396,26 @@ static func read_round(r: DotNetReader) -> Dictionary:
 	return {"round": number, "began": began, "winner": winner, "ok": r.ok()}
 
 
-static func write_death(player_id: int, by: int) -> PackedByteArray:
+## [param death] is how the body falls (dot-player-char's [DotPlayerDeath], the server's pick),
+## last and optional, so every client draws the same fall and an older one reads the rest.
+static func write_death(player_id: int, by: int, death: DotPlayerDeath = null) -> PackedByteArray:
 	var w := _w()
 	w.write_varint(player_id)
 	w.write_varint(by)
+	if death != null:
+		death.write_to(w)
 	return w.to_bytes()
 
 
 static func read_death(r: DotNetReader) -> Dictionary:
 	var player_id := r.read_varint()
 	var by := r.read_varint()
-	return {"player_id": player_id, "by": by, "ok": r.ok()}
+	var out := {"player_id": player_id, "by": by}
+	# A byte or more left is the fall; less is the padding to the last byte.
+	if r.bits_remaining() >= 8:
+		out["death"] = DotPlayerDeath.read_from(r)
+	out["ok"] = r.ok()
+	return out
 
 
 ## Where a barrel went off and how far it reached.
