@@ -64,6 +64,11 @@ func ready_to_swing() -> bool:
 ##
 ## Returns whether the swing happened at all — false means it was still on cooldown,
 ## which is different from a swing that missed.
+## A swing's weight against a toy, as a shot's damage (dot-props' `DotPropToyBox.shot`): a
+## beach ball goes off at its nine metres a second, a barrel rolls.
+const TOY_WHACK := 45.0
+
+
 func swing(
 	world: Node3D,
 	origin: Vector3,
@@ -97,6 +102,13 @@ func swing(
 
 	var collider := result.get("collider") as Node
 	var at: Vector3 = result.get("position", origin)
+
+	# A toy (dot-props', the bowl's beach balls and barrels): whacked along the swing, as a shot
+	# of the hammer's weight would push it. The world's box, by name; on a client it does
+	# nothing, the server's swing decides.
+	var box: Variant = world.get("toys")
+	if box is DotPropToyBox and (box as DotPropToyBox).shot(collider, at, direction, TOY_WHACK) >= 0:
+		return true
 
 	var prop := props.prop_for_node(collider) if props != null else null
 

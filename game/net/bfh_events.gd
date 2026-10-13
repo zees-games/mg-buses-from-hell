@@ -53,6 +53,9 @@ enum Kind {
 	## The bowl was rebuilt between rounds, to the one the players voted for: the same three
 	## numbers the HELLO carries, so a client rebuilds exactly as it would on joining.
 	BOWL,
+	## The bowl's toys: their net ids in ring order (both ends place them from the arena's
+	## build). After every build, and to a joiner after the HELLO.
+	TOYS,
 }
 
 enum Ask {
@@ -122,6 +125,26 @@ static func _w() -> DotNetWriter:
 ## hook is which and how wide the courtyard's west lane is. A client on the default hook
 ## against a server on the tight one would walk through a pillar it cannot see and stop at
 ## one that is not there. The hook by name, the lane to the millimetre.
+static func write_toys(map_id: StringName, net_ids: PackedInt64Array) -> PackedByteArray:
+	var w := _w()
+	w.write_string(String(map_id), ID_BYTES)
+	w.write_varint(net_ids.size())
+	for id in net_ids:
+		w.write_varint(maxi(int(id), 0))
+	return w.to_bytes()
+
+
+static func read_toys(r: DotNetReader) -> Dictionary:
+	var map_id := StringName(r.read_string(ID_BYTES))
+	var count := r.read_varint()
+	var ids := PackedInt64Array()
+	if count < 0 or count > 256:
+		return {"map_id": map_id, "ids": ids, "ok": false}
+	for i in count:
+		ids.append(r.read_varint())
+	return {"map_id": map_id, "ids": ids, "ok": r.ok()}
+
+
 static func write_hello(
 	player_id: int,
 	tick_rate: int,

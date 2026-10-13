@@ -442,6 +442,10 @@ var _stack_count: int = 0
 var _tank_end: int = 0
 
 
+## Every build, after the bowl is up: what the world builds the toys on.
+signal built()
+
+
 func build(p_radius: float) -> void:
 	radius = maxf(p_radius, 8.0)
 
@@ -465,6 +469,7 @@ func build(p_radius: float) -> void:
 	_tank_end = _obstacles.size()
 	_build_colonnade()
 	_place_scaffold()
+	_toy_spots = _find_toy_spots()
 
 	DotLog.info(
 		CHANNEL,
@@ -494,6 +499,8 @@ func build(p_radius: float) -> void:
 				"bus needs": "%.2f m" % BUS_GAP,
 				"hook_layout": hook_layout, "courtyard_west_lane": courtyard_west_lane},
 		)
+
+	built.emit()
 
 
 ## Everything a previous [method build] put here.
@@ -1717,7 +1724,7 @@ func scatter_point(stream: DotRandomStream, margin: float, height: float) -> Vec
 		var z := stream.next_range_f(-usable, usable)
 		if Vector2(x, z).length() > usable:
 			continue
-		if _inside_a_pillar(x, z) or _inside_the_scaffold(x, z) or _inside_a_start_lane(x, z, margin):
+		if _inside_a_pillar(x, z) or _inside_the_scaffold(x, z) or _inside_a_start_lane(x, z, margin) or _on_a_toy(x, z):
 			continue
 		return Vector3(x, height, z)
 
@@ -1771,6 +1778,67 @@ const PILLAR_KEEP_OUT := PILLAR_RADIUS + 2.2
 ## margin it always had and a tank keeps the same margin around a much bigger drum. The
 ## flat constant would have left a crate 1.4 m inside the biggest tank.
 const OBSTACLE_MARGIN := PILLAR_KEEP_OUT - PILLAR_RADIUS
+
+
+# --- Toys ----------------------------------------------------------------------
+
+## Where the bowl's toys stand (dot-props' loose toys: beach balls, barrels, a tyre): a ring
+## two thirds of the way out, clear of every pillar, tank and the scaffold. Not of the bus
+## lanes: they are the game's per round and a client never sets them, and a bus ploughing a
+## ball is the point. A pure function of the build, so both ends place the same toys in
+## the same order and a client pairs them by index.
+var _toy_spots: Array[Vector3] = []
+
+## The toys' ids, round the ring in this order.
+const TOY_KINDS: Array[String] = ["beach_ball", "barrel", "beach_ball", "tyre", "beach_ball", "barrel"]
+
+## How much room a toy spot keeps from an obstacle and from a scattered prop.
+const TOY_ROOM := 2.0
+
+
+func toy_placements() -> Array:
+	var out: Array = []
+	for i in range(_toy_spots.size()):
+		var at := _toy_spots[i]
+		out.append({"toy": TOY_KINDS[i % TOY_KINDS.size()], "at": [at.x, at.y, at.z], "yaw": float(i) * 37.0})
+	return out
+
+
+func _find_toy_spots() -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	var ring := runner_area_radius() * 0.62
+	var steps := 36
+	for k in range(steps):
+		if out.size() >= TOY_KINDS.size():
+			break
+		var a := TAU * float(k) / float(steps)
+		var x := cos(a) * ring
+		var z := sin(a) * ring
+		if _near_an_obstacle(x, z, TOY_ROOM) or _inside_the_scaffold(x, z):
+			continue
+		var crowded := false
+		for o in out:
+			if Vector2(o.x - x, o.z - z).length() < 6.0:
+				crowded = true
+		if not crowded:
+			out.append(Vector3(x, 0.0, z))
+	return out
+
+
+func _near_an_obstacle(x: float, z: float, room: float) -> bool:
+	for i in range(_obstacles.size()):
+		var at := _obstacles[i]
+		if Vector2(x - at.x, z - at.z).length() < _obstacle_radii[i] + room:
+			return true
+	return false
+
+
+## Whether a prop dropped at (x, z) would land on a toy: the scatter keeps off them.
+func _on_a_toy(x: float, z: float) -> bool:
+	for at in _toy_spots:
+		if Vector2(x - at.x, z - at.z).length() < TOY_ROOM:
+			return true
+	return false
 
 
 func _inside_a_pillar(x: float, z: float) -> bool:

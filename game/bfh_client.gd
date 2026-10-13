@@ -262,6 +262,8 @@ func _build_netcode() -> DotResult:
 	# The server's sv_ragdoll* set: this end draws the bodies.
 	if link != null:
 		var _bodies := game.ragdoll_rules.follow_cvars(link)
+		# And sv_toys*: a client hides the toys a server took away.
+		var _toys := game.toy_rules.follow_cvars(link)
 		# The server's mp_forceview: this end places its own camera.
 		var _view := game.view_rules.follow_cvars(link)
 

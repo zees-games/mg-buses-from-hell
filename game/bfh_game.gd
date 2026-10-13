@@ -217,6 +217,27 @@ var entities := DotEntityTable.new()
 ## `sv_ragdoll*` cvars, bound by the module (REPLICATED) and followed by a client through its
 ## link, because the client draws the bodies.
 var ragdoll_rules: DotPlayerRagdollRules = DotPlayerRagdollRules.new()
+
+## dot-props' `sv_toys*`, bound by the module (REPLICATED) and followed by a client.
+var toy_rules: DotPropToyRules = DotPropToyRules.new()
+
+## The bowl's toys (dot-props' loose ones: beach balls, barrels, a tyre), on a ring the arena
+## works out from its build (`BfhArena.toy_placements`), so both ends place the same toys in the
+## same order. A bus ploughs them, a hammer whacks them, a walk pushes them; nobody stands on
+## one or hides behind one. Rebuilt with the arena; home at every round's start.
+var toys: DotPropToyBox = null
+
+## The bowl's toys are about to go (the arena is rebuilt), and are built: what the bridge
+## releases and pairs their entities on.
+signal toys_clearing()
+signal toys_built()
+
+## A toy made a sound, on whichever end draws it.
+signal toy_sound(id: StringName, at: Vector3, strength: float)
+
+## The collision bit a loose toy is on (layer 10): nothing else here uses it, and a person's
+## motor (layer 1) never collides with it. Buses, crates and the bowl are all on layer 1.
+const TOY_LAYER := 1 << 9
 var _layout_seed: int = 0
 var _bus_ids: Array[int] = []
 
@@ -321,6 +342,8 @@ func _build_arena() -> void:
 	arena.hook_layout = config.hook_layout
 	arena.courtyard_west_lane = config.courtyard_west_lane
 	add_child(arena)
+	# Every build, the server's and a client's rebuild on HELLO alike.
+	var _toys := arena.built.connect(_build_toys)
 	arena.build(config.arena_radius)
 
 
@@ -869,6 +892,9 @@ func _on_round_started(number: int) -> void:
 
 	_clear_bowl()
 	_change_bowl()
+	# The toys home before anything is scattered round them.
+	if toys != null and authoritative:
+		toys.reset()
 	_lay_out_bowl()
 	_place_players()
 	_place_buses()
@@ -1159,6 +1185,9 @@ func _step(delta: float) -> void:
 		var player: BfhPlayer = players[id]
 		player.simulate(_tick, delta)
 
+	if authoritative:
+		_advance_toys(delta)
+
 	_drive_buses(delta)
 	_check_bus_impacts(delta)
 
@@ -1192,6 +1221,51 @@ func set_round_seconds(seconds: float) -> void:
 
 	if match_node != null and match_node.rules != null:
 		match_node.rules.time_limit_sec = seconds
+
+
+# --- Toys ----------------------------------------------------------------------
+
+func _build_toys() -> void:
+	if toys != null:
+		toys_clearing.emit()
+		remove_child(toys)
+		toys.queue_free()
+		toys = null
+	toys = DotPropToyBox.new()
+	toys.name = "Toys"
+	toys.authoritative = authoritative
+	toys.rules = toy_rules
+	toys.gravity = 20.0
+	toys.kill_y = -30.0
+	toys.loose_layer = TOY_LAYER
+	toys.loose_mask = 1 | TOY_LAYER
+	toys.solid_layer = 1
+	toys.solid_mask = 1
+	toys.footprint_layer = 0
+	toys.aim_mask = 1 | TOY_LAYER
+	add_child(toys)
+	var built := toys.build(arena.toy_placements())
+	if not built.ok:
+		DotLog.warn(CHANNEL, "the bowl's toys would not build", {"why": built.error.message})
+	var _sounds := toys.sound.connect(func(id: StringName, at: Vector3, strength: float) -> void: toy_sound.emit(id, at, strength))
+	toys_built.emit()
+
+
+## Everybody against the toys after they moved: a walk into a ball sends it on. Buses and crates
+## meet them in the solver; a person, whose motor never sees them, through this. Server side.
+func _advance_toys(delta: float) -> void:
+	if toys == null or toys.count() == 0:
+		return
+	for id: StringName in players:
+		var player: BfhPlayer = players[id]
+		if player.riding or (player.health != null and not player.health.alive):
+			continue
+		var state := player.controller.state
+		var tunables := player.controller.tunables
+		var radius := tunables.radius if tunables != null else 0.35
+		var height := lerpf(tunables.stand_height, tunables.crouch_height, state.crouch_fraction) if tunables != null else 1.8
+		var _pushed := toys.push_from(state.position, state.velocity, radius, height)
+	toys.advance(delta)
 
 
 ## The fixed step. One place, because three files were about to compute it.

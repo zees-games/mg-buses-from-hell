@@ -37,11 +37,11 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 270
+const CHECKS := 275
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 34
+const SECTIONS := 35
 
 const TICK := 1.0 / 60.0
 
@@ -129,6 +129,7 @@ func _run() -> void:
 	await _test_sides()
 	await _test_standing_on_a_crate()
 	await _test_hammer()
+	await _test_the_toys()
 	await _test_barrel()
 	await _test_bus()
 	await _test_round_ends()
@@ -3109,6 +3110,58 @@ func _test_barrel() -> void:
 	_check(not barrel.is_alive(), "the barrel is gone")
 
 	await _dispose(game)
+	_done()
+
+
+## dot-props' toys in the bowl: the ring's six built clear of every obstacle and still two seconds
+## on, a hammer whacks a beach ball off, a crate thrown into a barrel sends it rolling, and the next
+## round puts them home.
+func _test_the_toys() -> void:
+	print("the bowl's toys")
+	var game := _world(func(c: BfhConfig) -> void:
+		c.crate_count = 0
+		c.barrel_count = 0
+		c.driver_count = 1)
+	var driver := game.add_player(&"d", "Driver", BfhGame.TEAM_DRIVERS)
+	var runner := game.add_player(&"r", "Runner", BfhGame.TEAM_RUNNERS)
+	game.start()
+	await _step(game, 10)
+	var box := game.toys
+	var placed := game.arena.toy_placements().size()
+	_check(box != null and box.count() == placed and placed == BfhArena.TOY_KINDS.size() and box.missing.is_empty(),
+		"the bowl has its %d toys" % placed, str(box.describe()) if box != null else "none")
+	await _step(game, 120)
+	var off: Array = []
+	for toy in box.toys:
+		if toy.body.global_position.distance_to(toy.rest.origin) > 0.6:
+			off.append("%s %d to %s" % [toy.def["id"], toy.index, toy.body.global_position.snapped(Vector3.ONE * 0.1)])
+	_check(off.is_empty(), "two seconds on, every toy is where the bowl put it", "; ".join(off))
+
+	var ball := box.toy(0)
+	var b0 := ball.body.global_position
+	runner.hammer.cooldown = 0.0
+	var swung := runner.hammer.swing(game, b0 + Vector3(0.0, 0.0, -1.5), Vector3(0.0, 0.0, 1.0),
+		game.props, game.prop_damage, game.carry, runner.player_id, 0xFFFFFFF)
+	await _step(game, 20)
+	_check(swung and ball.body.global_position.distance_to(b0) > 0.5, "a hammer whacks a beach ball off",
+		"%.2f m" % ball.body.global_position.distance_to(b0))
+
+	# What a bus or a crate is to a toy: a body on the bowl's layer. A crate thrown into the
+	# barrel sends it on (a bus is the same layer, and heavier).
+	var barrel := box.toy(1)
+	var r0 := barrel.body.global_position
+	var crate := game.props.spawn(BfhContent.CRATE, &"world", r0 + Vector3(0.0, 0.2, -2.5))
+	await _step(game, 1)
+	if crate != null:
+		(crate.body() as RigidBody3D).linear_velocity = Vector3(0.0, 0.0, 12.0)
+	await _step(game, 30)
+	_check(crate != null and barrel.body.global_position.distance_to(r0) > 0.5, "a crate thrown into a barrel sends it rolling, as a bus does",
+		"%.2f m" % barrel.body.global_position.distance_to(r0))
+
+	game._on_round_started(game.round_number + 1)
+	await _step(game, 2)
+	_check(ball.body.global_position.distance_to(ball.rest.origin) < 0.3 and barrel.body.global_position.distance_to(barrel.rest.origin) < 0.3,
+		"and the next round puts them home")
 	_done()
 
 

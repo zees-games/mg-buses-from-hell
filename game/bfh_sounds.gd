@@ -210,6 +210,24 @@ static func catalogue(root: String = "") -> DotAudioCatalogue:
 		fall.max_concurrent = 3
 		fall.priority = 50
 		c.add(fall)
+
+	# The bowl's toys: dot-props' stock toy sounds (Kenney, CC0), shipped in the addon, under
+	# the buses in priority.
+	for row: Dictionary in DotPropToySounds.rows():
+		var toy := DotAudioDef.new()
+		toy.id = row["id"]
+		toy.path = row["path"]
+		toy.variants = row["variants"]
+		toy.kind = DotAudioDef.Kind.POSITIONAL_3D
+		toy.bus = &"SFX"
+		toy.gain_db = float(row["gain_db"])
+		toy.pitch_min = float(row["pitch_min"])
+		toy.pitch_max = float(row["pitch_max"])
+		toy.cooldown_ms = int(row["cooldown_ms"])
+		toy.max_distance = float(row["distance"])
+		toy.max_concurrent = 3
+		toy.priority = 30
+		c.add(toy)
 	return c
 
 
@@ -239,6 +257,20 @@ static func sound_recipes() -> Dictionary:
 		SIDE_SWAP: DotAudioSynth.Voice.SPAWN,
 		UI_CLICK: DotAudioSynth.Voice.CLICK,
 		UI_NOTICE: DotAudioSynth.Voice.BLIP,
+		# Stand-ins only for a build without dot-props' toy files.
+		DotPropToySounds.BOUNCE: DotAudioSynth.Voice.IMPACT,
+		DotPropToySounds.THUMP: DotAudioSynth.Voice.IMPACT,
+		DotPropToySounds.KNOCK: DotAudioSynth.Voice.IMPACT,
+		DotPropToySounds.PIN: DotAudioSynth.Voice.CLICK,
+		DotPropToySounds.WOOD: DotAudioSynth.Voice.IMPACT,
+		DotPropToySounds.RUBBER: DotAudioSynth.Voice.IMPACT,
+		DotPropToySounds.PUNCH: DotAudioSynth.Voice.HURT,
+		DotPropToySounds.METAL: DotAudioSynth.Voice.CLICK,
+		DotPropToySounds.BELL: DotAudioSynth.Voice.PICKUP,
+		DotPropToySounds.CLICK: DotAudioSynth.Voice.CLICK,
+		DotPropToySounds.WATER: DotAudioSynth.Voice.STEP,
+		DotPropToySounds.BOING: DotAudioSynth.Voice.SPAWN,
+		DotPropToySounds.HORN: DotAudioSynth.Voice.BLIP,
 		# Stand-ins only for a build without dot-player-char's files.
 		DotPlayerDeathReactions.SOUND_THUD: DotAudioSynth.Voice.IMPACT,
 		DotPlayerDeathReactions.SOUND_FACE_PLANT: DotAudioSynth.Voice.IMPACT,

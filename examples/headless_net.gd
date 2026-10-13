@@ -50,11 +50,11 @@ const BfhSpectate := preload("../game/bfh_spectate.gd")
 ## the wrong reason. A real client is a separate program with its own export and its own
 ## `user://` config. Make them disagree, and let HELLO correct it.
 
-const CHECKS := 193
+const CHECKS := 196
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 23
+const SECTIONS := 24
 
 ## Who the client is, on both ends.
 const CLIENT_PEER := 7
@@ -131,6 +131,7 @@ func _run() -> void:
 		await _test_a_barrel_is_drawn()
 		await _test_the_scoreboard()
 		await _test_a_voted_bowl_crosses()
+		await _test_the_toys_reach_the_client()
 		await _test_leaving()
 
 	print("")
@@ -2174,6 +2175,30 @@ func _test_a_voted_bowl_crosses() -> void:
 	var client_bodies := int(_client_bridge.describe()["bodies"])
 	_check(client_bodies == server_bodies and client_bodies > 0,
 		"with the new round's crates mirrored in it", "client %d, server %d" % [client_bodies, server_bodies])
+	_done()
+
+
+## The bowl's toys over the wire: paired by index on both ends, frozen copies, a ball pushed on
+## the server followed on the client.
+func _test_the_toys_reach_the_client() -> void:
+	print("the bowl's toys reach the client")
+	await _steps(4)
+	var count := _server_game.toys.count() if _server_game.toys != null else 0
+	_check(count > 0 and _server_bridge.toy_count() == count and _client_bridge.toy_count() == count,
+		"every toy is an entity on both ends, paired by index", "%d toys, %d and %d" % [count, _server_bridge.toy_count(), _client_bridge.toy_count()])
+	if count == 0 or _client_game.toys == null or _client_game.toys.count() == 0:
+		_done()
+		return
+	var server_ball := _server_game.toys.toy(0)
+	var client_ball := _client_game.toys.toy(0)
+	_check(client_ball.body.freeze and not client_ball.authoritative, "the client's are frozen copies")
+	var start := client_ball.body.global_position
+	var _kicked := _server_game.toys.hit(server_ball.body, server_ball.body.global_position, Vector3(1, 0.2, 0), 2.0)
+	await _steps(60)
+	var apart := client_ball.body.global_position.distance_to(server_ball.body.global_position)
+	_check(server_ball.body.global_position.distance_to(start) > 0.5 and apart < 0.8,
+		"a ball pushed on the server is followed on the client",
+		"%.2f m moved, %.2f m apart" % [server_ball.body.global_position.distance_to(start), apart])
 	_done()
 
 

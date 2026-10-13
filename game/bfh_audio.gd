@@ -112,6 +112,9 @@ func setup(world: Node3D, own: Callable = Callable()) -> DotResult:
 
 	world.connect("noise", _on_noise)
 	world.connect("barrel_exploded", _on_blast)
+	# The bowl's toys: a ball's bounce off a bus, a barrel's knock.
+	if world.has_signal("toy_sound"):
+		world.connect("toy_sound", _on_toy)
 	world.connect("round_began", _on_round_began)
 	world.connect("round_over", _on_round_over)
 	world.connect("sides_swapped", _on_sides_swapped)
@@ -190,6 +193,10 @@ func engine_speed(bus: Node3D) -> float:
 
 func _on_noise(id: StringName, at: Vector3) -> void:
 	audio.play_at(id, at)
+
+
+func _on_toy(id: StringName, at: Vector3, strength: float) -> void:
+	audio.play_at(id, at, clampf(strength, 0.25, 1.0))
 
 
 func _on_blast(at: Vector3, _radius: float) -> void:
