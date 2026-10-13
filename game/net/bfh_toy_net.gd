@@ -34,7 +34,9 @@ func _register_net_vars() -> void:
 
 ## Authority only: the toy's state into the replicated fields.
 func pull() -> void:
-	if toy == null or not is_instance_valid(toy):
+	# Out of the tree is a bowl rebuilt inside the netcode's own tick, which a dot-net from
+	# before history.md #30 still walks: a toy taken out has no transform to give.
+	if toy == null or not is_instance_valid(toy) or not toy.is_inside_tree():
 		return
 	var at := toy.state_transform()
 	net_position = at.origin
