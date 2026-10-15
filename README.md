@@ -89,6 +89,10 @@ bot_quota_mode fill          // fill (as above), fixed (that many bots), per_pla
 bot_difficulty medium        // easy, medium, hard or nightmare: how far ahead of a runner a bot bus aims and how fast it drives (every bot_* setting is a cvar too; solo: the console, or -- --bot_difficulty)
 bfh_bot_aim_past 8           // metres past a runner a bot bus aims, so it arrives at speed
 bfh_bot_steer_clearance 3.6  // metres a bot bus keeps off a pillar's or drum's surface
+bfh_bot_route_clearance 3.4  // metres a district route keeps off a building, wall or the ramp
+bfh_bot_route_replan 0.5     // seconds between a bot bus's route replans
+bfh_bot_unwedge_after 0.5    // seconds against something before a bot bus reverses off it
+bfh_bot_unwedge_seconds 1.4  // seconds it reverses for
 bfh_bus_stuck_break 1        // seconds a bus may push against something before what is under it breaks
 bfh_bus_stuck_reset 5        // seconds before a stuck bus is put back on its start line
 ```

@@ -88,7 +88,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 - `steer_around` is a nudge, not a path; its ceiling is `LANE_THROUGH`. A lane-threading exemption was tried and wedges the stacks.
 - A detour is passed as a route `[detour, past the quarry]`, never as the driver's last waypoint (it brakes into it).
 - A bus's brakes are newtons (dot-vehicle 4f4afaf): 30 kN foot brake (the bot's, and a person's S until the bus stops, then reverse: `brake_then_reverse` in `_drive_buses`, persons only), 40 kN handbrake (Ctrl) with the rear grip at 0.15 while held so it slides. `headless_run`'s "a bus's brakes" and "a handbrake turn" measure them; the deck chase is what a weaker foot brake slows. `tools/drive_shot.sh stop|handbrake|turn` draws them. [history](docs/history.md#s-was-reverse-thrust-and-the-handbrake-never-slid-2026-10-12)
-- Bot knobs (`bfh_bot_aim_past`, `bfh_bot_steer_clearance`, `bfh_bus_stuck_break`, `bfh_bus_stuck_reset`) are authority-only live cvars.
+- Bot knobs (`bfh_bot_aim_past`, `bfh_bot_steer_clearance`, `bfh_bot_route_clearance`, `bfh_bot_route_replan`, `bfh_bot_unwedge_after`, `bfh_bot_unwedge_seconds`, `bfh_bus_stuck_break`, `bfh_bus_stuck_reset`) are authority-only live cvars.
 
 **The game** ([design](docs/design.md), [services](docs/services.md))
 - The hammer cannot hurt a person; it is not a `DotWeapon`. No auto-hop. Damage is by closing speed; nothing above the bus's roof is hit.

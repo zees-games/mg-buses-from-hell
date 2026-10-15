@@ -1458,6 +1458,22 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 	# Written every tick rather than once, so `bfh_bot_steer_clearance` takes effect on the
 	# next tick. Only the bots read it; see [member BfhArena.steer_clearance].
 	arena.steer_clearance = config.bot_steer_clearance
+	arena.route_clearance = config.bot_route_clearance
+
+	# [b]A district is a maze and is driven by a route.[/b] Through the streets with
+	# [method BfhArena.street_route]; the first waypoints are passed at speed like any detour
+	# and the point past the quarry is last. No nudge on top of it: the route already keeps a
+	# bus off every building, and the nudge's wider berth is what wedged it in a 7.6 m street.
+	# Not up the ramp, whose line-up is its own rule.
+	if not bound and arena.routes_through_streets():
+		var path := _street_path(bus, quarry.global_position, beyond, delta)
+		var backed := _back_off(bus, path[0] if not path.is_empty() else beyond, delta)
+		if backed != null:
+			return backed
+		path.append(beyond)
+		player.autopilot.set_route(path)
+		return player.autopilot.drive(bus, delta)
+
 	var aim := arena.steer_around(bus.position(), beyond)
 	# [b]And never the point the bus is already standing on.[/b] `steer_around` hands a
 	# bus the point beside a pillar across its line; a bus that stops there with the
@@ -1474,6 +1490,10 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 	if on_it < PARKED_ON_WAYPOINT and bus.speed() < 1.0 and line.length() > 0.5:
 		aim = bus.position() + line.normalized() * config.bot_steer_clearance
 		aim.y = beyond.y
+	if not bound:
+		var backed_off := _back_off(bus, aim, delta)
+		if backed_off != null:
+			return backed_off
 	if bound:
 		var turned := _turn_round_for_the_ramp(player, bus, delta)
 		if turned != null:
@@ -1498,6 +1518,81 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 	else:
 		player.autopilot.set_target(aim)
 	return player.autopilot.drive(bus, delta)
+
+
+## Instance id -> seconds of reversing a wedged bot bus has left.
+var _bus_backing_off: Dictionary = {}
+
+
+## A bot bus that has been throttling against something, backing out of it: reverse with the
+## wheel over (in reverse it swings the nose towards the side [param toward] is on) for
+## `bot_unwedge_seconds`, then null so the ordinary drive takes over from where it got to.
+##
+## [b]Because the driver only ever goes forward.[/b] A bus whose nose is in a building, or whose
+## aim is behind it with a wall of towers either side, held the throttle until `_unstick` put it
+## back on its start line five seconds later (measured 2026-10-15: every map, two to five times
+## in 45 s). Triggered by the same clock the stuck rule reads, so nothing here decides what
+## "wedged" is; only sooner, and by a driver's remedy instead of a teleport.
+func _back_off(bus: DotVehicleInstance, toward: Vector3, delta: float) -> DotVehicleCommand:
+	var left := float(_bus_backing_off.get(bus.instance_id, 0.0))
+	if left <= 0.0:
+		if float(_bus_stuck.get(bus.instance_id, 0.0)) < config.bot_unwedge_after:
+			return null
+		left = config.bot_unwedge_seconds
+	left -= delta
+	if left <= 0.0:
+		_bus_backing_off.erase(bus.instance_id)
+		return null
+	_bus_backing_off[bus.instance_id] = left
+
+	var right := bus.body().global_basis.x
+	right.y = 0.0
+	var to := toward - bus.position()
+	to.y = 0.0
+	var side := 1.0 if right.dot(to) >= 0.0 else -1.0
+	var command := DotVehicleCommand.new()
+	command.throttle = -BACK_OFF_THROTTLE
+	command.steer = -side
+	command.sanitise()
+	return command
+
+
+const BACK_OFF_THROTTLE := 0.9
+
+
+## Instance id -> `{path, age, to}`: the street route a bot bus is following.
+var _bus_routes: Dictionary = {}
+
+
+## The waypoints a bot bus follows through a district to [param beyond], replanned every
+## `bot_route_replan` seconds or when the quarry has moved on, with the ones it has reached
+## dropped each tick. Empty when the line is clear.
+func _street_path(bus: DotVehicleInstance, quarry_at: Vector3, beyond: Vector3,
+		delta: float) -> PackedVector3Array:
+	var held: Dictionary = _bus_routes.get(bus.instance_id, {})
+	var age := float(held.get("age", INF)) + delta
+	var stale := held.is_empty() or age >= config.bot_route_replan \
+		or Vector3(held["to"]).distance_to(quarry_at) > STREET_REPLAN_MOVED
+	if stale:
+		held = {"path": arena.street_route(bus.position(), quarry_at), "to": quarry_at}
+		age = 0.0
+	held["age"] = age
+
+	var path: PackedVector3Array = held["path"]
+	# Dropped once passed, so the first waypoint is always ahead: the driver is handed the
+	# list afresh each tick and aims at its head.
+	var at := bus.position()
+	while not path.is_empty() and Vector2(path[0].x - at.x, path[0].z - at.z).length() < STREET_PASSED:
+		path.remove_at(0)
+	held["path"] = path
+	_bus_routes[bus.instance_id] = held
+	return path.duplicate()
+
+
+## How far a bot's quarry may move before its route is planned again, and how close to a
+## waypoint a bus is before it counts as passed. Metres.
+const STREET_REPLAN_MOVED := 6.0
+const STREET_PASSED := 3.5
 
 
 ## A bot bus that has to face the other way to get up the ramp turns round in legs, or

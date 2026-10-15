@@ -37,11 +37,11 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 306
+const CHECKS := 322
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 37
+const SECTIONS := 38
 
 const TICK := 1.0 / 60.0
 
@@ -116,6 +116,7 @@ func _run() -> void:
 	_test_every_bowl()
 	_test_districts()
 	await _test_driving_a_district()
+	await _test_bot_pace()
 	await _test_the_stacks()
 	await _test_the_tank_farm()
 	await _test_reach()
@@ -851,6 +852,118 @@ func _test_driving_a_district() -> void:
 		_check(covered > 30.0, "and it gets somewhere", "%.0f m" % covered)
 		await _dispose(game)
 
+	_done()
+
+
+## One bot bus chasing a runner who stands still wherever the scatter put them, and who is moved
+## to a fresh spot each time the bus gets within [constant REACH_M] of them (or after
+## [constant REACH_GIVE_UP] seconds without). Returns `{covered, seconds, resets, reaches,
+## stalls, longest_stall, stall_at}`: how far the bus travelled, how many times the stuck rule
+## put it back on its start line, how many runners it got to, and how long it stood throttling
+## at nothing, and where.
+func _pace_drive(bowl_id: StringName, seconds: float, extra: Callable = Callable()) -> Dictionary:
+	var game := _world(func(c: BfhConfig) -> void:
+		c.round_seconds = seconds + 60.0
+		c.crate_count = 12
+		c.barrel_count = 3
+		if extra.is_valid():
+			extra.call(c)
+	)
+	var driver := game.add_player(&"d", "Driver", BfhGame.TEAM_DRIVERS)
+	driver.is_bot = true
+	var runner := game.add_player(&"r", "Runner", BfhGame.TEAM_RUNNERS)
+	game.start()
+	await _step(game, 8)
+	if bowl_id != &"bfh_bowl":
+		game.change_bowl_now(bowl_id)
+		await _step(game, 20)
+
+	var bus := game.vehicles.get_vehicle(game._bus_ids[0])
+	var stream := DotRandomStream.new(11, &"pace")
+	var out := {"covered": 0.0, "seconds": 0.0, "resets": 0, "reaches": 0, "stalls": 0,
+		"longest_stall": 0.0, "stall_at": Vector3.ZERO}
+	var last := bus.position()
+	var stalled := 0.0
+	var since := 0.0
+	var spots := 0
+	var ticks := int(seconds / TICK)
+
+	for _i in range(ticks):
+		# A fresh runner spot, at least 25 m from the bus, from the seeded stream.
+		var near := runner.global_position.distance_to(bus.position()) < REACH_M
+		if spots == 0 or near or since > REACH_GIVE_UP:
+			if near:
+				out.reaches += 1
+			var at := runner.global_position
+			for _try in range(30):
+				at = game.arena.scatter_point(stream, 1.0, 0.0)
+				if at.distance_to(bus.position()) > 25.0:
+					break
+			_put(runner, at)
+			spots += 1
+			since = 0.0
+		game.simulate(TICK)
+		await get_tree().physics_frame
+		since += TICK
+		if not bus.is_alive():
+			break
+		var now := bus.position()
+		if _sent_home(last, now):
+			out.resets += 1
+		else:
+			out.covered += Vector2(now.x - last.x, now.z - last.z).length()
+		last = now
+		var asking := bus.command != null and absf(bus.command.throttle) > 0.3
+		if asking and bus.speed() < 1.0:
+			if stalled == 0.0:
+				out.stalls += 1
+			stalled += TICK
+			if stalled > out.longest_stall:
+				out.longest_stall = stalled
+				out.stall_at = now
+		else:
+			stalled = 0.0
+	out.seconds = float(ticks) * TICK
+	await _dispose(game)
+	return out
+
+
+## What a bot bus is held to over [constant PACE_SECONDS] of chasing runners who stand wherever
+## the scatter puts them. Measured 2026-10-15 before the street route, the unwedge and the
+## ramp-side nudge: 2.65 to 8.1 m/s average (suburb the slowest), two to five sends home and
+## stalls of 5.1 s (the stuck rule's reset) on every map; after, 6.5 to 11.9, none sent home and no
+## stall over a second. The floor is under every "after" with room and over the slowest "before",
+## and the other bars are what separate the rest.
+const PACE_SECONDS := 45.0
+const PACE_FLOOR := 5.0
+const PACE_SENT_HOME_AT_MOST := 1
+const PACE_STALL_AT_MOST := 2.0
+const REACH_M := 6.0
+const REACH_GIVE_UP := 20.0
+## Every map a bot bus is held to a pace on, and the bar for each.
+const PACE_MAPS := [&"bfh_bowl", &"bfh_downtown", &"bfh_hill_town", &"bfh_suburb"]
+
+
+func _test_bot_pace() -> void:
+	print("a bot bus keeps moving on every map")
+	var only := ""
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--map="):
+			only = arg.trim_prefix("--map=")
+	for id in PACE_MAPS:
+		if only != "" and String(id) != only:
+			continue
+		var r := await _pace_drive(id, PACE_SECONDS)
+		print("  ..    %-14s %.0f m in %.0f s = %.2f m/s, %d reaches, %d sent home, %d stalls (longest %.1f s at %s)"
+			% [id, r.covered, r.seconds, r.covered / r.seconds, r.reaches, r.resets, r.stalls,
+				r.longest_stall, str(r.stall_at.snappedf(0.1))])
+		_check(r.covered / r.seconds >= PACE_FLOOR, "%s: a bot bus keeps an average pace over %.0f s" % [id, PACE_SECONDS],
+			"%.2f m/s, floor %.1f" % [r.covered / r.seconds, PACE_FLOOR])
+		_check(r.resets <= PACE_SENT_HOME_AT_MOST, "%s: and is not sent home more than %d time" % [id, PACE_SENT_HOME_AT_MOST],
+			"sent home %d times" % r.resets)
+		_check(r.longest_stall < PACE_STALL_AT_MOST, "%s: and never throttles against something for %.0f s" % [id, PACE_STALL_AT_MOST],
+			"%.1f s at %s" % [r.longest_stall, str(r.stall_at.snappedf(0.1))])
+		_check(r.reaches >= 1, "%s: and gets to a runner" % id, "%d reaches" % r.reaches)
 	_done()
 
 

@@ -247,6 +247,18 @@ func _add_tunables(world: BfhGame) -> void:
 	_tunable("bfh_bot_steer_clearance", config.bot_steer_clearance,
 		"Metres a bot bus keeps off a pillar's or drum's surface; the map is laid out for 3.6",
 		func(value: float) -> void: config.bot_steer_clearance = maxf(value, 0.5))
+	_tunable("bfh_bot_route_clearance", config.bot_route_clearance,
+		"Metres a bot bus's centre keeps off a building when routed along a district's streets",
+		func(value: float) -> void: config.bot_route_clearance = clampf(value, 1.5, 4.0))
+	_tunable("bfh_bot_route_replan", config.bot_route_replan,
+		"Seconds between a bot bus planning its route through a district again",
+		func(value: float) -> void: config.bot_route_replan = clampf(value, 0.1, 3.0))
+	_tunable("bfh_bot_unwedge_after", config.bot_unwedge_after,
+		"Seconds a bot bus throttles against something before it backs off",
+		func(value: float) -> void: config.bot_unwedge_after = clampf(value, 0.1, 3.0))
+	_tunable("bfh_bot_unwedge_seconds", config.bot_unwedge_seconds,
+		"Seconds a bot bus reverses for, wheel over, when it backs off",
+		func(value: float) -> void: config.bot_unwedge_seconds = clampf(value, 0.3, 4.0))
 	_tunable("bfh_bus_stuck_break", config.bus_stuck_break_seconds,
 		"Seconds a bus may throttle against something before what is under it breaks",
 		func(value: float) -> void: config.bus_stuck_break_seconds = maxf(value, 0.1))

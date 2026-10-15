@@ -5,6 +5,7 @@ const BfhContent := preload("bfh_content.gd")
 const BfhReach := preload("bfh_reach.gd")
 const BfhTextures := preload("bfh_textures.gd")
 const BfhDistricts := preload("bfh_districts.gd")
+const BfhRoute := preload("bfh_route.gd")
 
 ## The bowl: a round sand floor, a wall around it, and a ledge the drivers look from.
 ##
@@ -539,6 +540,7 @@ func _clear() -> void:
 	_has_scaffold = false
 	_obstacles = PackedVector3Array()
 	_obstacle_radii = PackedFloat32Array()
+	_route = null
 	_stack_count = 0
 	_tank_end = 0
 	_district_buildings = []
@@ -1533,7 +1535,49 @@ const PILLAR_CLEARANCE := 3.6
 ## round again, which is the whole reason there is a lane through the middle for a driver
 ## who would rather not.
 func steer_around(from: Vector3, target: Vector3) -> Vector3:
-	return _round_the_obstacles(from, _round_the_ramp(from, target))
+	var nudged := _round_the_obstacles(from, _round_the_ramp(from, target))
+	# [b]The nudge's point is a target too, and the ramp is asked about it again.[/b] A bus
+	# beside the ramp (where every bus starts) whose line meets a building is handed the
+	# point beside it on whichever side has more room, and that is as often the far side of
+	# the slab: the bus then drove into the ramp's flank at full throttle until the stuck rule
+	# sent it home (measured 2026-10-15, every map, from the start lane). Only when the nudge
+	# moved the aim: the line to an untouched target was already checked.
+	if nudged.distance_squared_to(target) > 0.01:
+		return _round_the_ramp(from, nudged)
+	return nudged
+
+
+## Whether a bot bus is routed along streets here rather than nudged round obstacles: a
+## district's buildings are a maze of 7.6 m streets, which the nudge cannot thread. The plain
+## bowls keep the nudge, because their narrow lanes are doors on purpose (see `LANE_THROUGH`).
+func routes_through_streets() -> bool:
+	return district != ""
+
+
+## How far a bus's centre is kept off every obstacle, the wall and the slabs by
+## [method street_route]: `BfhConfig.bot_route_clearance`, written here by the world before each
+## bot steers. Changing it rebuilds the grid on the next route.
+var route_clearance: float = 3.4:
+	set(value):
+		if not is_equal_approx(value, route_clearance):
+			route_clearance = value
+			_route = null
+
+var _route: BfhRoute = null
+
+
+## The waypoints a bus at [param from] follows to [param target] through the streets, not
+## including where it is, or empty when the straight line is clear. See [BfhRoute].
+func street_route(from: Vector3, target: Vector3) -> PackedVector3Array:
+	if _route == null:
+		_route = BfhRoute.new()
+		var deck_front := -(radius - LEDGE_DEPTH)
+		var slabs: Array[Rect2] = [
+			Rect2(-RAMP_WIDTH * 0.5, deck_front, RAMP_WIDTH, ramp_foot().z - deck_front),
+			Rect2(-LEDGE_WIDTH * 0.5, -radius, LEDGE_WIDTH, LEDGE_DEPTH),
+		]
+		_route.build(radius, _obstacles, _obstacle_radii, slabs, route_clearance)
+	return _route.plan(from, target)
 
 
 ## The ramp, which is not a cylinder and is the one thing in the bowl a bus cannot come

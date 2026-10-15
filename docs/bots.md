@@ -40,3 +40,13 @@ Tried and dropped, each measured worse: stopping before the first leg, choosing 
 `_run_route` presses keys, so it moves a runner the way a person does. A held jump jumps once and must be released (auto-hop is off), which is why pressing jump near a face is safe here and would not be in an auto-hop game. A tick with no command repeats the last one (what a netcode wants of a lost packet), so a route that ends must stop pressing, or the runner walks on.
 
 **Every route prints its distance against its length and its average against the configured speed, and asserts on it**: a walk to `RUN_PACE` (0.9), a route with jumps to `CLIMB_PACE` (0.55). The old bars ("it gets moving at all") passed a bot at 30% of its speed; a climb reached the top at 23% speed and only the pace check said so. Bus drives assert they pass `bus_lethal_speed` on the way, because a bus crawling round cover at a speed that cannot hurt anybody used to pass.
+
+## Getting stuck (2026-10-15)
+
+Bot buses wedged and crawled on the bowl and on every district: 2.65 to 8.1 m/s over 45 s, two to five sends home, and stalls of 5.1 s (the stuck rule's reset) on every map. Three causes, each fixed where it lives:
+
+- **The start lanes.** `steer_around` nudged a target round the ramp, then round the obstacles, and the second nudge could put the point back across the ramp's flank, so a bus leaving a spawn lane drove at the ledge and sat there. The nudged point is now checked against the ramp again.
+- **District streets.** A nudge cannot plan: a street is a maze of buildings and a point-at-a-time sidestep wedges in it. Districts now plan a route (`bfh_route.gd`, an `AStarGrid2D` of 0.8 m cells over the same `_obstacles` the nudge reads, plus the ramp and ledge slabs, built lazily by `BfhArena.street_route`), string-pulled and followed as `set_route` waypoints. `steer_around` stays a nudge, for the bowl. The grid keeps `bfh_bot_route_clearance` (3.4 m) off a surface: a bus swings wider than its body, and at 2.8 m the route hugged buildings and the bus touched them.
+- **No recovery.** The stuck rule only broke props and sent the bus home 5 s later. A bus against something for `bfh_bot_unwedge_after` (0.5 s) now reverses for `bfh_bot_unwedge_seconds` (1.4 s), steering so the nose swings toward its target.
+
+Measured (45 s, `_test_bot_pace`, m/s and sends home): bowl 3.93 and 3; downtown 8.10 and 2; hill town 6.07 and 3; suburb 2.65 and 5, before; none sent home and no stall over a second after, 6.5 to 11.9 m/s. The suburb is the slowest and still has short stalls against buildings when a runner stands inside a building's clearance ring.

@@ -119,6 +119,24 @@ extends DotConfig
 ## of the map a door, less shaves them closer and wedges sooner.
 @export_range(1.5, 8.0, 0.1) var bot_steer_clearance: float = 3.6
 
+## How far a bot bus's centre is kept off a building, the wall and the ramp when it is routed
+## along a district's streets, in metres. A district's street is 7.6 m of clear floor, so the
+## open centre line is 7.6 minus twice this: at 3.4 it is 0.8 m, and at 3.8 or more no street
+## is open at all and the bots fall back to the nudge. Only the districts read it.
+@export_range(1.5, 4.0, 0.1) var bot_route_clearance: float = 3.4
+
+## Seconds between a bot bus planning its route again. The quarry moves, and so does the
+## bus off the line; more is cheaper and a bus that holds a stale route longer.
+@export_range(0.1, 3.0, 0.1) var bot_route_replan: float = 0.5
+
+## Seconds a bot bus may throttle against something before it backs off (`bot_unwedge_after`),
+## and how long it reverses for (`bot_unwedge_seconds`), with the wheel over so the nose swings
+## towards where it wants to go. The stuck rule's five seconds before a bus is put back on its
+## start line is the slow way out of a building and the symptom a runner sees as a bus
+## deleting itself; this is the way a driver gets out of one.
+@export_range(0.1, 3.0, 0.1) var bot_unwedge_after: float = 0.5
+@export_range(0.3, 4.0, 0.1) var bot_unwedge_seconds: float = 1.4
+
 ## Seconds a bus may ask for throttle and go nowhere before whatever is under it is
 ## broken, and before it is given up on and put back on its start line. A person's bus as
 ## well as a bot's: it is the rule that frees a bus high-centred on a crate. A bot that is
@@ -268,6 +286,8 @@ func describe() -> Dictionary:
 		"courtyard_west_lane": "%.1f m" % courtyard_west_lane,
 		"bot_aim_past": "%.1f m" % bot_aim_past,
 		"bot_steer_clearance": "%.1f m" % bot_steer_clearance,
+		"bot_route": "%.1f m clear, replanned every %.1f s" % [bot_route_clearance, bot_route_replan],
+		"bot_unwedge": "after %.1f s for %.1f s" % [bot_unwedge_after, bot_unwedge_seconds],
 		"bus_stuck": "%.1f / %.1f s" % [bus_stuck_break_seconds, bus_stuck_reset_seconds],
 	}
 
