@@ -26,6 +26,6 @@ client_scene: game/bfh.tscn
 module: game/bfh_module.gd
 
 cvars:
-  bfh_drivers: "2"
+  bfh_drivers: "4"
   bfh_bots: "1"
   bfh_round_seconds: "180"

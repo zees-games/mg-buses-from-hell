@@ -1,5 +1,7 @@
 extends RefCounted
 
+const BfhDistricts := preload("bfh_districts.gd")
+
 ## The bowls a round can be played in: this game's maps, for the players' vote.
 ##
 ## [b]A bowl is a radius, not a file.[/b] The map here is [method BfhArena.build] run on both
@@ -28,7 +30,8 @@ const BIG_RADIUS := 54.0
 
 
 ## Every bowl, in the order a ballot lists them when nothing else orders it: each a
-## [code]{id, name, radius}[/code].
+## [code]{id, name, radius}[/code] and, for a district, [code]district[/code] (what the
+## arena builds on that floor).
 static func all(config: Object) -> Array[Dictionary]:
 	var shipped := float(config.get("arena_radius")) if config != null else 46.0
 	var out: Array[Dictionary] = [
@@ -36,6 +39,12 @@ static func all(config: Object) -> Array[Dictionary]:
 		{"id": &"bfh_small_bowl", "name": "The Small Bowl", "radius": SMALL_RADIUS},
 		{"id": &"bfh_big_bowl", "name": "The Big Bowl", "radius": BIG_RADIUS},
 	]
+
+	# The districts: each a town on the same floor, with its own radius (see BfhDistricts).
+	# `district` is what the arena builds; the bowls' is empty.
+	for town in BfhDistricts.LIST:
+		out.append({"id": town["id"], "name": town["name"], "radius": float(town["radius"]),
+			"district": String(town["id"])})
 	return out
 
 

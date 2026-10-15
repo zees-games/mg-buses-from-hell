@@ -4,6 +4,7 @@ const BfhConfig := preload("bfh_config.gd")
 const BfhContent := preload("bfh_content.gd")
 const BfhReach := preload("bfh_reach.gd")
 const BfhTextures := preload("bfh_textures.gd")
+const BfhDistricts := preload("bfh_districts.gd")
 
 ## The bowl: a round sand floor, a wall around it, and a ledge the drivers look from.
 ##
@@ -413,6 +414,17 @@ const COLONNADE_MIN_RADIUS := 45.0
 
 var radius: float = 46.0
 
+## Which of [code]BfhDistricts[/code] the floor is, by id; empty (or an id this build does not
+## know) is the bowl with its stacks, tank farm and colonnade. Layout, not a cvar, for the
+## reason [member hook_layout] is not one: it travels in the HELLO and a client builds the
+## server's.
+var district: String = ""
+
+## What the district placed: each `{at, radius, height, kind}`, in the order the obstacles
+## were appended after the first obstacle this build made. A view for the drawing and the
+## suite; the one description of what is solid is still [code]_obstacles[/code].
+var _district_buildings: Array[Dictionary] = []
+
 ## Set before [method build]. The layers every piece of the world goes on.
 var world_layer: int = 1
 var world_mask: int = 1
@@ -460,15 +472,23 @@ func build(p_radius: float) -> void:
 	_build_floor()
 	_build_wall()
 	_build_ledge()
-	_build_stacks()
-	# Counted here rather than inside `_build_stacks`, which returns early on a bowl too
-	# small for them: the tanks are appended to the same array and the split between the
-	# two views has to be right whether or not the stacks went in.
-	_stack_count = _obstacles.size()
-	_build_tanks()
-	_tank_end = _obstacles.size()
-	_build_colonnade()
+	# The scaffold's place is known before a district is planned round it.
 	_place_scaffold()
+	if BfhDistricts.knows(district):
+		# A district replaces the stacks, the tank farm and the colonnade with a town; the
+		# ramp, the scaffold and the start lanes are the same in every map.
+		_build_district()
+		_stack_count = 0
+		_tank_end = 0
+	else:
+		_build_stacks()
+		# Counted here rather than inside `_build_stacks`, which returns early on a bowl too
+		# small for them: the tanks are appended to the same array and the split between the
+		# two views has to be right whether or not the stacks went in.
+		_stack_count = _obstacles.size()
+		_build_tanks()
+		_tank_end = _obstacles.size()
+		_build_colonnade()
 	_toy_spots = _find_toy_spots()
 
 	DotLog.info(
@@ -482,6 +502,7 @@ func build(p_radius: float) -> void:
 			"colonnade": _obstacles.size() - _tank_end,
 			"scaffold": "%d crates" % scaffold_cells().size(),
 			"tightest gap": "%.1f m" % narrowest_gap(),
+			"district": district if district != "" else "the bowl",
 			"hook": hook_layout,
 			"courtyard west lane": "%.2f m" % courtyard_west_lane,
 		}
@@ -520,6 +541,7 @@ func _clear() -> void:
 	_obstacle_radii = PackedFloat32Array()
 	_stack_count = 0
 	_tank_end = 0
+	_district_buildings = []
 
 
 ## Where a runner may be put: anywhere on the floor, inside a margin.
@@ -948,6 +970,171 @@ func _build_tanks() -> void:
 
 		_add_obstacle(at, local.z)
 		_build_tank(farm, "Tank%d" % i, at, local.z)
+
+
+## The district: roads painted on the floor, and every building through
+## [method _add_obstacle] like every other cylinder, so steering, the scatter, the toys and
+## the gap rule see them with no change. See [BfhDistricts].
+func _build_district() -> void:
+	var scaffold := Rect2()
+	if _has_scaffold:
+		var box := scaffold_footprint()
+		scaffold = Rect2(box.position.x, box.position.z, box.size.x, box.size.z)
+
+	# The buses' start lanes, whatever the count, so no building stands in front of a bus. The
+	# ramp and the deck are in the north strip; the lanes run from there to the middle.
+	var south := LEDGE_DEPTH + 6.0 + 24.0 + 4.0
+	var keep: Array[Rect2] = [Rect2(-17.0, -radius, 34.0, south)]
+
+	var plan := BfhDistricts.plan(district, radius, scaffold, keep)
+	var town := Node3D.new()
+	town.name = "District"
+	add_child(town)
+
+	var roads := Node3D.new()
+	roads.name = "Roads"
+	town.add_child(roads)
+	for road: Dictionary in plan["roads"]:
+		_draw_road(roads, road)
+
+	var index := 0
+	for building: Dictionary in plan["buildings"]:
+		_add_obstacle(building["at"], float(building["radius"]))
+		_district_buildings.append(building)
+		_build_building(town, "Building%d" % index, building)
+		index += 1
+
+
+const ROAD_COLOUR := Color(0.46, 0.45, 0.52)
+const LOOP_COLOUR := Color(0.95, 0.88, 0.55)
+const TOWER_COLOUR := Color(0.64, 0.74, 0.96)
+const TOWER_CAP := Color(0.42, 0.52, 0.80)
+const HOUSE_COLOUR := Color(0.98, 0.70, 0.56)
+const HOUSE_ROOF := Color(0.78, 0.42, 0.40)
+const ISLAND_COLOUR := Color(0.58, 0.92, 0.78)
+
+
+## A road, flat on the floor and never solid: a strip between two points or a disc. Painted
+## a hair above the sand so it does not shimmer against it, and thin enough that nothing
+## drives over a lip. Roads are the streets the buildings leave, drawn so a player can read
+## the kind of place; the gap rule is about the buildings.
+func _draw_road(parent: Node3D, road: Dictionary) -> void:
+	var colour := LOOP_COLOUR if road["colour_id"] == "loop" else ROAD_COLOUR
+	var mesh := MeshInstance3D.new()
+
+	if road.has("at"):
+		var disc := CylinderMesh.new()
+		disc.top_radius = float(road["radius"])
+		disc.bottom_radius = float(road["radius"])
+		disc.height = 0.05
+		disc.radial_segments = 40
+		mesh.mesh = disc
+		mesh.position = road["at"] + Vector3(0.0, 0.03, 0.0)
+	else:
+		var ends := _clip_to_floor(road["from"], road["to"], float(road["width"]) * 0.5)
+		if ends.is_empty():
+			return
+		var from: Vector3 = ends[0]
+		var to: Vector3 = ends[1]
+		var length := from.distance_to(to)
+		var box := BoxMesh.new()
+		box.size = Vector3(length, 0.05, float(road["width"]))
+		mesh.mesh = box
+		var lift := 0.045 if road["colour_id"] == "loop" else 0.025
+		mesh.position = (from + to) * 0.5 + Vector3(0.0, lift, 0.0)
+		mesh.rotation.y = -atan2(to.z - from.z, to.x - from.x)
+
+	mesh.material_override = BfhTextures.surface(colour)
+	parent.add_child(mesh)
+
+
+## A road's two ends, pulled in to where a strip of half-width [param half] still lies on the
+## floor, so a street that meets the wall stops at it instead of running out over the sky.
+## Empty when none of it is on the floor.
+func _clip_to_floor(from: Vector3, to: Vector3, half: float) -> Array[Vector3]:
+	var limit := radius - half - 0.3
+	var d := to - from
+	var a := d.x * d.x + d.z * d.z
+	if a < 0.0001:
+		return []
+	var b := 2.0 * (from.x * d.x + from.z * d.z)
+	var c := from.x * from.x + from.z * from.z - limit * limit
+	var disc := b * b - 4.0 * a * c
+	if disc <= 0.0:
+		return []
+	var root := sqrt(disc)
+	var t0 := maxf((-b - root) / (2.0 * a), 0.0)
+	var t1 := minf((-b + root) / (2.0 * a), 1.0)
+	if t1 <= t0:
+		return []
+	return [from + d * t0, from + d * t1]
+
+
+## One building: a cylinder collider and a look. A tower is a plain drum with a darker cap, a
+## house a drum under a cone roof, a roundabout's island a low green drum.
+func _build_building(parent: Node3D, node_name: String, building: Dictionary) -> void:
+	var at: Vector3 = building["at"]
+	var r := float(building["radius"])
+	var h := float(building["height"])
+	var kind := String(building["kind"])
+
+	var body := StaticBody3D.new()
+	body.name = node_name
+	body.position = at + Vector3(0.0, h * 0.5, 0.0)
+	body.collision_layer = world_layer
+	body.collision_mask = world_mask
+
+	var shape := CylinderShape3D.new()
+	shape.radius = r
+	shape.height = h
+	var collider := CollisionShape3D.new()
+	collider.shape = shape
+	body.add_child(collider)
+
+	var drum := CylinderMesh.new()
+	drum.top_radius = r
+	drum.bottom_radius = r
+	drum.height = h
+	drum.radial_segments = 28 if r > 4.0 else 16
+	var mesh := MeshInstance3D.new()
+	mesh.mesh = drum
+	mesh.material_override = BfhTextures.surface(
+		TOWER_COLOUR if kind == BfhDistricts.TOWER
+		else (ISLAND_COLOUR if kind == BfhDistricts.ISLAND else HOUSE_COLOUR)
+	)
+	body.add_child(mesh)
+
+	# Mesh only, like a pillar's capital: the only body that could touch the roof is a bus,
+	# and a lip that catches a hull three metres up is a way to stop one nobody drew.
+	if kind == BfhDistricts.HOUSE:
+		var cone := CylinderMesh.new()
+		cone.top_radius = 0.0
+		cone.bottom_radius = r * 1.25
+		cone.height = 2.2
+		cone.radial_segments = 16
+		var roof := MeshInstance3D.new()
+		roof.mesh = cone
+		roof.position = Vector3(0.0, h * 0.5 + 1.1, 0.0)
+		roof.material_override = BfhTextures.surface(HOUSE_ROOF)
+		body.add_child(roof)
+	elif kind == BfhDistricts.TOWER:
+		var cap := CylinderMesh.new()
+		cap.top_radius = r * 1.08
+		cap.bottom_radius = r * 1.08
+		cap.height = 0.7
+		cap.radial_segments = 28
+		var cap_mesh := MeshInstance3D.new()
+		cap_mesh.mesh = cap
+		cap_mesh.position = Vector3(0.0, h * 0.5 - 0.35, 0.0)
+		cap_mesh.material_override = BfhTextures.surface(TOWER_CAP)
+		body.add_child(cap_mesh)
+
+	parent.add_child(body)
+
+
+## What the district built, one `{at, radius, height, kind}` per building. Empty on the bowl.
+func district_buildings() -> Array[Dictionary]:
+	return _district_buildings
 
 
 ## The colonnade's pillars, through [method _add_obstacle] like every other cylinder,

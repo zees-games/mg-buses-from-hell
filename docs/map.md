@@ -26,6 +26,10 @@ Every feature is **placed** as a fraction of `arena_radius` but **spaced** for a
 
 **The bowls on the players' ballot** (`BfhBowls`) are radii for the same reason: `bfh_bowl` is the operator's `arena_radius`, `bfh_small_bowl` is 40 m (the tank farm's minimum: stacks and tanks, no scaffold or colonnade, open floor between), `bfh_big_bowl` 54 m. `headless_run`'s "every bowl on the ballot" builds each and holds it to the gap rule, and refuses two bowls of one radius. A bowl added there is a map: it gets that check, a `--plan` render (`tools/shot.sh 4 plan.png --plan --bfh-arena-radius=<r>`) and a look at what the bots do in it. The bots have not been measured in the small and big bowls the way they have in the shipped one.
 
+## Districts: three maps that are places
+
+`game/bfh_districts.gd` plans three more maps (`bfh_downtown` R60, `bfh_hill_town` R52, `bfh_suburb` R56) and `BfhBowls.all` lists them after the plain bowls, so the vote and the map menu offer them with no other change. A district replaces the stacks, the tank farm and the colonnade: `BfhArena._build_district` asks `BfhDistricts.plan` for buildings (circles) and painted roads, and every building goes through `_add_obstacle`, so steering, scatter, toys and the gap rule see them as they see a pillar. Roads are flat meshes with no collider. The plan refuses a building that would break the rules (`STREET` of clear floor to any other, wall room, scaffold room, the buses' start lanes, another road), so the gap rule holds by construction and `headless_run` still measures it. They are drawn by hand, from no map data. The district id travels in HELLO and BOWL, so a client builds the same town; see [netcode](netcode.md).
+
 ## The stacks (west)
 
 Concrete pillars, 1.2 m across, 5.4 m tall, permanent. What a person on foot has against a vehicle is **a turning circle**: a bus is nine metres long and a runner turns on the spot, so a cylinder to orbit is cover that does not have to survive anything. A pillar is also the one obstacle a raycast vehicle handles honestly: taller than the hull, it simply stops the bus.

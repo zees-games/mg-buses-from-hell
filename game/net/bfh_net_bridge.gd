@@ -642,7 +642,8 @@ func _announce_seat(vehicle: DotVehicleInstance, rider_id: StringName, seated: b
 ## PROP_GONEs and this round's PROPs, so every crate lands on the floor it was laid on.
 func _on_bowl_changed(_bowl_id: StringName) -> void:
 	_broadcast(BfhEvents.Kind.BOWL, BfhEvents.write_bowl(
-		game.arena.radius, game.arena.hook_layout, game.arena.courtyard_west_lane
+		game.arena.radius, game.arena.hook_layout, game.arena.courtyard_west_lane,
+		game.arena.district
 	))
 
 
@@ -1246,7 +1247,8 @@ func _admit(peer_id: int) -> void:
 		game.arena.radius if game.arena != null else game.config.arena_radius,
 		game.config.round_seconds,
 		game.arena.hook_layout if game.arena != null else game.config.hook_layout,
-		game.arena.courtyard_west_lane if game.arena != null else game.config.courtyard_west_lane
+		game.arena.courtyard_west_lane if game.arena != null else game.config.courtyard_west_lane,
+		game.arena.district if game.arena != null else ""
 	))
 
 	# The bowl's toys by net id in ring order, which the joiner's own are paired with.
@@ -1456,7 +1458,7 @@ func _on_event(message: DotNetMessage) -> void:
 			var bowl := BfhEvents.read_bowl(reader)
 			if bool(bowl["ok"]):
 				_adopt_map(float(bowl["arena_radius"]), str(bowl["hook_layout"]),
-					float(bowl["courtyard_west_lane"]))
+					float(bowl["courtyard_west_lane"]), str(bowl["district"]))
 		BfhEvents.Kind.SOUND:
 			var sound := BfhEvents.read_sound(reader)
 			var id := BfhSounds.world_id(int(sound["index"]))
@@ -1503,12 +1505,14 @@ func _heard_a_swap() -> void:
 ## And the two layout choices, which are as much the map as the radius is: a client on its
 ## own default hook against a server on the tight one has a pillar where the server has
 ## floor.
-func _adopt_map(radius: float, hook: String, west: float) -> void:
+func _adopt_map(radius: float, hook: String, west: float, district: String = "") -> void:
 	if game.arena != null and (absf(game.arena.radius - radius) > 0.01
+			or game.arena.district != district
 			or game.arena.hook_layout != hook
 			or absf(game.arena.courtyard_west_lane - west) > 0.005):
 		game.arena.hook_layout = hook
 		game.arena.courtyard_west_lane = west
+		game.arena.district = district
 		game.arena.build(radius)
 
 
@@ -1540,7 +1544,7 @@ func _apply_hello(reader: DotNetReader) -> void:
 	# all in the wrong place, and would walk through the visible wall into the server's
 	# real one.
 	_adopt_map(float(hello["arena_radius"]), str(hello["hook_layout"]),
-		float(hello["courtyard_west_lane"]))
+		float(hello["courtyard_west_lane"]), str(hello["district"]))
 
 	game.config.round_seconds = float(hello["round_seconds"])
 

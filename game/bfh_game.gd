@@ -1045,6 +1045,7 @@ func _change_bowl() -> void:
 		return
 
 	bowl_id = wanted
+	arena.district = String(chosen.get("district", ""))
 	arena.build(float(chosen["radius"]))
 	bowl_changed.emit(bowl_id)
 	DotLog.info(CHANNEL, "the bowl changed", {"bowl": String(bowl_id), "radius": "%.0f m" % arena.radius})

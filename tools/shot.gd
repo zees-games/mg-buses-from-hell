@@ -35,6 +35,7 @@ func _run() -> void:
 	var blast := false
 	var scoreboard := false
 	var ballot := false
+	var bowl_id := ""
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--seconds="):
 			seconds = float(arg.substr(10))
@@ -78,11 +79,20 @@ func _run() -> void:
 			scoreboard = true
 		elif arg == "--ballot":
 			ballot = true
+		elif arg.begins_with("--bowl="):
+			bowl_id = arg.substr(7)
 		elif arg.begins_with("--watch="):
 			watch = arg.substr(8)
 
 	var client: Node = load("res://game/bfh.tscn").instantiate()
 	add_child(client)
+
+	# `--bowl=bfh_downtown`: play in one of the ballot's bowls (BfhBowls ids), through the
+	# map menu's own door, so the round that begins is laid out on that floor.
+	if bowl_id != "":
+		var world_for_bowl: BfhGame = client.get("game")
+		if world_for_bowl != null:
+			print("bowl change: ", world_for_bowl.change_bowl_now(StringName(bowl_id)).ok)
 
 	# The chat box, with something in it. A box drawn empty says nothing about whether a
 	# line would be readable over a sand-coloured bowl in bright light, which is the only

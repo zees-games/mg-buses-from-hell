@@ -37,11 +37,11 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 275
+const CHECKS := 306
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 35
+const SECTIONS := 37
 
 const TICK := 1.0 / 60.0
 
@@ -114,6 +114,8 @@ func _run() -> void:
 	await _test_world_builds()
 	await _test_bowl_layout()
 	_test_every_bowl()
+	_test_districts()
+	await _test_driving_a_district()
 	await _test_the_stacks()
 	await _test_the_tank_farm()
 	await _test_reach()
@@ -726,6 +728,7 @@ func _test_every_bowl() -> void:
 	for bowl in BfhBowls.all(config):
 		var arena := BfhArena.new()
 		add_child(arena)
+		arena.district = String(bowl.get("district", ""))
 		arena.build(float(bowl["radius"]))
 		var gap := arena.narrowest_gap()
 		var scaffold := arena.scaffold_clearance()
@@ -741,6 +744,113 @@ func _test_every_bowl() -> void:
 		"too tight: %s, against %.2f m" % [", ".join(tight), BfhArena.BUS_GAP])
 	_check(radii.size() == BfhBowls.all(config).size(),
 		"and every bowl is a different size: two of one radius are one map under two names", str(radii.keys()))
+	_done()
+
+
+func _test_districts() -> void:
+	print("districts: maps drawn as places")
+	var config := BfhConfig.new()
+	var found := 0
+
+	for bowl in BfhBowls.all(config):
+		if String(bowl.get("district", "")) == "":
+			continue
+		found += 1
+		var id := String(bowl["id"])
+		var arena := BfhArena.new()
+		add_child(arena)
+		arena.district = String(bowl["district"])
+		arena.build(float(bowl["radius"]))
+
+		var buildings := arena.district_buildings()
+		_check(buildings.size() >= 8, "%s has a town on it" % id, "%d buildings" % buildings.size())
+		_check(arena.narrowest_gap() >= BfhArena.BUS_GAP,
+			"%s leaves every gap a bus can take" % id, "%.2f m" % arena.narrowest_gap())
+		_check(arena.scaffold_clearance() >= BfhArena.BUS_GAP,
+			"and a bus can pass the scaffold", "%.2f m" % arena.scaffold_clearance())
+
+		# No building on a bus's start lane, or the drivers would begin inside one.
+		var blocked := 0
+		for b: Dictionary in buildings:
+			var at: Vector3 = b["at"]
+			if absf(at.x) < 17.0 + float(b["radius"]) and at.z < -arena.radius + 4.0 + 24.0 + 6.0 + float(b["radius"]):
+				blocked += 1
+		_check(blocked == 0, "and nothing stands on the buses' start lanes", "%d in the way" % blocked)
+
+		# Runner spawns: every scattered point is on the floor and outside every obstacle.
+		var stream := DotRandomStream.new(7, &"district")
+		var bad := 0
+		var obstacles := arena.obstacles()
+		for _i in range(120):
+			var p := arena.scatter_point(stream, 1.0, 0.0)
+			if Vector2(p.x, p.z).length() > arena.radius:
+				bad += 1
+				continue
+			for k in range(obstacles.size()):
+				if Vector2(p.x - obstacles[k].x, p.z - obstacles[k].z).length() < arena.obstacle_radius(k):
+					bad += 1
+					break
+		_check(bad == 0, "and every runner spawn is on the floor and clear of a building", "%d bad of 120" % bad)
+
+		remove_child(arena)
+		arena.free()
+
+	_check(found == 3, "three districts are on the ballot", str(found))
+	_done()
+
+
+func _test_driving_a_district() -> void:
+	print("a bot bus drives each district")
+	var config := BfhConfig.new()
+
+	for bowl in BfhBowls.all(config):
+		var id := String(bowl.get("district", ""))
+		if id == "":
+			continue
+		var game := _world(func(c: BfhConfig) -> void:
+			c.round_seconds = 120.0
+		)
+		var driver := game.add_player(&"d", "Driver", BfhGame.TEAM_DRIVERS)
+		driver.is_bot = true
+		game.add_player(&"r", "Runner", BfhGame.TEAM_RUNNERS)
+		game.start()
+		await _step(game, 8)
+
+		var changed := game.change_bowl_now(StringName(bowl["id"]))
+		_check(changed.ok, "%s can be chosen from the map menu" % id, "refused")
+		await _step(game, 20)
+		_check(game.arena.district == id, "and the arena is that district", game.arena.district)
+
+		var bus := game.vehicles.get_vehicle(game._bus_ids[0])
+		var reach := game.arena.radius
+		var last := bus.position()
+		var covered := 0.0
+		var outside := false
+		var reset := false
+		var took := 0
+
+		for _i in range(420):
+			game.simulate(TICK)
+			await get_tree().physics_frame
+			took += 1
+			if not bus.is_alive():
+				break
+			var at := bus.position()
+			if Vector2(at.x, at.z).length() > reach + 2.0 or at.y < -3.0:
+				outside = true
+				break
+			if _sent_home(last, at):
+				reset = true
+				break
+			covered += Vector2(at.x - last.x, at.z - last.z).length()
+			last = at
+
+		print("  ..    %-15s covered %.0f m in %d ticks" % [id, covered, took])
+		_check(not outside, "a bot bus stays inside %s" % id)
+		_check(not reset, "and is not sent home")
+		_check(covered > 30.0, "and it gets somewhere", "%.0f m" % covered)
+		await _dispose(game)
+
 	_done()
 
 

@@ -50,7 +50,7 @@ const BfhSpectate := preload("../game/bfh_spectate.gd")
 ## the wrong reason. A real client is a separate program with its own export and its own
 ## `user://` config. Make them disagree, and let HELLO correct it.
 
-const CHECKS := 197
+const CHECKS := 199
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -229,6 +229,16 @@ func _test_the_wire() -> void:
 	_check(bool(bowl["ok"]) and absf(float(bowl["arena_radius"]) - 54.0) < 0.05
 			and str(bowl["hook_layout"]) == "tight" and absf(float(bowl["courtyard_west_lane"]) - 7.6) < 0.005,
 		"bowl round-trips: the map a vote changed between rounds", str(bowl))
+
+	_check(str(hello["district"]) == "" and str(bowl["district"]) == "",
+		"neither names a district unless the map is one")
+	var town_hello := BfhEvents.read_hello(DotNetReader.new(
+		BfhEvents.write_hello(SESSION, 128, 9001, 52.0, 180.0, "tight", 7.6, "bfh_hill_town")))
+	var town_bowl := BfhEvents.read_bowl(DotNetReader.new(
+		BfhEvents.write_bowl(56.0, "tight", 7.6, "bfh_suburb")))
+	_check(bool(town_hello["ok"]) and str(town_hello["district"]) == "bfh_hill_town"
+			and bool(town_bowl["ok"]) and str(town_bowl["district"]) == "bfh_suburb",
+		"hello and bowl carry the district a client must build", "%s, %s" % [town_hello["district"], town_bowl["district"]])
 
 	var join := BfhEvents.read_join(DotNetReader.new(
 		BfhEvents.write_join(SESSION, 31, "Ada", BfhGame.TEAM_DRIVERS)

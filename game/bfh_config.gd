@@ -34,8 +34,17 @@ extends DotConfig
 
 @export_group("Sides")
 
-## How many drivers the round starts with.
-@export_range(1, 8, 1) var driver_count: int = 2
+## How many drivers the round starts with: how many buses, and (in fill mode, the default)
+## how many bots there are when nobody has taken a seat.
+##
+## [b]Four, and it was two.[/b] Two buses in a 46 m bowl is a bus for every 3300 m^2 of floor,
+## which a runner crosses between one pass and the next; the bowls on the ballot run from
+## 40 to 60 m (5000 to 11000 m^2), and four gives roughly one bus per 1500 to 2800 m^2, a
+## pass every few seconds without the floor being all bus. Four is also what the start line
+## holds: two lanes either side of the ramp. A person who takes a seat takes it from a bot,
+## so a full table of people is the same four. The suites set their own (1) and do not read
+## this.
+@export_range(1, 8, 1) var driver_count: int = 4
 
 @export_group("The runners")
 

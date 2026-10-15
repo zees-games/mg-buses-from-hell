@@ -24,7 +24,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 | Path | What |
 | --- | --- |
 | `game/bfh_game.gd` | the simulation: rounds, sides, props, buses, damage, the autopilot. Headless |
-| `game/bfh_arena.gd`, `bfh_reach.gd`, `bfh_textures.gd`, `bfh_bowls.gd` | the bowl in code and its one obstacle description; what a runner can reach; the generated metre grid; the bowls (radii) on the players' ballot |
+| `game/bfh_arena.gd`, `bfh_reach.gd`, `bfh_textures.gd`, `bfh_bowls.gd`, `bfh_districts.gd` | the bowl in code and its one obstacle description; what a runner can reach; the generated metre grid; the bowls (radii) and the three town districts on the players' ballot |
 | `game/bfh_config.gd`, `bfh_content.gd`, `bfh_paths.gd` | every setting (metres and seconds, layered like every DotConfig); prop and vehicle catalogues; `rebase` for pack delivery |
 | `game/bfh_player.gd`, `bfh_hammer.gd` | one person (controller, health, hammer, riding a crate); the only weapon |
 | `game/bfh_module.gd`, `bfh_server.gd`, `bfh_services.gd`, `bfh_vote.gd` | the dot-server module over `DotGameModule`, the game scene, chat/voice/moderation over `DotGameServices`, the bowl vote over dot-vote |
@@ -72,7 +72,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 - The CLOCK carries crates left and both rounds-won tallies, and on a round's end it is sent **before** the ROUND.
 - A `DotNetMessage` script must never preload its own file (leaks the whole script graph at exit on a deployed server). `dedicated` checks the source.
 - `remove_player` forgets the entity in dot-combat and closes it before the node goes.
-- Layout settings that shape the map (`arena_radius`, `courtyard_west_lane`, `hook_layout`) travel in the HELLO and are not cvars; a live change would move geometry under connected players. A voted bowl is rebuilt only at a round's start and sent as BOWL between the PROP_GONEs and the PROPs. [netcode](docs/netcode.md#what-crosses)
+- Layout settings that shape the map (`arena_radius`, `courtyard_west_lane`, `hook_layout`, and the `district` a voted map names) travel in the HELLO and are not cvars; a live change would move geometry under connected players. A voted bowl is rebuilt only at a round's start and sent as BOWL between the PROP_GONEs and the PROPs. [netcode](docs/netcode.md#what-crosses)
 
 **The map** ([map](docs/map.md))
 - One obstacle description (`_obstacles`, from `PILLAR_LAYOUT`, `TANK_LAYOUT`, the colonnade); steering, scatter and gap rules read only that. Never add a second list.
