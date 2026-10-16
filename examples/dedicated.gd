@@ -25,7 +25,7 @@ const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 123
+const CHECKS := 124
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -716,9 +716,16 @@ func _test_the_bowl_vote() -> void:
 	# no client ever drew it.
 	director.set("_current_id", &"")
 	captured.clear()
+	var ballots: Array = []
+	var on_ballot := func(_options: Array, _seconds: float) -> void: ballots.append(1)
+	director.vote_opened.connect(on_ballot)
 	var rocked := _run_command("rtv")
 	vote.call("advance", 0.05)
+	director.vote_opened.disconnect(on_ballot)
 	_check(director.is_voting(), "and rock-the-vote opens a ballot before its time", str(rocked))
+	# The director opens a rocked ballot itself (dot-vote API 2); this game no longer does, so
+	# exactly one ballot opens, not one from each.
+	_check(ballots.size() == 1, "and exactly one ballot, the director's alone", str(ballots.size()))
 	var warm: Dictionary = captured.back() if not captured.is_empty() else {}
 	_check(bool(warm.get("open", false)),
 		"a ballot opened in the warmup is sent to be drawn", "%d sent" % captured.size())

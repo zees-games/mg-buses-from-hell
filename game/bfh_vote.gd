@@ -122,21 +122,26 @@ func setup() -> DotResult:
 
 	add_child(director)
 
-	# [b]Rock the vote opens the ballot here, because MANUAL never does.[/b] Under MANUAL the
-	# director hands every opening to its host, a rocked vote included: the clock expires
-	# with reason rtv, the director does nothing, and `!rtv` answered "Rocked. 1 of 1." and
-	# nothing happened. Connected after the director's own handler (its _ready runs first),
-	# so the director has finished with the expiry before this asks for a ballot.
-	director.clock.expired.connect(func(reason: StringName) -> void:
-		if reason != DotVoteClock.REASON_RTV or director.is_voting():
-			return
+	# [b]Rock the vote opens its own ballot under MANUAL from dot-vote API level 2.[/b] Before
+	# that the director handed every opening to its host, a rocked vote included: the clock
+	# expired with reason rtv, the director did nothing, and `!rtv` answered "Rocked. 1 of 1."
+	# and nothing happened. A pack runs on the client shell's dot-vote, which may be older than
+	# the one this repository links, so below level 2 this handler stays as the fallback. From
+	# level 2 it is gone, because two openers is one too many: a second ballot is only
+	# prevented by start_vote refusing while one is open.
+	if DotAddonApi.build_level("dot_vote") < 2:
+		# Connected after the director's own handler (its _ready runs first), so the director
+		# has finished with the expiry before this asks for a ballot.
+		director.clock.expired.connect(func(reason: StringName) -> void:
+			if reason != DotVoteClock.REASON_RTV or director.is_voting():
+				return
 
-		_opened_this_bowl = true
-		var opened := director.start_vote(DotVoteClock.REASON_RTV)
+			_opened_this_bowl = true
+			var opened := director.start_vote(DotVoteClock.REASON_RTV)
 
-		if not opened.ok:
-			DotLog.debug(CHANNEL, "the rocked vote could not open", {"why": opened.error.message})
-	)
+			if not opened.ok:
+				DotLog.debug(CHANNEL, "the rocked vote could not open", {"why": opened.error.message})
+		)
 
 	director.vote_closed.connect(func(result: DotVoteResult) -> void:
 		DotLog.info(CHANNEL, "the bowl vote closed", {"winner": String(result.winner_id), "votes": result.votes_cast})
