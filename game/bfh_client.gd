@@ -870,7 +870,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if player == null:
 		return
 
-	if event is InputEventMouseMotion and _captured:
+	# EVERY event, not only motion: the sampler latches button presses, which is how a wheel
+	# tick (press and release in one pair) reaches a command as one jump. Its `suspended`
+	# flag already gates this while a menu or chat is up, as it does Space.
+	if _captured:
 		if _offline and player.sampler != null:
 			player.sampler.handle_event(event)
 		elif _sampler != null:

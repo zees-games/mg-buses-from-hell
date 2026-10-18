@@ -37,11 +37,11 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 322
+const CHECKS := 326
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 38
+const SECTIONS := 39
 
 const TICK := 1.0 / 60.0
 
@@ -150,6 +150,7 @@ func _run() -> void:
 	_test_pack_paths()
 	await _test_help_and_menu()
 	await _test_the_map_menu()
+	await _test_wheel_jump()
 
 	# Anything a section did not take down itself, before the counts are printed: a world
 	# freed after `quit()` is a world the engine reports as a leak.
@@ -267,6 +268,40 @@ func _test_help_and_menu() -> void:
 	_check(help_button != null and leave_button != null and leave_button.visible,
 		"the Escape menu has Help & commands and Leave")
 	settings.close()
+	settings.queue_free()
+	await get_tree().process_frame
+	_done()
+
+
+## The mouse wheel jumps, rebindably, and a tick (press and release in one frame) is one jump.
+func _test_wheel_jump() -> void:
+	print("the wheel jumps")
+	var settings := BfhSettings.new()
+	add_child(settings)
+	var _built: DotResult = settings.setup(DotSettingsStoreMemory.new())
+	var labels: Array = []
+	for row in settings.bindings.rows:
+		if StringName(row["action"]) == &"dot_fps_jump":
+			labels.append(str(row["label"]))
+	_check(labels.size() >= 3, "jump has Space plus two wheel rows", str(labels))
+	var found := 0
+	for row in settings.bindings.rows:
+		if StringName(row["action"]) == &"dot_fps_jump" and (str(row["default"]) == "Wheel up" or str(row["default"]) == "Wheel down"):
+			found += 1
+	_check(found == 2, "the rows are Wheel up and Wheel down", str(found))
+	var sampler := DotFpsSampler.new(DotFpsTunables.new())
+	DotFpsSampler.register_default_actions(sampler)
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_WHEEL_UP
+	up.pressed = true
+	sampler.handle_event(up)
+	var rel := InputEventMouseButton.new()
+	rel.button_index = MOUSE_BUTTON_WHEEL_UP
+	rel.pressed = false
+	sampler.handle_event(rel)
+	var cmd := sampler.sample(0.016)
+	_check(cmd.is_pressed(DotFpsCommand.BUTTON_JUMP), "a wheel-up tick is a jump in the next command")
+	_check(not sampler.sample(0.016).is_pressed(DotFpsCommand.BUTTON_JUMP), "and only that one")
 	settings.queue_free()
 	await get_tree().process_frame
 	_done()
