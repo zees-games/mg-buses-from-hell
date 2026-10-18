@@ -31,9 +31,6 @@ const BfhSpectate := preload("bfh_spectate.gd")
 
 const CHANNEL := "bfh.client"
 
-## Where a dot-server client link publishes itself.
-const LINK_SERVICE := &"dot_client_link"
-
 @export var config_file: String = "user://cfg/buses-from-hell.json"
 
 ## Play alone even when a link is available. `--offline`.
@@ -48,8 +45,12 @@ var camera: Camera3D = null
 var hud: BfhHud = null
 
 ## Keeps the screen covered, and the local body and the input still, until the bowl, the
-## player and the camera are all in. See [method _build_gate].
+## player and the camera are all in. See [member DotGameClient.gate].
 var gate: DotLoadGate = null
+
+## dot-game's client platform: the cover, settings and menu, console, Tab, M, the pointer and
+## the input block. See [DotGameClient].
+var platform: DotGameClient = null
 
 ## The score and the sides: held on Tab, and up on its own between rounds. See [BfhScoreboard].
 var scoreboard: BfhScoreboard = null
@@ -67,7 +68,7 @@ var fx: BfhFx = null
 ## The player's own settings and the screen that changes them. See [BfhSettings].
 var settings: BfhSettings = null
 
-## The player's console. See [method DotConsoleKit.build].
+## The player's console, the platform's.
 var console: DotConsoleController = null
 
 ## Whether the camera was last put on somebody else's eyes. See [method _process].
@@ -97,14 +98,19 @@ var _sampler: DotFpsSampler = null
 ## matches before it does.
 var _watch_id: int = -1
 
-## Whether the pointer is ours. See [method _capture].
-var _captured: bool = false
-
 
 func _ready() -> void:
 	# First, before anything can be drawn: the bowl, the player and the camera arrive after
-	# this node is in the tree.
-	_build_gate()
+	# this node is in the tree. The platform puts the loading cover up, held until the player
+	# exists and the camera is current, and finds the link.
+	platform = DotGameClient.new()
+	platform.name = "Platform"
+	platform.force_offline = force_offline
+	platform.spawned_fn = func() -> bool: return player != null
+	platform.scoreboard_action = BfhBindings.SCOREBOARD
+	add_child(platform)
+	gate = platform.gate
+	gate.hold(&"map", "Loading the bowl")
 
 	var config := BfhConfig.new()
 
@@ -117,10 +123,8 @@ func _ready() -> void:
 	if not loaded.ok:
 		DotLog.warn(CHANNEL, "falling back to defaults", {"why": loaded.error.message})
 
-	link = DotRegistry.get_node_service(LINK_SERVICE)
-	_offline = force_offline \
-		or link == null \
-		or OS.get_cmdline_user_args().has("--offline")
+	link = platform.link as Node
+	_offline = platform.offline
 
 	game = BfhGame.new()
 	game.name = "World"
@@ -163,22 +167,9 @@ func _ready() -> void:
 		# with the bowl already replicated.
 		DotLog.result(CHANNEL, "the netcode", _build_netcode())
 
-	# Desktop captures immediately; a browser cannot and must be asked. Pointer lock needs
-	# transient user activation — a real click — and `_ready` is the one moment in a
-	# client's life guaranteed not to have one. It is refused *silently*: the mode reads
-	# back as CAPTURED and the cursor sits on top of the game anyway.
-	#
-	# [b]`is_web()` and not a capability, which is the one place this game breaks the
-	# family's own rule on purpose.[/b] "Ask about capabilities, not platforms" holds
-	# because the mapping is not one-to-one — except here, where it is: pointer lock
-	# needing a gesture is a property of the browser security model rather than of anything
-	# [DotPlatform] can measure, and there is no capability to ask.
-	if not DotPlatform.is_web():
-		_capture()
 
-
-## The load gate: covered, and the local body and the input still, until the bowl stands, the
-## local player exists and its camera is current.
+## The load gate is [member DotGameClient.gate]: covered, and the local body and the input
+## still, until the bowl stands, the local player exists and its camera is current.
 ##
 ## [b]Covered also means the round does not run.[/b] Offline the world ticks itself, so the bot
 ## bus, the round clock and the barrels would all act on the runner in front of a picture;
@@ -186,16 +177,6 @@ func _ready() -> void:
 ## cover with their input off. Connected, the server owns the round; what is left to hold is
 ## this end's sampling and keys, which wait on [method _covered]. The vendored art is loaded
 ## exactly as before: the gate only waits for it.
-func _build_gate() -> void:
-	gate = DotLoadGate.new()
-	gate.name = "LoadGate"
-	# A headless run draws nothing, so there is nothing to compile; its warm-up would only wait
-	# out its timeout, and every suite that drives a client would wait with it.
-	gate.warm_up_on_open = DisplayServer.get_name() != "headless"
-	add_child(gate)
-	gate.hold(&"map", "Loading the bowl")
-	gate.require(&"spawned", func() -> bool:
-		return player != null and camera != null and camera.is_inside_tree(), "Joining")
 
 
 ## The bowl is rebuilt (a vote's bowl, a server's radius in the HELLO): covered from the build
@@ -424,6 +405,8 @@ func _adopt(candidate: BfhPlayer) -> void:
 	if gate != null:
 		gate.freeze(player)
 	_build_camera()
+	if platform != null:
+		_suspend_input(platform.is_input_blocked())
 
 	if settings != null:
 		settings.bind_camera(camera)
@@ -490,7 +473,8 @@ func _build_scoreboard() -> void:
 	scoreboard = BfhScoreboard.new()
 	scoreboard.name = "Scoreboard"
 	add_child(scoreboard)
-	var board: DotMenuScoreboard = settings.menu.scoreboard if settings != null and settings.menu != null else null
+	# The platform feeds the menu's board and holds it on the Tab row; this draws on it.
+	var board: DotMenuScoreboard = platform.board as DotMenuScoreboard
 	scoreboard.bind(game, func() -> BfhPlayer: return player, board, link if not _offline else null)
 
 
@@ -502,14 +486,23 @@ func _build_settings() -> void:
 	settings = BfhSettings.new()
 	settings.name = "Settings"
 	add_child(settings)
+	platform.settings = settings
+	# Not handed over: BfhHud is a CanvasLayer, so it follows the menu itself, below.
+	platform.chat = chat
+	platform.board_snapshot_fn = func() -> Dictionary:
+		return scoreboard.snapshot() if scoreboard != null else {}
+	_wire_maps()
+	DotLog.result(CHANNEL, "the platform", platform.setup())
+	# Walking is off while the cover is up, a menu is open or a line is typed: the sampler polls
+	# the keyboard, and a player dragging a volume slider with the arrow keys would otherwise
+	# walk into the bus they had stopped to turn up (and a driver steer with the letters of the
+	# word they are typing).
+	platform.input_blocked_changed.connect(_suspend_input)
+	_suspend_input(platform.is_input_blocked())
 
-	var built: DotResult = settings.setup()
-
-	if not built.ok:
-		DotLog.warn(CHANNEL, "no settings; everything is at its default", {"why": built.error.message})
-		remove_child(settings)
-		settings.free()
-		settings = null
+	settings = platform.settings as BfhSettings
+	console = platform.console as DotConsoleController
+	if settings == null:
 		return
 
 	if _sampler != null:
@@ -522,30 +515,9 @@ func _build_settings() -> void:
 		settings.bind_fx(fx.fx)
 
 	if settings.menu != null:
-		# [b]Walking is off while the menu is up, as it is while typing.[/b] The sampler
-		# polls the keyboard, and a player dragging a volume slider with the arrow keys
-		# would otherwise walk into the bus they had stopped to turn up.
-		settings.menu_state_changed.connect(func(any_open: bool) -> void:
-			_suspend_input(any_open or (chat != null and chat.is_typing()))
-			# The menu takes Escape itself now, so the pointer is freed here rather than
-			# by the key. Back into the game on desktop on close; a browser needs the
-			# click that follows, which `_unhandled_input` already turns into a capture.
-			if any_open:
-				_release()
-			elif not DotPlatform.is_web():
-				_capture()
-		)
-		# Typing a line is the chat box's keyboard: Escape there closes the line, not
-		# opens the menu.
-		settings.menu.busy = func() -> bool: return chat != null and chat.is_typing()
-		# The console (the key under Escape): net_stat and every other setting by name, and
-		# the server's console when one runs in this process. One of the menu's overlays, so
-		# opening it stops the player and frees the pointer exactly as the menu does.
-		console = DotConsoleKit.build(self, settings.settings, settings.menu)
 		# The HUD in the menu's theme and at the player's HUD size, live.
 		if hud != null:
 			hud.follow_menu(settings.menu)
-		_wire_maps()
 
 
 ## M: the bowl list (dot-menu's map menu). Solo a choice changes the bowl here at once;
@@ -553,16 +525,12 @@ func _build_settings() -> void:
 ## gets a vote instead (dot-vote's map menu, wired in [BfhModule]). By name, so a client shell
 ## older than the map menu still runs the game without it.
 func _wire_maps() -> void:
-	if not settings.has_method(&"use_maps"):
-		return
 	if game != null:
 		game.workshop_index = DotContentIndex.shared()
-	var maps: Variant = settings.call(&"use_maps",
-		func() -> Array: return game.bowl_rows(game.workshop_index) if game != null else [],
-		func(id: StringName) -> DotResult: return game.change_bowl_now(id))
-	if maps is Object:
-		(maps as Object).set(&"title", "Change bowl")
-		(maps as Object).set(&"noun", "bowls")
+	platform.maps_rows_fn = func() -> Array: return game.bowl_rows(game.workshop_index) if game != null else []
+	platform.maps_change_fn = func(id: StringName) -> DotResult: return game.change_bowl_now(id)
+	platform.maps_title = "Change bowl"
+	platform.maps_noun = "bowls"
 
 
 func _suspend_input(value: bool) -> void:
@@ -619,23 +587,10 @@ func _build_chat() -> void:
 	chat.name = "Chat"
 	add_child(chat)
 
-	# [b]Typing is not moving.[/b] The sampler is what turns keys into a command, so
-	# suspending it is what stops a player walking into a bus while telling somebody it is
-	# coming — and, in this game, what stops a driver steering with the letters of the word
-	# they are typing.
-	chat.typing_changed.connect(func(typing: bool) -> void:
-		_suspend_input(typing or (settings != null and settings.is_open()))
-	)
 
-
-func _capture() -> void:
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	_captured = true
-
-
-func _release() -> void:
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_captured = false
+## Whether the pointer is the game's: captured. A menu frees it and the platform takes it back.
+func _pointer_ours() -> bool:
+	return Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 
 
 ## The sampled command, on a connected client, once per tick the clock says has passed.
@@ -877,33 +832,18 @@ var _swinging: bool = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and not _captured:
-		# Handled BEFORE the player guard below, because somebody clicks while the world
-		# is still loading more often than not, and a click swallowed for want of a player
-		# is a click that never captures anything.
-		_capture()
-		return
-
+	# Tab, M and a click taking the pointer back are the platform's (DotGameClient).
 	if event.is_action_pressed("ui_cancel"):
-		# Releases, never toggles. A browser exits pointer lock on Escape itself and then
-		# refuses to re-enter for about a second, so a toggle bound to it does nothing
-		# every other press.
-		#
-		# And opens the settings, because a released pointer with nothing on screen to click
-		# was a key that did half a job. A second Escape never reaches here: dot-ui's stack
-		# sits deeper in the tree, sees it first, and closes the screen.
-		_release()
+		# Opens the settings when the menu left this Escape alone, because a released pointer
+		# with nothing on screen to click was a key that did half a job. A second Escape never
+		# reaches here: dot-ui's stack sits deeper in the tree, sees it first, and closes the
+		# screen.
 		if settings != null:
 			settings.open()
 		return
 
 	# Nothing below acts while the cover is up: no swing, jump or look.
 	if _covered():
-		return
-
-	# Tab shows the score while it is held, to anybody — before the spectator's branch,
-	# because somebody who is out is the person with most time to read it.
-	if scoreboard != null and scoreboard.handle_key(event):
 		return
 
 	# A runner who is out: the mouse and the jump key are the spectator's, and nothing
@@ -937,7 +877,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# EVERY event, not only motion: the sampler latches button presses, which is how a wheel
 	# tick (press and release in one pair) reaches a command as one jump. Its `suspended`
 	# flag already gates this while a menu or chat is up, as it does Space.
-	if _captured:
+	if _pointer_ours():
 		if _offline and player.sampler != null:
 			player.sampler.handle_event(event)
 		elif _sampler != null:

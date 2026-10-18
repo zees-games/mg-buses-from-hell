@@ -36,6 +36,7 @@ func _run() -> void:
 	var blast := false
 	var scoreboard := false
 	var ballot := false
+	var cover := false
 	var bowl_id := ""
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--seconds="):
@@ -82,6 +83,8 @@ func _run() -> void:
 			scoreboard = true
 		elif arg == "--ballot":
 			ballot = true
+		elif arg == "--view=cover":
+			cover = true
 		elif arg.begins_with("--bowl="):
 			bowl_id = arg.substr(7)
 		elif arg.begins_with("--watch="):
@@ -107,6 +110,18 @@ func _run() -> void:
 
 	var client: Node = load("res://game/bfh.tscn").instantiate()
 	add_child(client)
+
+	# --view=cover: the loading cover dot-game's DotGameClient puts up first, before it lifts.
+	if cover:
+		for _i in 2:
+			await RenderingServer.frame_post_draw
+		var platform: DotGameClient = client.get("platform")
+		print("cover %s" % ("lifted" if platform.is_shown() else "up"))
+		var cover_path := ProjectSettings.globalize_path(out)
+		DirAccess.make_dir_recursive_absolute(cover_path.get_base_dir())
+		print("saved %s: %s" % [out, error_string(get_viewport().get_texture().get_image().save_png(cover_path))])
+		get_tree().quit(0)
+		return
 
 	# `--bowl=bfh_downtown`: play in one of the ballot's bowls (BfhBowls ids), through the
 	# map menu's own door, so the round that begins is laid out on that floor.

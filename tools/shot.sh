@@ -3,6 +3,7 @@
 #
 #   tools/shot.sh                        # 8 seconds in, to screenshots/bfh.png
 #   tools/shot.sh 20 chase.png           # later, somewhere else
+#   tools/shot.sh 1 cover.png --view=cover    # the loading cover, before it lifts
 #   tools/shot.sh 9 tanks.png --tanks    # from a camera rather than the player's eyes
 #   tools/shot.sh 9 scaffold.png --scaffold   # the scaffold, from the end a runner climbs
 #   tools/shot.sh 9 yard.png --yard           # the tank farm's back yard, from the scaffold's peak

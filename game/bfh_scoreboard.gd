@@ -78,10 +78,13 @@ func bind(p_game: BfhGame, own: Callable = Callable(), p_board: DotMenuScoreboar
 		return str(a.get("name", "")).naturalnocasecmp_to(str(b.get("name", ""))) < 0
 	board.decorate = _decorate_row
 	board.prepare = _prepare
-	if link != null:
-		board.feed_from(link)
-	else:
-		board.source = snapshot
+	# A board that was handed in is fed by whoever owns it (the client's platform feeds the
+	# menu's); only the one built here needs a source.
+	if p_board == null:
+		if link != null:
+			board.feed_from(link)
+		else:
+			board.source = snapshot
 
 	game.round_over.connect(func(_number: int, winner: int) -> void:
 		after_round = true
@@ -112,7 +115,10 @@ func handle_key(event: InputEvent) -> bool:
 
 
 func shown() -> bool:
-	return held or after_round
+	# The menu holds its board on the Tab row, and a round's start must not take it down
+	# under a finger that is still on the key.
+	var tab_down := InputMap.has_action(BfhBindings.SCOREBOARD) and Input.is_action_pressed(BfhBindings.SCOREBOARD)
+	return held or after_round or tab_down
 
 
 ## Up or down to match [method shown], and redrawn when up.
