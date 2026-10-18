@@ -47,6 +47,10 @@ var player: BfhPlayer = null
 var camera: Camera3D = null
 var hud: BfhHud = null
 
+## Keeps the screen covered, and the local body and the input still, until the bowl, the
+## player and the camera are all in. See [method _build_gate].
+var gate: DotLoadGate = null
+
 ## The score and the sides: held on Tab, and up on its own between rounds. See [BfhScoreboard].
 var scoreboard: BfhScoreboard = null
 
@@ -98,6 +102,10 @@ var _captured: bool = false
 
 
 func _ready() -> void:
+	# First, before anything can be drawn: the bowl, the player and the camera arrive after
+	# this node is in the tree.
+	_build_gate()
+
 	var config := BfhConfig.new()
 
 	# [b]`load_layered` on the CLIENT too, and another game in this family records what
@@ -125,7 +133,10 @@ func _ready() -> void:
 	game.tick_rate = int(
 		ProjectSettings.get_setting("physics/common/physics_ticks_per_second", 60)
 	)
+	# Before the world is added: a world that ticks itself must not run in front of a picture.
+	game.hold_clock = _covered
 	add_child(game)
+	_hold_for_bowls()
 	_build_ragdolls()
 
 	# The sampler lives HERE and not on the player, because on a connected client the
@@ -164,6 +175,43 @@ func _ready() -> void:
 	# [DotPlatform] can measure, and there is no capability to ask.
 	if not DotPlatform.is_web():
 		_capture()
+
+
+## The load gate: covered, and the local body and the input still, until the bowl stands, the
+## local player exists and its camera is current.
+##
+## [b]Covered also means the round does not run.[/b] Offline the world ticks itself, so the bot
+## bus, the round clock and the barrels would all act on the runner in front of a picture;
+## [member BfhGame.hold_clock] steps only the bodies then, which settle onto the sand under the
+## cover with their input off. Connected, the server owns the round; what is left to hold is
+## this end's sampling and keys, which wait on [method _covered]. The vendored art is loaded
+## exactly as before: the gate only waits for it.
+func _build_gate() -> void:
+	gate = DotLoadGate.new()
+	gate.name = "LoadGate"
+	# A headless run draws nothing, so there is nothing to compile; its warm-up would only wait
+	# out its timeout, and every suite that drives a client would wait with it.
+	gate.warm_up_on_open = DisplayServer.get_name() != "headless"
+	add_child(gate)
+	gate.hold(&"map", "Loading the bowl")
+	gate.require(&"spawned", func() -> bool:
+		return player != null and camera != null and camera.is_inside_tree(), "Joining")
+
+
+## The bowl is rebuilt (a vote's bowl, a server's radius in the HELLO): covered from the build
+## until the end of that frame, by which time the round has laid its props on it. The first
+## hold (from [method _build_gate]) is released when the first layout is in.
+func _hold_for_bowls() -> void:
+	game.arena.built.connect(func() -> void:
+		if gate == null:
+			return
+		gate.hold(&"map", "Loading the bowl")
+		gate.release.call_deferred(&"map"))
+
+
+## True while the load gate covers the screen: no input, no prediction sampling, no round clock.
+func _covered() -> bool:
+	return gate != null and not gate.is_open()
 
 
 # --- Dead bodies -----------------------------------------------------------
@@ -239,6 +287,7 @@ func _start_offline() -> void:
 
 	_adopt(game.add_player(&"local", "You", BfhGame.TEAM_RUNNERS, true))
 	game.start()
+	gate.release(&"map")
 
 	# An achievement, told the way a connected client is told one: as a notice. There is
 	# no server to send it, so the world's own signal is the whole path.
@@ -351,6 +400,8 @@ func _say_ready() -> void:
 func _on_hello(session_id: int) -> void:
 	_watch_id = session_id
 	_adopt(game.players.get(BfhNetBridge.player_key(session_id)))
+	# The HELLO carried the server's bowl, built just now; the player is what is left to wait for.
+	gate.release(&"map")
 
 
 ## A player arrived or changed. The one we are waiting for might be us.
@@ -370,6 +421,8 @@ func _adopt(candidate: BfhPlayer) -> void:
 		return
 
 	player = candidate
+	if gate != null:
+		gate.freeze(player)
 	_build_camera()
 
 	if settings != null:
@@ -594,14 +647,19 @@ func _physics_process(delta: float) -> void:
 	if _offline or net == null or not net.is_running() or bridge == null:
 		return
 
+	# The clock says how many ticks this frame is worth, which on a client whose engine
+	# runs at the server's rate is almost always exactly one.
+	var ticks := net.clock.advance(delta)
+
+	# The clock has advanced; only the sampling waits, so the mouse does not pile up a turn
+	# behind the cover and the server sees an idle body until it lifts.
+	if _covered():
+		return
+
 	var move := _sampler.sample(delta) if _sampler != null else DotFpsCommand.new()
 
 	if _swinging:
 		move.buttons |= BfhNetCommand.BUTTON_SWING
-
-	# The clock says how many ticks this frame is worth, which on a client whose engine
-	# runs at the server's rate is almost always exactly one.
-	var ticks := net.clock.advance(delta)
 
 	# [b]Each pass is its own tick.[/b] `advance` has already moved the clock by all of
 	# them, so `input_tick()` is the LAST one on every pass: a frame worth two ticks sent
@@ -835,6 +893,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_release()
 		if settings != null:
 			settings.open()
+		return
+
+	# Nothing below acts while the cover is up: no swing, jump or look.
+	if _covered():
 		return
 
 	# Tab shows the score while it is held, to anybody — before the spectator's branch,

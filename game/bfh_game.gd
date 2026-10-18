@@ -1156,10 +1156,29 @@ func _physics_process(delta: float) -> void:
 	simulate(delta)
 
 
+## Asked every tick of a world that ticks itself: true while a cover is up (the client's load
+## gate). Only the bodies are stepped then, so the bot bus, the toys, the impacts and the round
+## clock do not act on anybody in front of a picture. Unset, never held.
+var hold_clock: Callable = Callable()
+
+
 ## One simulated tick, counted by this world. What an offline client and the suite use.
 func simulate(delta: float) -> void:
 	_tick += 1
+
+	if hold_clock.is_valid() and bool(hold_clock.call()):
+		_step_bodies_only(delta)
+		return
+
 	_step(delta)
+
+
+## A tick under a cover: the bodies move and settle, nothing else happens. A body the gate has
+## frozen skips itself (see [method BfhPlayer.simulate]).
+func _step_bodies_only(delta: float) -> void:
+	for id: StringName in players:
+		var player: BfhPlayer = players[id]
+		player.simulate(_tick, delta)
 
 
 ## One simulated tick, numbered by the netcode. What the bridge uses.

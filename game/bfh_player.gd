@@ -239,8 +239,14 @@ static func tunables_for(config: BfhConfig) -> DotFpsTunables:
 
 ## Called once per simulated tick by the world.
 func simulate(tick: int, delta: float) -> void:
+	# The world calls this by name, so a body the load gate froze is skipped here.
+	if is_inside_tree() and not can_process():
+		return
+
 	if sampler != null:
-		controller.apply_command(sampler.sample(delta))
+		# Settling under the cover runs the body with its input off (falls, lands, no keys).
+		var gate := DotLoadGate.of(self) if is_inside_tree() else null
+		controller.apply_command(sampler.sample(delta) if gate == null or gate.is_open() else DotFpsCommand.new())
 
 	# Sampled above and then dropped: those same keys are what the bus is steered
 	# with, and the world reads the pending command out for that. Not simulating is
