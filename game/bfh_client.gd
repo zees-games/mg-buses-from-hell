@@ -555,8 +555,10 @@ func _build_settings() -> void:
 func _wire_maps() -> void:
 	if not settings.has_method(&"use_maps"):
 		return
+	if game != null:
+		game.workshop_index = DotContentIndex.shared()
 	var maps: Variant = settings.call(&"use_maps",
-		func() -> Array: return game.bowl_rows() if game != null else [],
+		func() -> Array: return game.bowl_rows(game.workshop_index) if game != null else [],
 		func(id: StringName) -> DotResult: return game.change_bowl_now(id))
 	if maps is Object:
 		(maps as Object).set(&"title", "Change bowl")

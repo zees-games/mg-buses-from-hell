@@ -5,6 +5,7 @@ const BfhBowls := preload("bfh_bowls.gd")
 const BfhConfig := preload("bfh_config.gd")
 const BfhContent := preload("bfh_content.gd")
 const BfhReach := preload("bfh_reach.gd")
+const BfhVote := preload("bfh_vote.gd")
 const BfhPlayer := preload("bfh_player.gd")
 const BfhProgress := preload("bfh_progress.gd")
 const BfhSounds := preload("bfh_sounds.gd")
@@ -176,6 +177,10 @@ var bowl_id: StringName = BfhBowls.DEFAULT
 ## The bowl the next round is played in, set by the players' vote ([code]game/bfh_vote.gd[/code])
 ## and used once. Empty keeps this one.
 var next_bowl_id: StringName = &""
+
+## The Workshop index a solo client points this at (`DotContentIndex.shared()`), so a
+## subscribed bowl can be chosen. Null on a server, which plays only its own.
+var workshop_index: DotContentIndex = null
 
 ## Simulated seconds since the round began. Never a wall clock.
 var round_elapsed: float = 0.0
@@ -999,11 +1004,42 @@ func _clear_bowl() -> void:
 ## Every bowl this server plays, as the map menu (M) lists them: `{id, name, detail, current}`,
 ## its size under the name. Solo the client's list, online the server's (the module hands it
 ## to dot-vote's map menu), so both say the same.
-func bowl_rows() -> Array:
+##
+## [param index] is the Workshop's: a subscribed map of an accepted kind whose bowl document
+## loads is listed after the bowls as "Name [Pack]", for the index's current session only (so
+## never online). Null lists the game's own.
+func bowl_rows(index: DotContentIndex = null) -> Array:
 	var out: Array = []
 	for bowl in BfhBowls.allowed(config):
 		out.append({"id": String(bowl["id"]), "name": str(bowl["name"]),
 			"detail": "%d m across" % int(round(float(bowl["radius"]) * 2.0)), "current": bowl["id"] == bowl_id})
+	for bowl in workshop_bowls(index):
+		out.append({"id": String(bowl["id"]), "name": str(bowl["name"]),
+			"detail": "%d m across, Workshop" % int(round(float(bowl["radius"]) * 2.0)), "current": bowl["id"] == bowl_id})
+	return out
+
+
+## The bowls a subscribed pack adds, each `{id, name, radius}`. A pack's `map` entry of an
+## accepted `map_kind` names, in `scene`, a bowl document: JSON `{"radius": metres}`, clamped
+## to what the arena's gap rule has been built and checked for. One that does not load is
+## left out (nothing broken is listed), and the game's own ids win.
+func workshop_bowls(index: DotContentIndex) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if index == null:
+		return out
+	for entry in index.entries(&"map"):
+		if entry.id == "" or BfhBowls.by_id(config, StringName(entry.id)).size() > 0 \
+				or not BfhVote.ACCEPTED_MAP_KINDS.has(str(entry.raw.get("map_kind", ""))):
+			continue
+		var path: String = entry.path("scene")
+		if path == "" or not FileAccess.file_exists(path):
+			continue
+		var doc: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		if not (doc is Dictionary) or not (doc as Dictionary).get("radius") is float:
+			continue
+		var name: String = "%s [%s]" % [entry.name, entry.pack_title] if entry.pack_title != "" else entry.name
+		out.append({"id": StringName(entry.id), "name": name,
+			"radius": clampf(float((doc as Dictionary)["radius"]), BfhBowls.SMALL_RADIUS, BfhBowls.WORKSHOP_MAX_RADIUS)})
 	return out
 
 
@@ -1013,7 +1049,8 @@ func bowl_rows() -> Array:
 func change_bowl_now(id: StringName) -> DotResult:
 	if not authoritative:
 		return DotResult.fail(DotError.CODE_STATE, "Only the server changes the bowl.")
-	if not BfhBowls.allowed(config).any(func(b: Dictionary) -> bool: return b["id"] == id):
+	if not BfhBowls.allowed(config).any(func(b: Dictionary) -> bool: return b["id"] == id) \
+			and not workshop_bowls(workshop_index).any(func(b: Dictionary) -> bool: return b["id"] == id):
 		return DotResult.fail(DotError.CODE_INVALID, "There is no bowl called '%s' here." % id)
 	next_bowl_id = id
 	if match_node == null or not match_node.begin_round_now(_tick):
@@ -1038,6 +1075,12 @@ func _change_bowl() -> void:
 		offered = offered or bowl["id"] == wanted
 
 	var chosen := BfhBowls.by_id(config, wanted)
+
+	if chosen.is_empty():
+		for bowl in workshop_bowls(workshop_index):
+			if bowl["id"] == wanted:
+				chosen = bowl
+				offered = true
 
 	if not offered or chosen.is_empty():
 		DotLog.warn(CHANNEL, "the voted bowl is not one this server offers; keeping this one",

@@ -1,0 +1,8 @@
+{
+    "schema": 1,
+    "kinds": ["game"],
+    "accepts": {
+        "kinds": ["map"],
+        "map_kinds": ["arena"]
+    }
+}

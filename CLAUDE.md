@@ -35,12 +35,12 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 | `fx/` | the barrel's blast, built in code |
 | `assets/kenney/` | vendored CC0 models and atlases, one folder per kit (see its README) |
 | `scenes/bfh_server.tscn`, `game.yml` | what a deployed server instantiates; the descriptor in the pack |
-| `examples/` | `headless_run`, `headless_net`, `dedicated` |
+| `examples/` | `headless_run`, `headless_net`, `headless_workshop`, `dedicated` |
 | `tools/` | `shot.sh` / `shot.gd` / `net_shot.gd`: render a frame, and the network jitter and prediction probes; `drive_shot.sh`: a person driving a bus, from above, as a contact sheet |
 
 ## Running and testing
 
-- `./game.sh` plays offline; `./game.sh online` runs a local server and browser client; `./game.sh test` parses everything and runs the three suites; `./game.sh test <suite>` runs one; `./game.sh shot` renders. Addon links come from `.gitignore` through dot-bootstrap.
+- `./game.sh` plays offline; `./game.sh online` runs a local server and browser client; `./game.sh test` parses everything and runs the four suites; `./game.sh test <suite>` runs one; `./game.sh shot` renders. Addon links come from `.gitignore` through dot-bootstrap.
 - `headless_run -- --only=<method>` runs one section. [testing](docs/testing.md)
 - After touching a camera or the view key: `tools/camera_check.sh` (cameras round the bowl, armed; `--render` for both views). [client](docs/client.md#first-and-third-person)
 - **Render after any change to what is drawn** (`tools/shot.sh`, flags per feature). Four bugs here were only visible in a picture. [testing](docs/testing.md#renders-what-no-assertion-reaches)
@@ -52,7 +52,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 - A dead body falls as dot-player-char's ragdoll: the server picks the fall (`BfhGame.decide_death`, on `player.death`; a bus or a barrel always throws it), it rides DEATH last and optional, and the client copies it from the figure it draws (`BfhClient._fall`, from the world's `player_died` in both halves). The `sv_ragdoll*` cvars are bound in the module, REPLICATED, and followed by the client. Sounds in a pack are under its root except an addon's own (`res://addons/`). See dot-player-char's [docs/ragdolls.md](../dot-player-char/docs/ragdolls.md).
 **Delivery** ([delivery](docs/delivery.md))
 - **Every key is a `BfhBindings` row read through its action** (the board's Tab and the spectator's jump fall back to the keycode only with no table, for the suites); H is help (dot-menu's stock key; `BfhSettings._fill_help` writes the rules), so no row may default to H. `headless_run` checks it and the Escape menu's Help and Leave.
-- **M is the bowl list** (dot-menu's map menu): `BfhGame.bowl_rows()` and `change_bowl_now()` (the next bowl plus dot-match's `begin_round_now`) serve both solo and the server, where dot-vote's map menu lets the owner's `sv_map_menu_flag` change it now and gives anybody else a vote. No row may default to M; `headless_run` and `dedicated` check it.
+- **M is the bowl list** (dot-menu's map menu): `BfhGame.bowl_rows()` and `change_bowl_now()` (the next bowl plus dot-match's `begin_round_now`) serve both solo and the server, where dot-vote's map menu lets the owner's `sv_map_menu_flag` change it now and gives anybody else a vote. No row may default to M; `headless_run` and `dedicated` check it. **A subscribed Workshop map is a bowl document** (`{"radius": m}`, `accepts` in `provides.json`): solo lists it as `Name [Pack]` and plays it, online lists none, the game's own ids win. [not-yet](docs/not-yet.md)
 - No `class_name` anywhere in this repository; scripts are reached by relative `preload`. `dot-server-deploy/tools/check.sh` refuses one.
 - Every `res://` path of this game's own goes through `BfhPaths.rebase()` **where it is defined** (`static var X := BfhPaths.rebase(...)`), never a bare `const`. `headless_run` fails on a bare one.
 - `rebase` must stay idempotent: exported paths in a `.tscn` arrive already rewritten. Test the mounted case through `rebase_onto`, never `rebase` built in (a tautology).

@@ -13,3 +13,4 @@ One subject per file. [CLAUDE.md](../CLAUDE.md) has the rules in one line each; 
 | [delivery.md](delivery.md) | the pack: no `class_name`, `rebase` at definition and idempotent (seventh form), an imported model's texture dependency (sixth form), gravity and renderer, smaller deployment traps |
 | [testing.md](testing.md) | the three suites, the rules they follow, asserting the mechanism, renders, and the real-deployment check |
 | [history.md](history.md) | bug narratives worth recognising again |
+| [not-yet.md](not-yet.md) | what a Workshop map can and cannot be here: a bowl document with a radius, no obstacles of its own |

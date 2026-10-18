@@ -31,6 +31,7 @@ func _run() -> void:
 	var beacon := false
 	var blind := false
 	var settings := false
+	var maps := false
 	var watch := ""
 	var blast := false
 	var scoreboard := false
@@ -73,6 +74,8 @@ func _run() -> void:
 			blind = true
 		elif arg == "--settings":
 			settings = true
+		elif arg == "--maps":
+			maps = true
 		elif arg == "--blast":
 			blast = true
 		elif arg == "--scoreboard":
@@ -83,6 +86,24 @@ func _run() -> void:
 			bowl_id = arg.substr(7)
 		elif arg.begins_with("--watch="):
 			watch = arg.substr(8)
+
+	# `--maps`: a fixture bowl pack in the shared DotContentIndex, as the solo shell leaves one
+	# after a subscribed pack mounts, and the M menu opened on it.
+	if maps:
+		var dir := "user://ws_shot_bfh/"
+		DirAccess.make_dir_recursive_absolute(dir)
+		var file := FileAccess.open(dir + "pit.json", FileAccess.WRITE)
+		file.store_string(JSON.stringify({"radius": 50.0}))
+		file.close()
+		var index := DotContentIndex.shared()
+		index.set_session(DotContentIndex.SESSION_SOLO)
+		var _added := index.add_pack({
+			"content_id": "fixture/bowls", "version": "1.0.0", "prefix": dir,
+			"session": DotContentIndex.SESSION_SOLO, "source": &"subscription",
+			"provides": {"schema": 1, "title": "Hilltop Pack", "kinds": ["map"], "entries": [
+				{"kind": "map", "id": "fixture_pit", "name": "Fixture Pit", "scene": "pit.json", "map_kind": "arena"},
+			]},
+		})
 
 	var client: Node = load("res://game/bfh.tscn").instantiate()
 	add_child(client)
@@ -146,6 +167,20 @@ func _run() -> void:
 		while settle < 0.6:
 			settle += get_process_delta_time()
 			await get_tree().process_frame
+
+	if maps and client.get("settings") != null:
+		await get_tree().create_timer(0.5).timeout
+		var menu: Variant = client.get("settings").get("menu")
+		menu.call(&"open_maps")
+		var picker: Variant = menu.get("picker")
+		var world_for_maps: BfhGame = client.get("game")
+		if picker != null and world_for_maps != null:
+			var rows := world_for_maps.bowl_rows(DotContentIndex.shared())
+			for i in range(rows.size()):
+				if str(rows[i]["id"]) == "fixture_pit":
+					picker.call(&"turn", 99)
+					picker.call(&"turn", i - rows.size() + 1)
+		await get_tree().create_timer(0.3).timeout
 
 	# The settings screen, over the bowl, the way Escape opens it.
 	if settings and client.get("settings") != null:

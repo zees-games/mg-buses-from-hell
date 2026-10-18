@@ -27,6 +27,11 @@ const CHANNEL := "buses.vote"
 ## [code]metadata: bowl_vote:[/code] in a delivered game's [code]game.yml[/code].
 const METADATA_KEY := "bowl_vote"
 
+## The `map_kind`s of subscribed maps the ballot lists: `accepts.map_kinds` in `provides.json`,
+## written out here because that file is not mounted with the game (`headless_workshop` holds
+## the two equal).
+const ACCEPTED_MAP_KINDS := ["arena"]
+
 ## What the vote command is called: `!vote 2` in chat, `vote 2` in a console.
 const COMMAND_NAMES := {"vote": "vote"}
 
@@ -69,6 +74,9 @@ var people_fn: Callable = Callable()
 ## only for a round in progress. The host's, because only the match knows.
 var round_in_progress_fn: Callable = Callable()
 
+## The Workshop index the ballot merges maps from; null is the process's shared one. A suite sets it.
+var content_index: DotContentIndex = null
+
 var director: DotVoteDirector = null
 var source: DotVoteListSource = null
 var commands: DotVoteCommands = null
@@ -87,7 +95,15 @@ func setup() -> DotResult:
 	source = DotVoteListSource.new()
 	source.label = "bowls"
 	source.apply_fn = func(id: StringName) -> DotResult:
+		# A bowl is a radius built in code, so a subscribed pack's scene map has nothing to
+		# build here: it is listed, and refused when it wins (docs/not-yet.md).
+		if not _own_ids().has(id):
+			return DotResult.fail(DotError.CODE_STATE, "'%s' is a Workshop map this game cannot play yet." % id)
 		return apply_fn.call(id) if apply_fn.is_valid() else DotResult.success(id)
+	# The game's own list, re-read before each ballot; the index's maps are merged in beside it.
+	source.entries_fn = func() -> Array:
+		return bowls_fn.call() if bowls_fn.is_valid() else []
+	source.follow_content(content_index if content_index != null else DotContentIndex.shared(), PackedStringArray(ACCEPTED_MAP_KINDS))
 	refresh_bowls()
 
 	director = DotVoteDirector.new()
@@ -215,6 +231,15 @@ func refresh_bowls() -> void:
 	for pair: Variant in bowls_fn.call():
 		var row: Array = pair
 		var _added := source.add(DotVoteChoice.of(StringName(str(row[0])), str(row[1])))
+
+
+## The ids of this game's own bowls.
+func _own_ids() -> Array:
+	var out: Array = []
+	if bowls_fn.is_valid():
+		for pair: Variant in bowls_fn.call():
+			out.append(StringName(str((pair as Array)[0])))
+	return out
 
 
 ## A round began in [param id]: the director starts over on it and the ballot timer restarts.

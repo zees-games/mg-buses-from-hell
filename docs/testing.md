@@ -6,6 +6,7 @@
 | --- | --- |
 | `examples/headless_run` | the simulation offline: rounds, sides, props, buses, the map's rules at the shipped and minimum radii, every bot drive and route, the climbs, sounds, the HUD's overlays |
 | `examples/headless_net` | both ends over a loopback link (real encoders, bridge, events; no OS socket, dropping one snapshot in five where it matters): prediction, bodies and interpolation, spectating, identity, effects, the scoreboard; and no engine error over the whole run (an `EngineErrors` logger: two minigames' suites printed `!is_inside_tree()` from a toy pulled after a mid-tick rebuild, green) |
+| `examples/headless_workshop` | subscribed maps against a fixture `DotContentIndex`: the accepted kind is listed and playable in solo (ballot, map menu rows) as `Name [Pack]`, an unaccepted `map_kind` or a missing document is not, an online session lists none, the game's own ids win |
 | `examples/dedicated` | as a server: the console, the live moderation tools, identity admission, and the source check for self-preloading messages |
 
 ## Rules the suites follow

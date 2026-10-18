@@ -28,6 +28,9 @@ const SMALL_RADIUS := 40.0
 ## The big bowl's radius.
 const BIG_RADIUS := 54.0
 
+## The largest radius a Workshop bowl document may ask for.
+const WORKSHOP_MAX_RADIUS := 70.0
+
 
 ## Every bowl, in the order a ballot lists them when nothing else orders it: each a
 ## [code]{id, name, radius}[/code] and, for a district, [code]district[/code] (what the

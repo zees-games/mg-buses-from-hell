@@ -32,7 +32,7 @@
 GAME_NAME="Buses From Hell"
 PACK="buses"
 EXTRA_PACKS=""
-SUITES="headless_run headless_net dedicated"
+SUITES="headless_run headless_net headless_workshop dedicated"
 # --------------------------------------------------------------------------------
 
 set -uo pipefail
