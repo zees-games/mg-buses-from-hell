@@ -136,6 +136,11 @@ func _game_load() -> DotResult:
 			DotError.CODE_STATE, "The registered game is not a BfhGame."
 		)
 
+	# Nobody is hurt behind a loading cover: the roster is DotGameModule's, so ask it by userid
+	# (a bot's key has none, and the roster holds nobody it did not seat).
+	world.loading_fn = func(key: StringName) -> bool:
+		return is_loading(BfhNetBridge.session_of(key))
+
 	add_command("bfh_status", _cmd_status, "Show the round, the bowl and the buses")
 	add_command("bfh_net", _cmd_net, "Show what the netcode is doing")
 	add_command("bfh_say", _cmd_say, "Say something to everybody, as the server")
@@ -305,6 +310,9 @@ func _tunable(
 ## tree before the module loaded and a server can unload and reload a game module without
 ## the bowl going away, which is what `module reload` is for.
 func _game_unload() -> void:
+	if game != null and "loading_fn" in game:
+		game.set(&"loading_fn", Callable())
+
 	if vote != null:
 		vote.queue_free()
 		vote = null

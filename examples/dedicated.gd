@@ -25,7 +25,7 @@ const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 124
+const CHECKS := 134
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -38,7 +38,7 @@ const SERVER_DIR := "user://bfh_dedicated"
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 14
+const SECTIONS := 15
 
 ## The port this test listens on. Nothing else on a developer's machine is likely to be
 ## holding it, and a boot that failed on a busy 27015 would look like the module being
@@ -110,6 +110,7 @@ func _run() -> void:
 		await _test_the_live_tools()
 		await _test_progress_and_spectating()
 		await _test_who_they_are()
+		await _test_loading_cover()
 		_test_the_bowl_vote()
 		_test_finish_round_waits_for_a_live_round()
 		await _test_it_unloads_cleanly()
@@ -1484,6 +1485,111 @@ func _line_with(text: String, needle: String) -> String:
 func _last_lines(text: String, count: int) -> String:
 	var lines := text.strip_edges().split("\n")
 	return "\n".join(lines.slice(maxi(0, lines.size() - count)))
+
+
+## [b]A runner behind its loading cover is not run over, and is once the cover lifts.[/b] A real
+## [DotClientLink] joins over the server's ENet socket and says nothing, as a client still
+## loading its level does. A bus hit and a barrel's blast must do nothing to it; an operator's
+## damage (a slay or slap goes straight to dot-combat) still lands. The client then sends
+## `game.cover` on the real wire and the same hits land.
+func _test_loading_cover() -> void:
+	print("")
+	print("a client behind its loading cover is not harmed")
+
+	var module := _module()
+	var roster: DotGameRoster = module.get("roster") if module != null else null
+
+	var known: Dictionary = {}
+	for each in server.playing_sessions():
+		known[each.userid] = true
+
+	var side := Node.new()
+	side.name = "CoverClient"
+	add_child(side)
+	get_tree().set_multiplayer(MultiplayerAPI.create_default_interface(), side.get_path())
+	# Under a node named like this suite's own, so the RPC path the server sends
+	# ("Dedicated/Server") resolves in the client's separate multiplayer tree too.
+	var mirror := Node.new()
+	mirror.name = name
+	side.add_child(mirror)
+	var link := DotClientLink.new()
+	link.name = "Server"
+	link.player_name = "Cover"
+	link.transport_preference = "udp"
+	link.udp_address = "127.0.0.1:%d" % server.config.port
+	mirror.add_child(link)
+	link.connect_to_server("127.0.0.1:%d" % server.config.port)
+
+	var seat: Array = [null]
+	for _i in 1800:
+		await get_tree().physics_frame
+		for each in server.playing_sessions():
+			if not known.has(each.userid) and game.players.has(StringName("u%d" % each.userid)):
+				seat[0] = each
+		if seat[0] != null:
+			break
+
+	_check(seat[0] != null and roster != null, "a real client joins over the socket", str(link.last_error))
+
+	if seat[0] == null or roster == null:
+		for what in ["held as loading", "a bus hit", "a blast", "an operator's damage", "the cover report",
+				"a bus hit after", "a blast after", "bots and strangers", "leaving"]:
+			_check(false, "%s (no runner joined)" % what)
+		link.disconnect_from_server("done")
+		side.queue_free()
+		_done()
+		return
+
+	var userid: int = seat[0].userid
+	var key := StringName("u%d" % userid)
+	var runner: BfhPlayer = game.players[key]
+	var health: DotHealth = runner.health
+	health.invulnerable = false
+	health.cannot_die = false
+	health.invulnerable_until_tick = -1
+	_check(roster.is_loading(userid), "the server holds the seat as loading from its spawn", str(roster.describe()))
+
+	var at := runner.global_position
+	var before := health.health
+	game._bus_hit(runner, &"", 3.0, Vector3.FORWARD)
+	_check(health.health == before, "a bus hit does nothing to it", "%s -> %s" % [before, health.health])
+
+	game._on_prop_exploded(at, 6.0, 5.0, 0.0, &"")
+	_check(health.health == before, "and neither does a barrel's blast", "%s -> %s" % [before, health.health])
+
+	game.combat.apply_damage(DotDamage.make(0, runner.entity_id, 1.0, null))
+	_check(health.health < before, "an operator's damage still lands", "%s -> %s" % [before, health.health])
+
+	DotGameClient.report_cover(link, false)
+	var lifted := false
+	for _i in 900:
+		await get_tree().physics_frame
+		if not roster.is_loading(userid):
+			lifted = true
+			break
+	_check(lifted, "its cover report crosses the wire and ends the loading state")
+
+	var after_lift := health.health
+	game._bus_hit(runner, &"", 3.0, Vector3.FORWARD)
+	_check(health.health < after_lift, "and the same bus hit now lands", "%s -> %s" % [after_lift, health.health])
+
+	var after_bus := health.health
+	game._on_prop_exploded(at, 6.0, 5.0, 0.0, &"")
+	_check(health.health < after_bus, "and so does the blast", "%s -> %s" % [after_bus, health.health])
+
+	_check(not bool(game.loading_fn.call(&"bot7")) and not bool(game.loading_fn.call(&"u99999")),
+		"a bot, or a seat the roster does not hold, is never loading")
+
+	link.disconnect_from_server("done")
+	var gone := false
+	for _i in 900:
+		await get_tree().physics_frame
+		if not game.players.has(key):
+			gone = true
+			break
+	_check(gone and not roster.is_loading(userid), "it leaves and the roster forgets it")
+	side.queue_free()
+	_done()
 
 
 ## Statistics, achievements and the spectator camera, as a server's world builds them.

@@ -1204,6 +1204,11 @@ func _physics_process(delta: float) -> void:
 ## clock do not act on anybody in front of a picture. Unset, never held.
 var hold_clock: Callable = Callable()
 
+## Whether a player's client is still behind its loading cover: `func(player_key: StringName) -> bool`.
+## The server module fills it from dot-game's roster; unset (offline, a suite, a bot) nobody is
+## loading, so every offline suite is unchanged. A covered client froze itself and cannot see.
+var loading_fn: Callable = Callable()
+
 
 ## One simulated tick, counted by this world. What an offline client and the suite use.
 func simulate(delta: float) -> void:
@@ -2180,7 +2185,17 @@ func _roof_of(body: Node3D) -> float:
 const BUS_ROOF_MARGIN := 0.25
 
 
+## Whether [param player] is behind a loading cover and so may not be hurt. Only the two
+## hazards (a bus, a barrel's blast) ask; an admin's slay or slap goes straight to dot-combat.
+func is_loading(player: BfhPlayer) -> bool:
+	return loading_fn.is_valid() and bool(loading_fn.call(player.player_id))
+
+
 func _bus_hit(player: BfhPlayer, by: StringName, closing: float, offset: Vector3) -> void:
+	# Before the damage, the knock and the sound: a hit that did not happen leaves no trace.
+	if is_loading(player):
+		return
+
 	var lethal := closing >= config.bus_lethal_speed
 	var amount := config.runner_health * 2.0 if lethal else closing * config.bus_bump_damage
 
@@ -2411,7 +2426,7 @@ func _on_prop_exploded(
 	for id: StringName in players:
 		var player: BfhPlayer = players[id]
 
-		if player.health == null or not player.health.alive or player.riding:
+		if player.health == null or not player.health.alive or player.riding or is_loading(player):
 			continue
 
 		var offset := player.global_position - at
