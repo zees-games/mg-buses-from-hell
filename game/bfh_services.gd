@@ -255,7 +255,7 @@ func _mod_abilities() -> Dictionary:
 			p.blinded = bool(args["on"])
 			return DotResult.success(p.blinded),
 		# On a driver the beacon is drawn round their BUS, because the bus is the only
-		# thing anybody can see of them; see `bfh_beacon.gd`.
+		# thing anybody can see of them; see `BfhPlayer.present_beacon`.
 		"beacon": func(id: StringName, args: Dictionary) -> DotResult:
 			var p := _mod_player(id)
 			if p == null:

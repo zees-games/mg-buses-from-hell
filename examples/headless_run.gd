@@ -446,12 +446,12 @@ func _test_blind_and_beacon_drawn() -> void:
 	var bus := driver.ridden
 	var on_bus := driver.beacon_marker
 	_check(
-		driver.riding and bus != null and on_bus != null and on_bus.is_on_bus()
+		driver.riding and bus != null and on_bus != null
 		and on_bus.global_position.distance_to(bus.global_position) < 0.01
-		and on_bus.ring_radius() > 4.0,
+		and on_bus.ring_radius > 4.0,
 		"a beaconed driver's marker is drawn round their bus, wide enough to circle it",
 		"riding %s, bus %s, ring %.1f m" % [
-			str(driver.riding), str(bus), on_bus.ring_radius() if on_bus != null else 0.0
+			str(driver.riding), str(bus), on_bus.ring_radius if on_bus != null else 0.0
 		]
 	)
 

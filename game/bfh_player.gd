@@ -1,7 +1,29 @@
 extends CharacterBody3D
 
 const BfhConfig := preload("bfh_config.gd")
-const BfhBeacon := preload("bfh_beacon.gd")
+
+## Seconds between ripples, and between pings.
+const BEACON_PERIOD := 1.0
+
+## Red-orange: the one colour the sand, the concrete and the blue sky are not, so it reads
+## as a mark rather than as part of the bowl.
+const BEACON_COLOUR := Color(1.0, 0.28, 0.18)
+
+## A person: a ring just outside a runner's capsule, a column from above their head.
+const BEACON_PERSON_RING := 0.75
+const BEACON_PERSON_BASE := 2.1
+
+## A bus: round a 9 m by 3 m hull, and from above its 2.5 m roof. The ring is drawn at the
+## bus's own origin height and a hull that long needs a radius past its corners, or the
+## ring disappears into the bodywork at both ends.
+const BEACON_BUS_RING := 5.2
+const BEACON_BUS_BASE := 4.0
+
+const BEACON_COLUMN := 14.0
+
+## Further than the bowl is wide: a beacon that went quiet at the far wall would fail in the
+## one place it is used.
+const BEACON_PING_RANGE := 160.0
 const BfhFigure := preload("bfh_figure.gd")
 const BfhAvatars := preload("bfh_avatars.gd")
 const BfhHammer := preload("bfh_hammer.gd")
@@ -114,7 +136,10 @@ var beacon: bool = false
 
 ## The marker [member beacon] draws, while it does. Client side; built and freed by
 ## [method present_beacon].
-var beacon_marker: BfhBeacon = null
+var beacon_marker: DotFxBeacon = null
+
+## Whether [member beacon_marker] is currently sized for a bus; see [method present_beacon].
+var _beacon_on_bus: bool = false
 
 ## What other people see this player as. Client side; built and shown by
 ## [method present_body], never on a server, which draws nothing.
@@ -318,7 +343,7 @@ func drawn_position() -> Vector3:
 ## next round, which is this game's respawn — but a runner who is out is out until then, and
 ## a column over where they fell points everybody at an empty patch of sand.
 ##
-## [param own_view] is whether this is the player the camera belongs to; see [BfhBeacon].
+## [param own_view] is whether this is the player the camera belongs to; see [DotFxBeacon].
 func present_beacon(delta: float, own_view: bool) -> void:
 	var alive := health == null or health.alive
 
@@ -328,13 +353,29 @@ func present_beacon(delta: float, own_view: bool) -> void:
 			beacon_marker = null
 		return
 
+	var on_bus := riding and ridden != null and is_instance_valid(ridden)
+
 	if beacon_marker == null:
-		beacon_marker = BfhBeacon.new()
+		beacon_marker = DotFxBeacon.new()
 		beacon_marker.name = "Beacon"
+		beacon_marker.period = BEACON_PERIOD
+		beacon_marker.ripple_scale = 3.0
+		beacon_marker.colour = BEACON_COLOUR
+		beacon_marker.ping_range = BEACON_PING_RANGE
+		_beacon_on_bus = on_bus
+		beacon_marker.ring_radius = BEACON_BUS_RING if on_bus else BEACON_PERSON_RING
+		beacon_marker.column_height = BEACON_COLUMN
+		beacon_marker.column_base = BEACON_BUS_BASE if on_bus else BEACON_PERSON_BASE
 		add_child(beacon_marker)
 
-	var on_bus := riding and ridden != null and is_instance_valid(ridden)
-	beacon_marker.mark_bus(on_bus)
+	# Boarding or leaving a bus resizes the marker that is already there: rebuilding it
+	# would restart its ping.
+	if on_bus != _beacon_on_bus:
+		_beacon_on_bus = on_bus
+		beacon_marker.resize(
+			BEACON_BUS_RING if on_bus else BEACON_PERSON_RING, BEACON_COLUMN,
+			BEACON_BUS_BASE if on_bus else BEACON_PERSON_BASE
+		)
 	beacon_marker.local_view = own_view
 	var at := drawn_position()
 	beacon_marker.global_position = at

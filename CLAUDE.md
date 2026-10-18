@@ -29,7 +29,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 | `game/bfh_player.gd`, `bfh_hammer.gd` | one person (controller, health, hammer, riding a crate); the only weapon |
 | `game/bfh_module.gd`, `bfh_server.gd`, `bfh_services.gd`, `bfh_vote.gd` | the dot-server module over `DotGameModule`, the game scene, chat/voice/moderation over `DotGameServices`, the bowl vote over dot-vote |
 | `game/net/` | the wire: codec, messages, link, net behaviours, and `bfh_net_bridge.gd`, the only file naming both halves |
-| `game/bfh_client.gd`, `bfh_client_chat.gd`, `bfh_hud.gd`, `bfh_beacon.gd`, `bfh_figure.gd`, `bfh_spectate.gd`, `bfh_audio.gd`, `bfh_sounds.gd`, `bfh_fx.gd`, `bfh_scoreboard.gd`, `bfh_settings.gd`, `bfh_avatars.gd`, `bfh.tscn` | the client: never built by a dedicated server |
+| `game/bfh_client.gd`, `bfh_client_chat.gd`, `bfh_hud.gd`, `bfh_figure.gd`, `bfh_spectate.gd`, `bfh_audio.gd`, `bfh_sounds.gd`, `bfh_fx.gd`, `bfh_scoreboard.gd`, `bfh_settings.gd`, `bfh_avatars.gd`, `bfh.tscn` | the client: never built by a dedicated server |
 | `game/bfh_stats.gd`, `bfh_awards.gd`, `bfh_progress.gd` | per-player numbers and achievements, authority only |
 | `props/` | crate, barrel and bus scenes, `bfh_prop_body.gd`, `bfh_bus.gd`, and `bfh_art.gd` (the atlas repair for delivered packs) |
 | `fx/` | the barrel's blast, built in code |
