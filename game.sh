@@ -125,6 +125,61 @@ run_suite() {
     return 1
 }
 
+PARSE_NOISE='ObjectDB instances( were)? leaked|resources still in use|Pages in use exist at exit|at: (cleanup|clear|~PagedAllocator)|Text-based project'
+
+# Prints each script that does not parse and returns how many. ANY output for a script,
+# past the noise above, is a failure: a warning-as-error reads as nothing else.
+parse_all() {
+    local fails=0 f out tool=addons/dot_core/tools/dot_parse_all.gd
+    local scripts
+    scripts="$(git ls-files '*.gd' 2>/dev/null || find . -name '*.gd' -not -path './.godot/*' -not -path './addons/*' | sed 's|^\./||')"
+    if [ -f "$tool" ] && [ -z "${PARSE_PER_FILE:-}" ]; then
+        # One process loads every script: about ten times faster than a start-up per
+        # file (66 scripts: 40 s against 4 s), with the same verdicts. The tool prints a
+        # "PARSE> res://path" marker before each script, so output still belongs to a
+        # file; what comes before the first marker or after PARSE_END belongs to none.
+        local list log line cur="" curout="" finished=0
+        list="$(mktemp)"; log="$(mktemp)"
+        printf '%s\n' "$scripts" > "$list"
+        PARSE_LIST="$list" timeout 900 "$GODOT" --headless --path . --script "res://$tool" >"$log" 2>&1
+        while IFS= read -r line; do
+            case "$line" in
+                'PARSE> '*|'PARSE_END')
+                    if [ -n "$cur" ] && [ -n "$curout" ]; then
+                        printf '  %sFAIL%s %s\n%s\n' "$RED" "$OFF" "$cur" "$curout"
+                        fails=$((fails + 1))
+                    fi
+                    cur=""; curout=""
+                    [ "$line" = PARSE_END ] || cur="${line#PARSE> res://}" ;;
+                'PARSED '*) finished=1 ;;
+                'PARSE_FAIL '*) [ -n "$cur" ] && [ -z "$curout" ] && curout="$line" ;;
+                *)  [ -n "$cur" ] || continue
+                    printf '%s\n' "$line" | grep -Ev '^(Godot Engine v|$)' | grep -Eivq "$PARSE_NOISE" || continue
+                    curout="${curout:+$curout$'\n'}$line" ;;
+            esac
+        done < "$log"
+        # No PARSED line: the tool itself died or timed out, which is a failure, not a pass.
+        if [ "$finished" -eq 0 ]; then
+            printf '  %sFAIL%s the parse tool did not finish\n' "$RED" "$OFF"
+            tail -n 20 "$log"
+            fails=$((fails + 1))
+        fi
+        rm -f "$list" "$log"
+        return "$fails"
+    fi
+    # An older dot-core without the tool: one process per script.
+    while read -r f; do
+        [ -n "$f" ] || continue
+        out="$(timeout 120 "$GODOT" --headless --path . --check-only --script "res://$f" 2>&1 \
+            | grep -Ev '^(Godot Engine v|$)' | grep -Eiv "$PARSE_NOISE")"
+        if [ -n "$out" ]; then
+            printf '  %sFAIL%s %s\n%s\n' "$RED" "$OFF" "$f" "$out"
+            fails=$((fails + 1))
+        fi
+    done <<< "$scripts"
+    return "$fails"
+}
+
 do_test() {
     check_addons
     local fails=0 f out
@@ -133,15 +188,8 @@ do_test() {
 
     if [ "$PARSE" = 1 ] && [ $# -eq 0 ]; then
         echo "parsing every script"
-        while read -r f; do
-            out="$(timeout 120 "$GODOT" --headless --path . --check-only --script "res://$f" 2>&1 \
-                | grep -Ev '^(Godot Engine v|$)' \
-                | grep -Eiv 'ObjectDB instances( were)? leaked|resources still in use|Pages in use exist at exit|at: (cleanup|clear|~PagedAllocator)|Text-based project')"
-            if [ -n "$out" ]; then
-                printf '  %sFAIL%s %s\n%s\n' "$RED" "$OFF" "$f" "$out"
-                fails=$((fails + 1))
-            fi
-        done < <(git ls-files '*.gd' 2>/dev/null || find . -name '*.gd' -not -path './.godot/*' -not -path './addons/*' | sed 's|^\./||')
+        parse_all
+        fails=$?
         [ "$fails" -eq 0 ] && printf '  %sok%s   every script parses\n' "$GRN" "$OFF"
     fi
 
