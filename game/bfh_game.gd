@@ -996,6 +996,8 @@ func _clear_bowl() -> void:
 	# Keyed by instance ids that are gone now, and never read again: a slow leak of two
 	# entries a round for the life of the server rather than a behaviour, but a leak.
 	_bus_stuck.clear()
+	_bus_back_forward.clear()
+	_bus_hopped.clear()
 	_bus_inverted.clear()
 	_bus_backing.clear()
 	_bus_turning.clear()
@@ -1602,13 +1604,23 @@ var _bus_backing_off: Dictionary = {}
 ## "wedged" is; only sooner, and by a driver's remedy instead of a teleport.
 func _back_off(bus: DotVehicleInstance, toward: Vector3, delta: float) -> DotVehicleCommand:
 	var left := float(_bus_backing_off.get(bus.instance_id, 0.0))
+	var held := float(_bus_stuck.get(bus.instance_id, 0.0))
+	if held <= 0.0:
+		# Free (or never caught): the next wedge starts by reversing again.
+		_bus_back_forward.erase(bus.instance_id)
 	if left <= 0.0:
-		if float(_bus_stuck.get(bus.instance_id, 0.0)) < config.bot_unwedge_after:
+		if held < config.bot_unwedge_after:
 			return null
 		left = config.bot_unwedge_seconds
 	left -= delta
 	if left <= 0.0:
 		_bus_backing_off.erase(bus.instance_id)
+		# [b]A leg that left it pinned is followed by the other direction.[/b] The stuck clock
+		# only restarts when the bus moves, so a bus held in reverse (a tank behind it as well
+		# as in front) restarted the same reverse leg every 1.4 s until the stuck rule sent it
+		# home: measured 2026-10-18 with four bot buses in a bowl, 5.1 s stalls on every map.
+		if held >= config.bot_unwedge_after:
+			_bus_back_forward[bus.instance_id] = not _bus_back_forward.get(bus.instance_id, false)
 		return null
 	_bus_backing_off[bus.instance_id] = left
 
@@ -1617,11 +1629,16 @@ func _back_off(bus: DotVehicleInstance, toward: Vector3, delta: float) -> DotVeh
 	var to := toward - bus.position()
 	to.y = 0.0
 	var side := 1.0 if right.dot(to) >= 0.0 else -1.0
+	var forward: bool = _bus_back_forward.get(bus.instance_id, false)
 	var command := DotVehicleCommand.new()
-	command.throttle = -BACK_OFF_THROTTLE
-	command.steer = -side
+	command.throttle = BACK_OFF_THROTTLE if forward else -BACK_OFF_THROTTLE
+	command.steer = side if forward else -side
 	command.sanitise()
 	return command
+
+
+## Instance id -> true when the wedged bus's current leg is forward rather than reverse.
+var _bus_back_forward: Dictionary = {}
 
 
 const BACK_OFF_THROTTLE := 0.9
@@ -2271,6 +2288,13 @@ func _break_props_under(bus: DotVehicleInstance, speed: float, by: StringName) -
 const STUCK_BREAK_SEC := 1.0
 const STUCK_RESET_SEC := 5.0
 
+## When a stuck bus hops back (at most half the reset time), and how far, in metres.
+const STUCK_HOP_SEC := 2.0
+const STUCK_HOP_METRES := 4.0
+
+## Instance ids that have hopped in this stuck spell; forgotten once the bus moves.
+var _bus_hopped: Dictionary = {}
+
 
 ## A bus that is throttling and going nowhere, and what to do about it.
 ##
@@ -2293,6 +2317,7 @@ func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
 
 	if not asking or moving:
 		_bus_stuck.erase(bus.instance_id)
+		_bus_hopped.erase(bus.instance_id)
 		return
 
 	var held := float(_bus_stuck.get(bus.instance_id, 0.0)) + delta
@@ -2315,6 +2340,25 @@ func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
 				continue
 			bus_struck.emit(prop.instance_id, by)
 			prop_damage.break_now(prop.instance_id, by)
+
+	# [b]Before the start line, a short hop back the way it came.[/b] A bus sitting on a concrete
+	# block (it cannot be broken or pushed, so the rule above has nothing to remove) is
+	# high-centred in both directions, and the back-off rocking cannot lift it. Measured
+	# 2026-10-18 with four bot buses: three of four maps held a bus on a block or crate for the
+	# full five seconds and then sent it across the bowl. A hop of a few metres along its own
+	# axis puts it where it was driving a moment ago, still in the chase.
+	var hop_at := minf(STUCK_HOP_SEC, config.bus_stuck_reset_seconds * 0.5)
+	if held >= hop_at and not _bus_hopped.has(bus.instance_id):
+		_bus_hopped[bus.instance_id] = true
+		var behind := bus.body().global_basis.z
+		behind.y = 0.0
+		if behind.length() > 0.01 and bus.body().global_basis.y.y > 0.5:
+			var hop_body := bus.body()
+			hop_body.linear_velocity = Vector3.ZERO
+			hop_body.angular_velocity = Vector3.ZERO
+			hop_body.global_position += behind.normalized() * STUCK_HOP_METRES + Vector3.UP * 0.4
+			DotLog.debug(CHANNEL, "a stuck bus hopped back", {"stuck_for": held})
+			return
 
 	if held < config.bus_stuck_reset_seconds:
 		return

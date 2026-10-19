@@ -37,11 +37,11 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 326
+const CHECKS := 342
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 39
+const SECTIONS := 40
 
 const TICK := 1.0 / 60.0
 
@@ -117,6 +117,7 @@ func _run() -> void:
 	_test_districts()
 	await _test_driving_a_district()
 	await _test_bot_pace()
+	await _test_bot_pack()
 	await _test_the_stacks()
 	await _test_the_tank_farm()
 	await _test_reach()
@@ -999,6 +1000,113 @@ func _test_bot_pace() -> void:
 		_check(r.longest_stall < PACE_STALL_AT_MOST, "%s: and never throttles against something for %.0f s" % [id, PACE_STALL_AT_MOST],
 			"%.1f s at %s" % [r.longest_stall, str(r.stall_at.snappedf(0.1))])
 		_check(r.reaches >= 1, "%s: and gets to a runner" % id, "%d reaches" % r.reaches)
+	_done()
+
+
+## A full table of bot buses, as a server runs: [constant PACK_BUSES] bots driving at
+## [constant PACK_RUNNERS] runners standing wherever the stream puts them. One bus alone
+## never meets another, and a pair wedged nose to flank is a stall no single-bus drive can
+## show. Returns `{buses, covered, resets, longest_stall, stall_at}`, the longest per bus.
+func _pack_drive(bowl_id: StringName, seconds: float) -> Dictionary:
+	var game := _world(func(c: BfhConfig) -> void:
+		c.round_seconds = seconds + 60.0
+		c.driver_count = PACK_BUSES
+	)
+	for i in range(PACK_BUSES):
+		var driver := game.add_player(StringName("d%d" % i), "Driver %d" % i, BfhGame.TEAM_DRIVERS)
+		driver.is_bot = true
+	var runners: Array = []
+	for i in range(PACK_RUNNERS):
+		runners.append(game.add_player(StringName("r%d" % i), "Runner %d" % i, BfhGame.TEAM_RUNNERS))
+	game.start()
+	await _step(game, 8)
+	if bowl_id != &"bfh_bowl":
+		game.change_bowl_now(bowl_id)
+		await _step(game, 20)
+
+	var buses: Array = []
+	for id in game._bus_ids:
+		buses.append(game.vehicles.get_vehicle(id))
+	var stream := DotRandomStream.new(23, &"pack")
+	var n := buses.size()
+	var last: Array = []
+	var stalled: Array = []
+	var began: Array = []
+	var out := {"buses": n, "covered": 0.0, "resets": 0, "longest_stall": 0.0, "stall_at": Vector3.ZERO}
+	for bus in buses:
+		last.append(bus.position())
+		stalled.append(0.0)
+		began.append(bus.position())
+	var ticks := int(seconds / TICK)
+	var since := 0.0
+
+	for _i in range(ticks):
+		since += TICK
+		for runner: BfhPlayer in runners:
+			var closest := 1e9
+			for bus in buses:
+				closest = minf(closest, runner.global_position.distance_to(bus.position()))
+			if since > REACH_GIVE_UP or closest < REACH_M:
+				var at: Vector3 = runner.global_position
+				for _try in range(30):
+					at = game.arena.scatter_point(stream, 1.0, 0.0)
+					if at.distance_to(runner.global_position) > 20.0:
+						break
+				_put(runner, at)
+		if since > REACH_GIVE_UP:
+			since = 0.0
+		game.simulate(TICK)
+		await get_tree().physics_frame
+		for k in range(n):
+			var bus = buses[k]
+			if not bus.is_alive():
+				continue
+			var now: Vector3 = bus.position()
+			# Past a hop back (4 m): only the start line is that far.
+			if Vector2(now.x - last[k].x, now.z - last[k].z).length() > 6.0:
+				out.resets += 1
+			else:
+				out.covered += Vector2(now.x - last[k].x, now.z - last[k].z).length()
+			last[k] = now
+			var asking: bool = bus.command != null and absf(bus.command.throttle) > 0.3
+			# On its roof is `_upright`'s to answer, not a wedge.
+			if asking and bus.speed() < 1.0 and bus.body().global_basis.y.y > 0.5:
+				if stalled[k] == 0.0:
+					began[k] = now
+				stalled[k] += TICK
+				if stalled[k] > out.longest_stall:
+					out.longest_stall = stalled[k]
+					out.stall_at = began[k]
+			else:
+				stalled[k] = 0.0
+	await _dispose(game)
+	return out
+
+
+const PACK_BUSES := 4
+const PACK_RUNNERS := 3
+const PACK_STALL_AT_MOST := 2.5
+
+
+func _test_bot_pack() -> void:
+	print("four bot buses together keep moving on every map")
+	var only := ""
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--map="):
+			only = arg.trim_prefix("--map=")
+	for id in PACE_MAPS:
+		if only != "" and String(id) != only:
+			continue
+		var r := await _pack_drive(id, PACE_SECONDS)
+		var each: float = r.covered / (PACE_SECONDS * maxf(r.buses, 1))
+		print("  ..    %-14s %d buses, %.2f m/s each, %d sent home, longest stall %.1f s at %s"
+			% [id, r.buses, each, r.resets, r.longest_stall, str(r.stall_at.snappedf(0.1))])
+		_check(r.buses == PACK_BUSES, "%s: all %d buses are on the floor" % [id, PACK_BUSES], "%d" % r.buses)
+		_check(each >= PACE_FLOOR, "%s: each of them keeps an average pace" % id, "%.2f m/s, floor %.1f" % [each, PACE_FLOOR])
+		_check(r.resets <= PACE_SENT_HOME_AT_MOST * PACK_BUSES, "%s: and none is sent home more than %d time" % [id, PACE_SENT_HOME_AT_MOST],
+			"sent home %d times" % r.resets)
+		_check(r.longest_stall < PACK_STALL_AT_MOST, "%s: and none is stuck for %.1f s (no progress while asking for throttle)" % [id, PACK_STALL_AT_MOST],
+			"%.1f s at %s" % [r.longest_stall, str(r.stall_at.snappedf(0.1))])
 	_done()
 
 

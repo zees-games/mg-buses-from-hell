@@ -50,3 +50,12 @@ Bot buses wedged and crawled on the bowl and on every district: 2.65 to 8.1 m/s 
 - **No recovery.** The stuck rule only broke props and sent the bus home 5 s later. A bus against something for `bfh_bot_unwedge_after` (0.5 s) now reverses for `bfh_bot_unwedge_seconds` (1.4 s), steering so the nose swings toward its target.
 
 Measured (45 s, `_test_bot_pace`, m/s and sends home): bowl 3.93 and 3; downtown 8.10 and 2; hill town 6.07 and 3; suburb 2.65 and 5, before; none sent home and no stall over a second after, 6.5 to 11.9 m/s. The suburb is the slowest and still has short stalls against buildings when a runner stands inside a building's clearance ring.
+
+## Four buses together (2026-10-18)
+
+`_test_bot_pace` drives one bus, which never meets another bus or a block it did not choose. A full table (`driver_count` 4, the default; the module keeps every empty seat filled) stalled for the whole five seconds of the stuck rule on every map, and `_test_bot_pack` now fails on that: four bot buses, three runners, 45 s per map, no bus throttling without moving for 2.5 s, each averaging 5 m/s, and none sent home more than once. Two causes:
+
+- **The back-off only reversed.** The stuck clock restarts only when the bus moves, so a bus pinned in reverse (something ahead of it and behind it) began the same reverse leg every 1.4 s until the reset. A leg that leaves it still stuck is now followed by a forward leg with the wheel the other way (`_bus_back_forward`), alternating.
+- **A concrete block cannot be broken, and a bus sits on it.** `_unstick` breaks what is under a stuck bus, and a block (4000 kg, `max_health` 0) is the one prop it cannot, so the bus was high-centred both ways. After `STUCK_HOP_SEC` (2 s, at most half the reset time) the bus hops `STUCK_HOP_METRES` (4 m) back along its own axis, once per stuck spell, and the start line stays the last resort. A bus on its roof is `_upright`'s, not counted as a stall.
+
+The default fill was already four (it was two until 2026-10-16; `bfh_drivers`, `bot_quota`).
