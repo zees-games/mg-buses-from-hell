@@ -3,6 +3,7 @@ extends Node
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhGame := preload("../game/bfh_game.gd")
 const BfhContent := preload("../game/bfh_content.gd")
+const BfhNetLink := preload("../game/net/bfh_net_link.gd")
 const BfhPlayer := preload("../game/bfh_player.gd")
 const BfhAvatars := preload("../game/bfh_avatars.gd")
 const BfhBowls := preload("../game/bfh_bowls.gd")
@@ -25,7 +26,7 @@ const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 134
+const CHECKS := 141
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -38,7 +39,7 @@ const SERVER_DIR := "user://bfh_dedicated"
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 15
+const SECTIONS := 16
 
 ## The port this test listens on. Nothing else on a developer's machine is likely to be
 ## holding it, and a boot that failed on a busy 27015 would look like the module being
@@ -114,6 +115,7 @@ func _run() -> void:
 		_test_the_bowl_vote()
 		_test_finish_round_waits_for_a_live_round()
 		await _test_it_unloads_cleanly()
+		await _test_a_reload_leaves_one_live_link()
 		_test_no_message_preloads_itself()
 
 	if not probe.is_empty():
@@ -1324,6 +1326,81 @@ func _test_it_unloads_cleanly() -> void:
 		server.console.find_command("noclip") != null,
 		"the live tools' among them, rather than refused as taken"
 	)
+	_done()
+
+
+## A module reload must leave ONE link under the server, still named for the client's route,
+## and a real client must still be sent to over it.
+##
+## [b]Over a real socket, because the loopback cannot see it.[/b] Before the bridge opened its
+## link through [DotGameLink], every load added another under the server, Godot renamed the
+## live one `@Node@n`, and an RPC to a real client found no node at that path and vanished
+## without an error. Reloaded twice here, before the client joins.
+func _test_a_reload_leaves_one_live_link() -> void:
+	print("")
+	print("a module reload leaves one live link")
+
+	for _i in range(2):
+		_check(server.modules.unload_module("buses").ok, "the module unloads")
+		_check((await server.modules.load_module("res://game/bfh_module.gd")).ok, "and loads again")
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var links := 0
+	for child in server.get_children():
+		if child is BfhNetLink:
+			links += 1
+	_check(links == 1 and server.has_node(NodePath(String(BfhNetLink.NODE_NAME))),
+		"exactly one link, under the name the client routes to (%d)" % links)
+
+	var known: Dictionary = {}
+	for each in server.playing_sessions():
+		known[each.userid] = true
+
+	var side := Node.new()
+	side.name = "ReloadClient"
+	add_child(side)
+	get_tree().set_multiplayer(MultiplayerAPI.create_default_interface(), side.get_path())
+	var mirror := Node.new()
+	mirror.name = name
+	side.add_child(mirror)
+	var link := DotClientLink.new()
+	link.name = "Server"
+	link.player_name = "Reload"
+	link.transport_preference = "udp"
+	link.udp_address = "127.0.0.1:%d" % server.config.port
+	mirror.add_child(link)
+	link.connect_to_server("127.0.0.1:%d" % server.config.port)
+
+	var seat: Array = [null]
+	for _i in 1800:
+		await get_tree().physics_frame
+		for each in server.playing_sessions():
+			if not known.has(each.userid):
+				seat[0] = each
+		if seat[0] != null:
+			break
+	_check(seat[0] != null, "a real client joins the reloaded server", str(link.last_error))
+
+	var heard := false
+	var receiver := BfhNetLink.new()
+	if seat[0] != null:
+		# What the game's client holds at the same path, added once joined: the link frees
+		# the children of the game it replaces when the server names its own.
+		receiver.name = BfhNetLink.NODE_NAME
+		link.add_child(receiver)
+		var live: BfhNetLink = server.get_node(NodePath(String(BfhNetLink.NODE_NAME)))
+		for _i in 300:
+			live.send_event(seat[0].peer_id, PackedByteArray([0]))
+			await get_tree().physics_frame
+			if receiver.events_received > 0:
+				heard = true
+				break
+	_check(heard, "and hears the server's events over the link", str(receiver.events_received))
+
+	link.disconnect_from_server("done")
+	await get_tree().physics_frame
+	side.queue_free()
 	_done()
 
 
