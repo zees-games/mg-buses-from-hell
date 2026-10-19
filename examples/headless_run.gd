@@ -37,7 +37,7 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 342
+const CHECKS := 343
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -760,6 +760,7 @@ func _test_every_bowl() -> void:
 	print("every bowl on the ballot")
 	var config := BfhConfig.new()
 	var tight := PackedStringArray()
+	var unshaped := PackedStringArray()
 	var radii := {}
 
 	for bowl in BfhBowls.all(config):
@@ -774,11 +775,24 @@ func _test_every_bowl() -> void:
 		if minf(gap, scaffold) < BfhArena.BUS_GAP:
 			tight.append("%s (%.2f / %.2f m)" % [bowl["id"], gap, scaffold])
 		radii[snappedf(arena.radius, 0.5)] = true
+
+		# dot-core's audit: drawn geometry nothing collides with is walked through.
+		var res := DotCollisionAudit.audit(arena, true)
+		if res.ok:
+			var report: DotCollisionAudit = res.value
+			print("  ..    %s collision audit: %d of %d" % [String(bowl["id"]), report.count(), report.examined])
+			if report.count() > 0:
+				unshaped.append("%s (%d)" % [bowl["id"], report.count()])
+				for line in report.describe_lines().slice(1, 12):
+					print("    %s" % line)
+		else:
+			unshaped.append("%s (audit failed: %s)" % [bowl["id"], res.error.message])
 		remove_child(arena)
 		arena.free()
 
 	_check(tight.is_empty(), "no bowl on the ballot has a gap a bus cannot take",
 		"too tight: %s, against %.2f m" % [", ".join(tight), BfhArena.BUS_GAP])
+	_check(unshaped.is_empty(), "and nothing drawn in a bowl is walked through", ", ".join(unshaped))
 	_check(radii.size() == BfhBowls.all(config).size(),
 		"and every bowl is a different size: two of one radius are one map under two names", str(radii.keys()))
 	_done()
