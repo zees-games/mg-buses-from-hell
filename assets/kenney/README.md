@@ -6,7 +6,7 @@ Four models from [Kenney's](https://kenney.nl) game-asset bundle, **CC0 1.0** â€
 | --- | --- |
 | `survival/crate.glb` | Survival Kit, `box.glb` |
 | `survival/barrel.glb` | Survival Kit, `barrel.glb` |
-| `car/bus.glb` | Car Kit, `garbage-truck.glb` |
+| `car/bus.glb` | Car Kit, `garbage-truck.glb`; the base `art-src/bus/build.py` turns into `assets/models/bus.glb`, which is what the game draws |
 | `characters/character-a.glb` | Blocky Characters, `character-a.glb` |
 | `characters/Textures/texture-{a,b,c,e,f,k,j}.png` | Blocky Characters, seven of its eighteen atlases |
 

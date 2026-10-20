@@ -1,6 +1,6 @@
 [gd_scene load_steps=4 format=3]
 
-[ext_resource type="PackedScene" path="res://assets/kenney/car/bus.glb" id="art"]
+[ext_resource type="PackedScene" path="res://assets/models/bus.glb" id="art"]
 [ext_resource type="Script" path="res://props/bfh_bus.gd" id="script"]
 
 [sub_resource type="BoxShape3D" id="hull"]
