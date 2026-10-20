@@ -7,6 +7,7 @@ const BfhNetLink := preload("../game/net/bfh_net_link.gd")
 const BfhPlayer := preload("../game/bfh_player.gd")
 const BfhAvatars := preload("../game/bfh_avatars.gd")
 const BfhBowls := preload("../game/bfh_bowls.gd")
+const BfhDistricts := preload("../game/bfh_districts.gd")
 const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 
 ## Boots a real [DotServer], loads this game into it as a module, and runs the commands
@@ -26,7 +27,7 @@ const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 141
+const CHECKS := 156
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -39,7 +40,7 @@ const SERVER_DIR := "user://bfh_dedicated"
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 16
+const SECTIONS := 17
 
 ## The port this test listens on. Nothing else on a developer's machine is likely to be
 ## holding it, and a boot that failed on a busy 27015 would look like the module being
@@ -113,6 +114,7 @@ func _run() -> void:
 		await _test_who_they_are()
 		await _test_loading_cover()
 		_test_the_bowl_vote()
+		_test_rotation_file()
 		_test_finish_round_waits_for_a_live_round()
 		await _test_it_unloads_cleanly()
 		await _test_a_reload_leaves_one_live_link()
@@ -733,6 +735,130 @@ func _test_the_bowl_vote() -> void:
 	_check(bool(warm.get("open", false)),
 		"a ballot opened in the warmup is sent to be drawn", "%d sent" % captured.size())
 	_done()
+
+## Stands in for the module a vote's commands are registered on, recording the names.
+class CommandHost extends Node:
+	var added: Dictionary = {}
+
+	func add_command(full: String, fn: Callable, _help: String, _permission: String) -> Object:
+		added[full] = fn
+		return null
+
+
+## `cfg/maps.yml`: which bowls rotate. The format is dot-map's selftest's; this is what the GAME
+## does with it: a bowl left out is installed and loadable and is never drawn, never on a
+## ballot, never nominated, marked in the map list; a switch of rotation takes effect; a renamed
+## command is registered; no file means every bowl.
+func _test_rotation_file() -> void:
+	print("rotation file")
+	var module := _module()
+	var vote: Node = module.get("vote") if module != null else null
+	var director: DotVoteDirector = vote.get("director") if vote != null else null
+	var district := str(BfhDistricts.LIST[0]["id"])
+	var keep_a: Array = ["bfh_bowl", "bfh_small_bowl"]
+	var keep_b: Array = ["bfh_big_bowl", district]
+	var before := game.bowl_id
+	var parsed := DotMapRotationFile.from_trees([{"defaults": {
+		"rotation": "a",
+		"rotations": {"a": {"maps": keep_a, "mode": "random"}, "b": {"maps": keep_b, "mode": "cycle"}},
+		"commands": {"names": {"rtv": "rockit"}},
+	}}], "mg-buses-from-hell")
+	_check(parsed.ok, "a rotation file parses", str(parsed.error))
+	var kept = game.rotation_file
+	game.rotation_file = parsed.value
+	game.apply_rotation()
+
+	var drawn := {}
+	for _i in 30:
+		var id := game.next_bowl()
+		drawn[String(id)] = true
+		game._rotation.note_played(id)
+		game._rotation.seed_value += 1
+	var strays := drawn.keys().filter(func(id: String) -> bool: return not keep_a.has(id))
+	_check(not drawn.is_empty() and strays.is_empty(), "a bowl outside the rotation is never drawn", str(strays))
+	_check(not game.rotating_ids().has(&"bfh_big_bowl") and not game.in_rotation(&"bfh_big_bowl")
+			and BfhBowls.by_id(game.config, &"bfh_big_bowl").size() > 0,
+		"and stays installed but is not what the rotation offers")
+
+	# Nobody voted: the round's own change follows the rotation, not the bowl it was in.
+	game.change_bowl_now(&"bfh_big_bowl")
+	var fell_to := {}
+	for _i in 8:
+		game.next_bowl_id = &""
+		game._change_bowl()
+		fell_to[String(game.bowl_id)] = true
+		game._rotation.seed_value += 1
+	_check(not fell_to.is_empty() and fell_to.keys().all(func(id: String) -> bool: return keep_a.has(id)),
+		"and a round nobody voted for opens in a bowl of the rotation", str(fell_to.keys()))
+
+	if vote != null:
+		vote.call("refresh_bowls")
+		director.begin(game.bowl_id)
+		var ballot: Array = []
+		for choice in (vote.get("source") as DotVoteListSource).entries:
+			ballot.append(String(choice.id))
+		_check(ballot.has("bfh_small_bowl") and not ballot.has("bfh_big_bowl") and not ballot.has(district),
+			"never on a ballot", str(ballot))
+		var refused := _run_command("nominate bfh_big_bowl")
+		_check(not _said(refused, "Nominated"), "refused by nominate", ", ".join(refused))
+		# Not the one in play: nominating the current bowl is refused for its own reason.
+		var other := "bfh_small_bowl" if game.bowl_id != &"bfh_small_bowl" else "bfh_bowl"
+		var accepted := _run_command("nominate %s" % other)
+		_check(_said(accepted, "Nominated"), "while one in the rotation is accepted", ", ".join(accepted))
+	else:
+		_check(false, "never on a ballot", "no vote")
+		_check(false, "refused by nominate", "no vote")
+		_check(false, "while one in the rotation is accepted", "no vote")
+
+	var out_row: Dictionary = {}
+	var in_row: Dictionary = {}
+	for row: Dictionary in game.bowl_rows():
+		if row["id"] == "bfh_big_bowl":
+			out_row = row
+		elif row["id"] == "bfh_small_bowl":
+			in_row = row
+	_check(not out_row.is_empty() and not bool(out_row["in_rotation"])
+			and str(out_row["name"]).contains("not in rotation"), "the bowl list marks it")
+	_check(not in_row.is_empty() and bool(in_row["in_rotation"])
+			and not str(in_row["name"]).contains("not in rotation"), "and leaves the rotating ones alone")
+	_check(game.change_bowl_now(&"bfh_big_bowl").ok and game.bowl_id == &"bfh_big_bowl",
+		"while the map menu's change still loads it", str(game.bowl_id))
+
+	_check(game.switch_rotation("b").ok and game.rotating_ids().size() == 2
+			and game.rotating_ids().has(&"bfh_big_bowl") and game.rotating_ids().has(StringName(district)),
+		"a rotation switch takes effect")
+	_check(not game.switch_rotation("nowhere").ok, "and an unknown rotation changes nothing")
+
+	var seen: Array = []
+	for _i in 4:
+		var id := game.next_bowl()
+		seen.append(String(id))
+		game._rotation.note_played(id)
+	_check(seen[0] != seen[1] and seen[0] == seen[2] and seen[1] == seen[3]
+			and keep_b.has(seen[0]) and keep_b.has(seen[1]), "a cycle walks the rotation in turn", str(seen))
+
+	var host := CommandHost.new()
+	var bound: DotResult = vote.call("install_commands", host) if vote != null else null
+	_check(bound != null and bound.ok and host.added.has("rockit") and not host.added.has("rtv"),
+		"and a renamed rtv is registered under its new name", ", ".join(host.added.keys().slice(0, 6)))
+	host.free()
+
+	# No file: every bowl rotates, as it always did.
+	game.rotation_file = null
+	game.apply_rotation()
+	_check(game.rotating_ids().size() == BfhBowls.allowed(game.config).size() and game.in_rotation(&"bfh_big_bowl"),
+		"with no file every bowl is in the rotation")
+
+	# Put the world back: the later sections share this bowl.
+	game.rotation_file = kept
+	game.apply_rotation()
+	game.next_bowl_id = before
+	game._change_bowl()
+	if vote != null:
+		vote.call("refresh_bowls")
+		director.begin(game.bowl_id)
+	_done()
+
 
 ## [b]`time_up: finish_round` waits for a round being played, never for warmup.[/b] The game
 ## hands dot-vote its match's answer (`round_in_progress_fn`); without it a limit that ran out

@@ -69,6 +69,15 @@ var ballot_fn: Callable = Callable()
 ## [code]func(voter: StringName) -> Dictionary[/code]: a voter's name and avatar, for the ballot.
 var people_fn: Callable = Callable()
 
+## `() -> Dictionary`: maps.yml's `commands:` block, so an operator renames vote, rtv and
+## nominate without this game naming any of them. Unset renames nothing.
+var commands_spec_fn: Callable = Callable()
+
+## `(id) -> bool` and `() -> Array`: maps.yml's active rotation, handed to the source so the pack
+## maps dot-vote merges are filtered and ordered like the game's own (dot-vote API level 12).
+var in_rotation_fn: Callable = Callable()
+var rotation_order_fn: Callable = Callable()
+
 ## [code]func() -> bool[/code]: whether a round is being played right now — not warmup, not
 ## between rounds. Handed to dot-vote so [code]time_up: finish_round[/code] holds a change
 ## only for a round in progress. The host's, because only the match knows.
@@ -104,6 +113,10 @@ func setup() -> DotResult:
 	source.entries_fn = func() -> Array:
 		return bowls_fn.call() if bowls_fn.is_valid() else []
 	source.follow_content(content_index if content_index != null else DotContentIndex.shared(), PackedStringArray(ACCEPTED_MAP_KINDS))
+	# By name, only where it exists: a delivered pack may run on an older shell dot-vote.
+	if "in_rotation_fn" in source:
+		source.set(&"in_rotation_fn", in_rotation_fn)
+		source.set(&"rotation_order_fn", rotation_order_fn)
 	refresh_bowls()
 
 	director = DotVoteDirector.new()
@@ -332,7 +345,9 @@ func install_commands(host: Object) -> DotResult:
 
 	commands = DotVoteCommands.new()
 	commands.director = director
-	commands.names = COMMAND_NAMES
+	commands.names = COMMAND_NAMES.duplicate()
+	# maps.yml's `commands:` block, read on every bind.
+	commands.spec_fn = commands_spec_fn
 	commands.voter_fn = func(ctx: Object) -> StringName:
 		var session: Variant = ctx.get("session")
 

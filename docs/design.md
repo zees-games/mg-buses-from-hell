@@ -62,6 +62,7 @@ This game has no map files and no dot-map catalogue: its map is `BfhArena.build(
 - No time limit (`duration_sec` 0), the current bowl is on the ballot, no cooldown in plays. Bots do not vote, so a server of bots never opens one.
 - dot-vote's commands (`vote`, `rtv`, `nominate`, …) are the module's, so `!vote 2` in chat reaches them through `_on_chat_command` as the player who typed it.
 - The client shell draws the ballot from the `map_ballot` notice (`DotVoteBallotFeed` → `DotBallotPanel` down the right-hand side); nothing of it is in this game's client. `tools/shot.sh 8 ballot.png --ballot` draws the same panel from this game's own vote.
+- `cfg/maps.yml` (dot-map's `DotMapRotationFile`, found through `--config`; `sv_map_rotation_file`, `bfh_rotation`, `bfh_maps_reload`) says which bowls rotate: the ballot, nominations and the pick for a round nobody voted on follow it, the map menu marks the others "(not in rotation)" and still loads them; no file rotates every bowl.
 - An owner reshapes it in `user://cfg/buses_vote.json` or `game.yml`'s `metadata: bowl_vote:`, keyed as `DotVoteRules`; `{"enabled": false}` keeps the server's own bowl.
 
 `examples/dedicated`'s "the bowl vote" drives it through the console as a player's chat would, through to the next round rebuilt in the voted bowl. Not yet tried in a browser.

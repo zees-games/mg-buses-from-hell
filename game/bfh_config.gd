@@ -155,6 +155,13 @@ extends DotConfig
 ## `bfh_big_bowl`; see `BfhBowls`). Empty offers all of them; one id is no vote at all.
 @export var bowl_ids: PackedStringArray = PackedStringArray()
 
+## The file that says which bowls this server ROTATES: `cfg/maps.yml` (dot-map's
+## `DotMapRotationFile`: named rotations, `random` or `cycle`, wildcards, command names), looked
+## for in the `--config` directory. Empty, or no such file, rotates every bowl. A bowl it leaves
+## out stays installed (the map menu loads it); it is only never drawn, balloted or nominated.
+## `sv_map_rotation_file`.
+@export var map_rotation_file: String = "cfg/maps.yml"
+
 ## How many crates are scattered at the start of a round.
 @export_range(0, 200, 1) var crate_count: int = 34
 

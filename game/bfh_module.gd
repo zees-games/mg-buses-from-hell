@@ -154,6 +154,7 @@ func _game_load() -> DotResult:
 
 	_add_tunables(world)
 	_build_vote(world)
+	_add_rotation(world)
 
 	# Dead bodies: dot-player-char's sv_ragdoll* set. The server only picks each death's reaction
 	# from them; REPLICATED, because the clients draw the bodies (see the client's _build_netcode).
@@ -281,6 +282,55 @@ func _add_tunables(world: BfhGame) -> void:
 ## that the game would not load.
 static func _number(value: float) -> String:
 	return "%d" % int(round(value)) if is_equal_approx(value, round(value)) else "%.2f" % value
+
+
+## maps.yml: `sv_map_rotation_file`, `bfh_rotation` (switch or list) and `bfh_maps_reload`.
+func _add_rotation(world: BfhGame) -> void:
+	add_command("bfh_rotation", _cmd_rotation,
+		"bfh_rotation [name]: switch to a rotation in maps.yml, or list them", DotAdminFlags.CHANGEMAP)
+	add_command("bfh_maps_reload", _cmd_maps_reload, "Re-read maps.yml", DotAdminFlags.CHANGEMAP)
+	var file_cvar := add_cvar("sv_map_rotation_file", world.config.map_rotation_file,
+		"maps.yml: the bowls that rotate, in named rotations. Unlisted bowls stay installed.")
+	file_cvar.changed.connect(func(_old: String, new_value: String) -> void:
+		world.config.map_rotation_file = new_value.strip_edges()
+		var _read := world.load_rotation()
+		if vote != null:
+			vote.refresh_bowls())
+
+
+func _cmd_rotation(ctx: DotCmdContext) -> void:
+	var world := game as BfhGame
+
+	if world == null or not world.has_rotation_file():
+		ctx.reply("There is no maps.yml; every bowl rotates.")
+		return
+
+	var file := world.rotation_file
+
+	if ctx.argc() == 0:
+		ctx.reply("Rotations: %s (active: %s)" % [", ".join(file.rotation_names()), file.active_name()])
+		return
+
+	var switched := world.switch_rotation(ctx.arg(0))
+
+	if not switched.ok:
+		ctx.reply(switched.error.message)
+		return
+
+	if vote != null:
+		vote.refresh_bowls()
+
+	ctx.reply("Rotation: %s" % ctx.arg(0))
+
+
+func _cmd_maps_reload(ctx: DotCmdContext) -> void:
+	var world := game as BfhGame
+	var read := world.load_rotation()
+
+	if vote != null:
+		vote.refresh_bowls()
+
+	ctx.reply("maps.yml read." if read.ok else read.error.message)
 
 
 ## One cvar, its default taken from the configuration rather than written twice.
@@ -451,10 +501,14 @@ func _build_vote(world: BfhGame) -> void:
 	vote.bowls_fn = func() -> Array:
 		var out: Array = []
 
-		for bowl in BfhBowls.allowed(world.config):
-			out.append([bowl["id"], bowl["name"]])
+		# Only the bowls maps.yml rotates; the map menu and an admin still load any.
+		for id in world.rotating_ids():
+			out.append([id, str(BfhBowls.by_id(world.config, id).get("name", id))])
 
 		return out
+	vote.commands_spec_fn = world.rotation_commands
+	vote.in_rotation_fn = func(id: StringName) -> bool: return not world.has_rotation_file() or world.in_rotation(id)
+	vote.rotation_order_fn = func() -> Array: return world.rotating_ids()
 	vote.apply_fn = func(id: StringName) -> DotResult:
 		world.next_bowl_id = id
 		return DotResult.success(id)

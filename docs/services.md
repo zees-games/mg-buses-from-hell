@@ -40,6 +40,7 @@ The `.gitignore` is the dependency manifest. Kept or dropped for a reason:
 - **dot-spawn** is not linked: there is no respawn, and the top-of-round scatter's keep-outs come from `BfhArena`'s one description; a catalogue of sites would be a second description to drift from it. (A late joiner placed in front of a moving bus is unmeasured.)
 - **dot-team** is not linked: `sides` is two asymmetric entries capped by seats, not balanced, and its spectate bridge would restrict the camera to one's own side, which this game decided against.
 - **dot-physics** is not linked: nothing names a layer or a surface.
+- **dot-map** is linked only for `DotMapRotationFile` (maps.yml); the bowls stay `BfhBowls`, mirrored as `DotMapDef`s.
 - **dot-fx** is linked for the barrel's blast. It had once been linked for two weeks with no effect; a manifest line for an addon nobody uses is a dependency that lies.
 - **dot-weapon / dot-loadout** are not linked: there is exactly one thing to hold. A catalogue of one is wrong the moment somebody adds a second entry and forgets its rules.
 
