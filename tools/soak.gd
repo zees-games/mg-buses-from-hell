@@ -139,7 +139,30 @@ func _movers() -> Array:
 		if bus == null or not bus.is_alive():
 			continue
 		out.append({"id": id, "position": bus.position(), "kind": &"bot", "has_goal": chasing})
+		_trace_bus(id, bus)
 	return out
+
+
+## `--trace` prints each bus once a second: position, speed, the nearest runner, and the ramp plan.
+func _trace_bus(id: StringName, bus: DotVehicleInstance) -> void:
+	if not OS.get_cmdline_user_args().has("--trace"):
+		return
+	var sec := (Engine.get_physics_frames() - _first_frame) / TICK_RATE
+	if _traced_sec.get(id, -1) == sec:
+		return
+	_traced_sec[id] = sec
+	var q := _game._nearest_runner(bus.position())
+	var plan: Dictionary = _game._bus_turning.get(bus.instance_id, {})
+	var p := bus.position()
+	print("TRACE t=%d %s pos=(%.1f,%.1f,y%.1f) v=%.1f route=%s quarry=%s plan=%s back=%s stuck=%.1f" % [
+		sec, id, p.x, p.z, p.y, bus.speed(), str(_game._bus_routes.get(bus.instance_id, {}).get("path", PackedVector3Array()).slice(0, 3)),
+		"-" if q == null else "(%.1f,%.1f,y%.1f)" % [q.global_position.x, q.global_position.z, q.global_position.y],
+		plan.get("phase", "-") + ("R" if plan.get("reverse", false) else "F"),
+		_game._bus_backing_off.get(bus.instance_id, 0.0) > 0.0, float(_game._bus_stuck.get(bus.instance_id, 0.0))])
+
+
+var _traced_sec := {}
+var _first_frame := Engine.get_physics_frames()
 
 
 func _fail(why: String) -> void:

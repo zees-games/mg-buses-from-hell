@@ -1004,6 +1004,8 @@ func _clear_bowl() -> void:
 	_bus_inverted.clear()
 	_bus_backing.clear()
 	_bus_turning.clear()
+	_bus_turn_rest.clear()
+	_bus_pinned.clear()
 
 
 ## The server's maps.yml, or null when there is none (every bowl rotates, as it always did).
@@ -1690,7 +1692,17 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 	# Slower while bound up the ramp: 5 m of slab for 2.5 m of bus leaves 1.25 m either
 	# side, and at full speed the line-up overshoots the middle. See
 	# [method BfhArena._up_the_ramp].
+	# [b]In a district the ramp's own rules begin at the foot.[/b] Further out the street route
+	# carries the bus there: the open-floor turn and line-up, planned with `steer_around`, drove
+	# a bus into a street's buildings 45 m from the ramp and stood it braking there for 26 s.
 	var bound := arena.ramp_bound(bus.position(), beyond)
+	var resting := float(_bus_turn_rest.get(bus.instance_id, 0.0))
+	if resting > 0.0:
+		_bus_turn_rest[bus.instance_id] = resting - delta
+		bound = false
+	if bound and arena.routes_through_streets() \
+			and bus.position().distance_to(arena.ramp_foot()) > STREET_RAMP_NEAR:
+		bound = false
 	var pace := config.bus_top_speed * clampf(1.0 + 0.4 * (skill.aggression - _MEDIUM.aggression), 0.5, 1.0)
 	player.autopilot.target_speed = minf(pace, RAMP_SPEED) if bound else pace
 	# Written every tick rather than once, so `bfh_bot_steer_clearance` takes effect on the
@@ -2013,6 +2025,15 @@ func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
 		_bus_turning[id] = plan
 		_bus_backing.erase(id)
 
+	# [b]A turn that is not finishing is given up.[/b] In a district the turning point can have
+	# buildings round it and the legs shuffle for ever (hill town, 40 s, never reaching the
+	# line-up); the bus rests from the ramp rules and drives its route or nudge instead.
+	plan["age"] = float(plan.get("age", 0.0)) + delta
+	if float(plan["age"]) > RAMP_TURN_GIVE_UP:
+		_bus_turning.erase(id)
+		_bus_turn_rest[id] = RAMP_TURN_REST
+		return null
+
 	var centre: Vector3 = plan["centre"]
 	var to_centre := Vector3(centre.x - pos.x, 0.0, centre.z - pos.z)
 	var held: float = float(plan["held"]) + delta
@@ -2032,6 +2053,7 @@ func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
 			return player.autopilot.drive(bus, delta)
 		plan["phase"] = "legs"
 		plan["held"] = 0.0
+		plan["leg_from"] = pos
 		# The way round, once. Straight behind, either way is half a turn, so it goes the
 		# way that swings the nose across the centre rather than away from it.
 		if forward.dot(axis) > -0.985:
@@ -2130,7 +2152,12 @@ func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
 		# way: a bus already outside them would otherwise find both ends "blocked" and
 		# never move again (measured from the sw start, stood still for 17 s).
 		var bounds: Variant = centre if held > RAMP_LEG_FREE else null
-		if _end_blocked(bus, pos, forward, right, reverse, bounds) or stopped \
+		# [b]A leg that has not moved is not ended by the floor.[/b] A bus within the margin of
+		# something at both ends found each new leg blocked on its first tick, flipped and
+		# braked again, and stood braking for 27 s with no throttle for the stuck rule to
+		# see (small bowl, in front of the foot). It pushes instead, and the stall ends it.
+		var moved := pos.distance_to(plan.get("leg_from", pos)) > RAMP_LEG_MOVED
+		if (moved and _end_blocked(bus, pos, forward, right, reverse, bounds)) or stopped \
 				or held > RAMP_LEG_LONGEST:
 			reverse = not reverse
 			plan["reverse"] = reverse
@@ -2147,6 +2174,7 @@ func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
 		if absf(speed) < RAMP_LEG_STILL and float(plan["held"]) > RAMP_LEG_SETTLE:
 			plan["settling"] = false
 			plan["held"] = 0.0
+			plan["leg_from"] = pos
 	elif absf(speed) < RAMP_LEG_SPEED:
 		command.throttle = -1.0 if reverse else RAMP_TURN_THROTTLE
 	command.sanitise()
@@ -2234,6 +2262,15 @@ const RAMP_LEG_SETTLE := 0.2
 const RAMP_LEG_STALL := 0.6
 const RAMP_LEG_FREE := 0.4
 const RAMP_LEG_LONGEST := 3.0
+## How far a leg has to go before the floor can end it (m).
+const RAMP_LEG_MOVED := 0.4
+## How long a turn may take before the bus gives it up, and how long it then rests from the
+## ramp rules (s).
+const RAMP_TURN_GIVE_UP := 12.0
+const RAMP_TURN_REST := 8.0
+
+## Instance id -> seconds a bus that gave up its turn has left away from the ramp rules.
+var _bus_turn_rest: Dictionary = {}
 
 
 ## How near its waypoint a stopped bot bus has to be to be standing on it: twice the
@@ -2242,6 +2279,9 @@ const PARKED_ON_WAYPOINT := 1.0
 
 ## How fast a bot drives while it is lining up on and climbing the ramp, in m/s.
 const RAMP_SPEED := 9.0
+
+## How near the ramp's foot a district bus is before the ramp rules take over from its route (m).
+const STREET_RAMP_NEAR := 24.0
 
 ## Degrees off its nose the point a ramp-bound bot steers for has to be before it turns
 ## round, on the floor and on the line-up; the angle it turns round to; the longest each
@@ -2465,6 +2505,14 @@ const STUCK_HOP_METRES := 4.0
 var _bus_hopped: Dictionary = {}
 
 
+## Instance id -> `{at, held}`: where a bus asking for throttle was last clear of, and for how long.
+var _bus_pinned: Dictionary = {}
+
+## The circle a bus must leave, and how long it may stay in it while asking to go (s).
+const PINNED_RADIUS := 3.0
+const PINNED_SECONDS := 7.0
+
+
 ## A bus that is throttling and going nowhere, and what to do about it.
 ##
 ## [b]A crate stops a bus, and it should not, and no amount of tuning fixes it.[/b] A
@@ -2484,12 +2532,30 @@ func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
 	var asking := bus.command != null and absf(bus.command.throttle) > 0.3
 	var moving := bus.speed() > 1.0
 
+	# [b]Rocking in place is not moving.[/b] The back-off reverses and goes forward again, and
+	# each lurch passes 1 m/s and restarts the clock below, so a bus wedged among crates in a
+	# street shuffled within three metres for 20 s without ever being caught (hill town).
+	# Asking for throttle and not having left a 3 m circle for `PINNED_SECONDS` counts as stuck
+	# whatever the speed.
+	var pin: Dictionary = _bus_pinned.get(bus.instance_id, {})
+	var here := bus.position()
+	if pin.is_empty() or not asking or here.distance_to(pin["at"]) > PINNED_RADIUS:
+		pin = {"at": here, "held": 0.0}
+	else:
+		pin["held"] = float(pin["held"]) + delta
+	_bus_pinned[bus.instance_id] = pin
+	var pinned := float(pin["held"]) >= PINNED_SECONDS
+	if pinned:
+		moving = false
+
 	if not asking or moving:
 		_bus_stuck.erase(bus.instance_id)
 		_bus_hopped.erase(bus.instance_id)
 		return
 
 	var held := float(_bus_stuck.get(bus.instance_id, 0.0)) + delta
+	if pinned:
+		held = maxf(held, config.bus_stuck_reset_seconds)
 	_bus_stuck[bus.instance_id] = held
 
 	if held < config.bus_stuck_break_seconds:
@@ -2545,6 +2611,7 @@ func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
 	)
 
 	_bus_stuck.erase(bus.instance_id)
+	_bus_pinned.erase(bus.instance_id)
 	DotLog.info(CHANNEL, "a bus was put back on its start line", {"stuck_for": held})
 
 
