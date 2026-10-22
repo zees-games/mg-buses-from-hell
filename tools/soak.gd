@@ -22,6 +22,8 @@ const DEFAULT_MINUTES := 1.0
 const DEFAULT_BOTS := 4
 const RUNNERS := 3
 const TICK_RATE := 64
+## The buses are physics bodies the engine steps once per physics frame, so the sim ticks one frame at a time.
+const STEPS_PER_FRAME := 1
 
 var _game: BfhGame
 var _rounds_over := 0
@@ -102,7 +104,7 @@ func _run() -> void:
 	var delta := 1.0 / float(TICK_RATE)
 	while not soak.is_done():
 		soak.advance(delta)
-		if soak.ticks % 32 == 0:
+		if soak.ticks % STEPS_PER_FRAME == 0:
 			await get_tree().physics_frame
 
 	var report := soak.finish()
