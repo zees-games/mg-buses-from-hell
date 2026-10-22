@@ -59,3 +59,5 @@ Measured (45 s, `_test_bot_pace`, m/s and sends home): bowl 3.93 and 3; downtown
 - **A concrete block cannot be broken, and a bus sits on it.** `_unstick` breaks what is under a stuck bus, and a block (4000 kg, `max_health` 0) is the one prop it cannot, so the bus was high-centred both ways. After `STUCK_HOP_SEC` (2 s, at most half the reset time) the bus hops `STUCK_HOP_METRES` (4 m) back along its own axis, once per stuck spell, and the start line stays the last resort. A bus on its roof is `_upright`'s, not counted as a stall.
 
 The default fill was already four (it was two until 2026-10-16; `bfh_drivers`, `bot_quota`).
+
+The bus soak (`./game.sh --no-parse soak <bowl> 1`, [soak.md](soak.md)) found the ramp-turn, pinned-in-place and street-ramp-radius stuck causes now handled in `game/bfh_game.gd`. Five runs each of `bfh_hill_town`, `bfh_suburb` and `bfh_small_bowl` (2026-10-22) all passed with no stuck verdict (max 0 s against the 10 s limit).
