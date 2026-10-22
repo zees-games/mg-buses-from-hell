@@ -94,6 +94,9 @@ var config: BfhConfig = null
 
 var controller: DotFpsController = null
 var sampler: DotFpsSampler = null
+
+## Set by the world each tick for somebody flying a free camera: their command is zeroed.
+var input_off := false
 var health: DotHealth = null
 
 ## The hammer, on a runner. Null on a driver: a bus is the weapon.
@@ -246,7 +249,11 @@ func simulate(tick: int, delta: float) -> void:
 	if sampler != null:
 		# Settling under the cover runs the body with its input off (falls, lands, no keys).
 		var gate := DotLoadGate.of(self) if is_inside_tree() else null
-		controller.apply_command(sampler.sample(delta) if gate == null or gate.is_open() else DotFpsCommand.new())
+		var open := gate == null or gate.is_open()
+		# A roamer's keys fly the camera; they must not also walk the body that fell.
+		controller.apply_command(
+			sampler.sample(delta) if open and not input_off else DotFpsCommand.new()
+		)
 
 	# Sampled above and then dropped: those same keys are what the bus is steered
 	# with, and the world reads the pending command out for that. Not simulating is

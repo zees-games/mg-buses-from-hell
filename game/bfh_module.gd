@@ -173,6 +173,13 @@ func _game_load() -> DotResult:
 		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
 	)
 
+	# dot-spectate's mp_forcecamera, mp_freeroam and mp_freeroam_speed: whether a runner who is
+	# out may fly a free camera. REPLICATED, because the client flies it and hides the key.
+	if world.spectate != null and world.spectate.manager != null:
+		_spectate_cvars = world.spectate.manager.rules.bind_cvars(
+			add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
+		)
+
 	_bots = add_cvar(
 		"bfh_bots", "1",
 		"Bots in empty driving seats: 1 keeps as many as bot_quota and bot_quota_mode say, 0 none at all."
@@ -218,6 +225,10 @@ func _game_load() -> DotResult:
 ## how many crates the NEXT round is laid out with; it does not put crates in the bowl
 ## now. A cvar that pretended otherwise would be one an admin sets in the middle of a
 ## round and then reports as broken.
+## The cvars dot-spectate's rules were bound to, kept for the suite.
+var _spectate_cvars: Array = []
+
+
 func _add_tunables(world: BfhGame) -> void:
 	var config := world.config
 

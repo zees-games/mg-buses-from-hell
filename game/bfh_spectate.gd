@@ -37,8 +37,13 @@ const BfhPlayer := preload("bfh_player.gd")
 ## - [b]No delay[/b], for the same reason: a delay that only a client enforces, over data
 ##   the client already has, is theatre. (A mirror records its own history since
 ##   2026-09-25, so it would draw — but only what this client already has.)
-## - [b]No roaming.[/b] A free camera over a 92 m bowl is a map of it, and above the tanks
-##   it is exactly the view the tank farm exists to take away from a runner on the ground.
+## - [b]Roaming is on, as everywhere in the family[/b] (decided 2026-10-21; `mp_freeroam 0`
+##   or `mp_forcecamera` 1 or 2 switches it off). The worry that kept it off, a map of the
+##   bowl above the tanks, is the same one as the positions above: this server replicates
+##   everything to everybody, so a modified client has the map whatever the camera shows,
+##   and an honest runner who is out is owed something better than three minutes of one bus.
+##   The camera is the client's ([code]DotSpectatorFreeCam[/code]); the server holds only the
+##   mode.
 ## - [b]The living do not watch.[/b] A runner who is up is playing; a driver cannot be out.
 ##
 ## [b]A bus's "eyes" are its cab.[/b] A driver's own position is where they sat down —
@@ -52,6 +57,8 @@ const CHANNEL := "bfh.spectate"
 const ASK_NEXT := 0
 const ASK_PREVIOUS := 1
 const ASK_VIEW := 2
+## The free-camera key: into one, or back onto a player. The fourth value of the two bits.
+const ASK_ROAM := 3
 
 ## Where a driver's view is, in their bus's own frame: over the cab roof, behind the
 ## container its forks carry out front.
@@ -115,7 +122,8 @@ static func rules_for(tick_rate: int) -> DotSpectatorRules:
 	rules.allow_while_alive = false
 	rules.allow_while_dead = true
 	rules.allow_unassigned = true
-	rules.allow_roaming = false
+	# allow_roaming stays at the family default (true) and follows `mp_freeroam`. Hardcoding it
+	# off here would be overwritten by the cvar's default the moment the module bound it.
 	rules.cycle_includes_dead = false
 	rules.auto_retarget = true
 	rules.delay_ticks = 0
@@ -248,6 +256,9 @@ func request(player_id: StringName, ask: int) -> DotResult:
 			)
 			return manager.set_mode(key, wanted)
 
+		ASK_ROAM:
+			return manager.toggle_roam(key)
+
 	return DotResult.fail(DotError.CODE_INVALID, "Unknown spectator request %d." % ask)
 
 
@@ -260,6 +271,16 @@ func is_spectating(player_id: StringName) -> bool:
 ## Where [param player_id]'s camera is, or identity when they are not watching.
 func camera_for(player_id: StringName) -> Transform3D:
 	return manager.camera_of(String(player_id)) if manager != null else Transform3D.IDENTITY
+
+
+func is_roaming(player_id: StringName) -> bool:
+	return manager != null and manager.view(String(player_id)).mode == DotSpectatorView.Mode.ROAMING
+
+
+## Whether the free-camera key should be offered to this viewer now (`mp_freeroam`,
+## `mp_forcecamera`).
+func can_roam(player_id: StringName) -> bool:
+	return manager != null and manager.can_roam(String(player_id))
 
 
 func mode_of(player_id: StringName) -> int:

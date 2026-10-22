@@ -50,7 +50,7 @@ const BfhSpectate := preload("../game/bfh_spectate.gd")
 ## the wrong reason. A real client is a separate program with its own export and its own
 ## `user://` config. Make them disagree, and let HELLO correct it.
 
-const CHECKS := 199
+const CHECKS := 203
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -375,6 +375,14 @@ func _test_the_wire() -> void:
 	_check(
 		bool(watch["ok"]) and int(watch["ask"]) == BfhSpectate.ASK_VIEW,
 		"a spectator's click round-trips, and it is only the ask — never who to watch"
+	)
+
+	var roam_ask := BfhEvents.read_watch(DotNetReader.new(
+		BfhEvents.write_watch(BfhSpectate.ASK_ROAM)
+	))
+	_check(
+		bool(roam_ask["ok"]) and int(roam_ask["ask"]) == BfhSpectate.ASK_ROAM,
+		"and so does the free-camera ask, the fourth value of the same two bits"
 	)
 
 	# The writer masks a value to its field, so a kind past the field goes out as a smaller
@@ -2389,6 +2397,43 @@ func _test_a_runner_who_is_out() -> void:
 		"and space asks for the view behind them",
 		spectate.describe_view(mine.player_id)
 	)
+
+	# Free roam: the ask goes to the server, which decides (toggle_roam), and ROAMING comes
+	# back with no target. An empty target must not read as "stop watching".
+	var server_rules := _server_game.spectate.manager.rules
+	_client_bridge.ask_watch(BfhSpectate.ASK_ROAM)
+	_exchange()
+	await _steps(4)
+	_check(
+		_server_game.spectate.is_roaming(mine.player_id) and spectate.is_roaming(mine.player_id)
+		and spectate.is_spectating(mine.player_id),
+		"the free-camera ask is decided by the server, and ROAMING comes back to the client",
+		"server %s, client %s" % [
+			_server_game.spectate.describe_view(mine.player_id), spectate.describe_view(mine.player_id)
+		]
+	)
+
+	var roam_notices: Array[String] = []
+	_client_bridge.notice_received.connect(func(text: String) -> void: roam_notices.append(text))
+	var _roam_off := server_rules.set_cvar("mp_freeroam", "0")
+	await _steps(4)
+	_check(
+		not _server_game.spectate.is_roaming(mine.player_id) and not spectate.is_roaming(mine.player_id)
+		and spectate.is_spectating(mine.player_id),
+		"mp_freeroam 0 mid-roam returns the roamer to a player, on the client too",
+		spectate.describe_view(mine.player_id)
+	)
+
+	_client_bridge.ask_watch(BfhSpectate.ASK_ROAM)
+	_exchange()
+	await _steps(4)
+	_check(
+		not _server_game.spectate.is_roaming(mine.player_id)
+		and roam_notices.any(func(t: String) -> bool: return t.to_lower().contains("roam")),
+		"a refused free-camera ask comes back as a notice, and the roamer stays on a player",
+		str(roam_notices)
+	)
+	var _roam_on := server_rules.set_cvar("mp_freeroam", "1")
 
 	# An achievement, from the server's tracker to the one person who earned it. Unlocked
 	# by hand rather than earned — earning is `headless_run`'s — so what is under test is

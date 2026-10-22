@@ -37,6 +37,7 @@ When you are run over, you watch the bus that got you for a moment, then whoever
 | **WASD** | Move | Drive and steer |
 | **Space** | Jump | |
 | **Mouse 1** | Swing the hammer | Horn |
+| **G** | While out: a free camera (WASD, Space / Ctrl up and down, Shift fast, Alt slow, mouse to look), and back onto a player | |
 | **Tab** (hold) | Scoreboard | Scoreboard |
 | **Y** / **U** | Chat / chat to your side | Chat / chat to your side |
 | **V** | Push to talk (to your side) | Push to talk |
@@ -98,6 +99,8 @@ bfh_bus_stuck_reset 5        // seconds before a stuck bus is put back on its st
 ```
 
 Runners who are run over or blown up fly as ragdolls ([dot-player-char](https://github.com/modcommunity/dot-player-char)); the server picks how each one goes down and everybody sees the same fall. `sv_ragdoll 0` makes it a quick fall with no physics, `sv_ragdoll_style` picks ragdoll, stiff, topple or hide, `sv_ragdoll_time` and `sv_ragdoll_max` say how long and how many, and `sv_ragdoll_reactions` weights the falls (`limp`, `face_plant`, `crumple`, `headshot_launch`, `power_launch`; 0 turns one off).
+
+A runner who is out can fly a free camera (G); `mp_freeroam 0` keeps them on players, `mp_forcecamera 1` or `2` restricts the camera and switches it off, and `mp_freeroam_speed` (metres a second, 12) sets the speed.
 
 The bot cvars are the family's shared ones (dot-server's `DotBotQuota`), counted here in driving seats because a bot only ever drives: `bfh_drivers` is how many seats there are and caps the quota.
 

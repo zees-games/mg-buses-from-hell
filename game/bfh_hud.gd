@@ -3,6 +3,7 @@ extends CanvasLayer
 const BfhGame := preload("bfh_game.gd")
 const BfhPlayer := preload("bfh_player.gd")
 const BfhArena := preload("bfh_arena.gd")
+const BfhBindings := preload("bfh_bindings.gd")
 
 ## Health, the clock, and how much cover is left. Four numbers and a crosshair.
 ##
@@ -258,6 +259,11 @@ static func watching_line(p_game: BfhGame, own: BfhPlayer) -> String:
 			or not p_game.spectate.is_spectating(own.player_id):
 		return "down — next round"
 
+	var roam_key: String = BfhBindings.key_name(BfhBindings.ROAM)
+
+	if p_game.spectate.is_roaming(own.player_id):
+		return "down — free camera (WASD · space/ctrl: up/down · shift: fast · %s: back to the players)" % roam_key
+
 	var target := p_game.spectate.target_of(own.player_id)
 	var who: BfhPlayer = p_game.players.get(target)
 	var name := who.display_name if who != null else "nobody"
@@ -273,4 +279,5 @@ static func watching_line(p_game: BfhGame, own: BfhPlayer) -> String:
 		DotSpectatorView.Mode.FIXED:
 			return "down — next round"
 
-	return "down — watching %s   (click: next · right-click: back · space: view)" % name
+	var roam_hint := (" · %s: free camera" % roam_key) if p_game.spectate.can_roam(own.player_id) else ""
+	return "down — watching %s   (click: next · right-click: back · space: view%s)" % [name, roam_hint]

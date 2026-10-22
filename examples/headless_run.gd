@@ -37,7 +37,7 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 343
+const CHECKS := 352
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -4338,7 +4338,7 @@ func _test_spectating() -> void:
 	)
 
 	if spectate == null or driver.ridden == null:
-		for _i in range(10):
+		for _i in range(19):
 			_check(false, "(no spectate, or no bus to be run over by)")
 		await _dispose(game)
 		_done()
@@ -4422,6 +4422,80 @@ func _test_spectating() -> void:
 		"and the HUD says whose eyes, and how to change them",
 		line
 	)
+
+	# --- Free roam: on by default, the server's call, the restriction wins silently.
+	var rules := spectate.manager.rules
+	_check(
+		rules.allow_roaming and rules.force_camera == 0 and rules.roaming_permitted()
+		and spectate.can_roam(&"r1"),
+		"free roam is on by default and the key is offered",
+		"allow=%s force=%d" % [rules.allow_roaming, rules.force_camera]
+	)
+
+	var entered := spectate.request(&"r1", BfhSpectate.ASK_ROAM)
+	_check(
+		entered.ok and spectate.is_roaming(&"r1") and spectate.is_spectating(&"r1"),
+		"the roam ask enters a free camera",
+		spectate.describe_view(&"r1")
+	)
+	_check(
+		BfhHud.watching_line(game, out).contains("free camera"),
+		"and the HUD names the free camera",
+		BfhHud.watching_line(game, out)
+	)
+
+	var fly := DotSpectatorFreeCam.new()
+	fly.rules = rules
+	fly.seed_from(spectate.camera_for(&"r1"))
+	var flown := fly.step(Vector3(0.0, 0.0, 1.0), false, false, 1.0).origin.distance_to(
+		spectate.camera_for(&"r1").origin
+	)
+	_check(
+		absf(flown - rules.roam_speed) < 0.5,
+		"the free camera flies at mp_freeroam_speed",
+		"%.1f m in a second at %.1f" % [flown, rules.roam_speed]
+	)
+
+	await _step(game, 2)
+	_check(
+		out.input_off,
+		"a roamer's body is not walked by the keys that fly the camera (command zeroed)"
+	)
+
+	var left := spectate.request(&"r1", BfhSpectate.ASK_ROAM)
+	_check(
+		left.ok and not spectate.is_roaming(&"r1") and spectate.is_spectating(&"r1"),
+		"the same ask leaves it, back onto a player",
+		spectate.describe_view(&"r1")
+	)
+
+	var _off := rules.set_cvar("mp_freeroam", "0")
+	var refused_off := spectate.request(&"r1", BfhSpectate.ASK_ROAM)
+	_check(
+		not refused_off.ok and not spectate.is_roaming(&"r1") and not spectate.can_roam(&"r1"),
+		"mp_freeroam 0 refuses the free camera",
+		refused_off.error.message if not refused_off.ok else "it was allowed"
+	)
+	var _on := rules.set_cvar("mp_freeroam", "1")
+
+	var _own_side := rules.set_cvar("mp_forcecamera", "1")
+	var refused_forced := spectate.request(&"r1", BfhSpectate.ASK_ROAM)
+	_check(
+		not refused_forced.ok and not spectate.is_roaming(&"r1"),
+		"mp_forcecamera 1 refuses it too: the restriction wins",
+		refused_forced.error.message if not refused_forced.ok else "it was allowed"
+	)
+	var _anybody := rules.set_cvar("mp_forcecamera", "0")
+
+	var _again := spectate.request(&"r1", BfhSpectate.ASK_ROAM)
+	var _off_mid := rules.set_cvar("mp_freeroam", "0")
+	await _step(game, 3)
+	_check(
+		_again.ok and not spectate.is_roaming(&"r1") and spectate.is_spectating(&"r1"),
+		"mp_freeroam 0 mid-roam returns the roamer to a player",
+		spectate.describe_view(&"r1")
+	)
+	var _restored := rules.set_cvar("mp_freeroam", "1")
 
 	# The target leaves. dot-spectate picks the replacement from the participants, so the
 	# world has to have dropped them first or the leaver is picked again.

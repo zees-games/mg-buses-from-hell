@@ -27,7 +27,7 @@ const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 156
+const CHECKS := 157
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -1101,6 +1101,19 @@ func _test_the_bots() -> void:
 	# so nothing else moves under the count.
 	_check(server.console.find_cvar("bot_quota") != null and server.console.find_cvar("bot_quota_mode") != null,
 		"the shared bot_quota cvars are registered")
+
+	# Free roam: dot-spectate's three cvars are bound on the module, and a console change
+	# reaches the rules the world's spectator manager runs.
+	var roam_rules: DotSpectatorRules = game.spectate.manager.rules if game.spectate != null else null
+	var _roam_off := _run_command("mp_freeroam 0")
+	var roam_reached := roam_rules != null and not roam_rules.roaming_permitted()
+	var _roam_on := _run_command("mp_freeroam 1")
+	_check(
+		server.console.find_cvar("mp_freeroam") != null and server.console.find_cvar("mp_forcecamera") != null
+		and server.console.find_cvar("mp_freeroam_speed") != null and roam_reached
+		and roam_rules.roaming_permitted(),
+		"mp_freeroam, mp_forcecamera and mp_freeroam_speed are cvars, and mp_freeroam reaches the spectator rules"
+	)
 
 	var bridge: Object = module.get("bridge") if module != null else null
 

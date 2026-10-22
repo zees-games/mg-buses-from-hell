@@ -589,7 +589,7 @@ static func read_sound(r: DotNetReader) -> Dictionary:
 	return {"index": index, "position": at, "ok": r.ok()}
 
 
-## What a spectator asked for: `BfhSpectate.ASK_NEXT`, `ASK_PREVIOUS` or `ASK_VIEW`.
+## What a spectator asked for: `BfhSpectate.ASK_NEXT`, `ASK_PREVIOUS`, `ASK_VIEW` or `ASK_ROAM`.
 ##
 ## [b]Only the ask.[/b] Not who to watch: the server picks the next target from its own
 ## list, under its own rules, so a client cannot name somebody the policy would refuse.

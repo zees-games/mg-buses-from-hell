@@ -1421,6 +1421,7 @@ func _step(delta: float) -> void:
 
 	for id: StringName in players:
 		var player: BfhPlayer = players[id]
+		player.input_off = spectate != null and spectate.is_roaming(id)
 		player.simulate(_tick, delta)
 
 	if authoritative:
