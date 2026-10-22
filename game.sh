@@ -13,6 +13,7 @@
 #   ./game.sh test NAME...         run only these suites (e.g. ./game.sh test headless_net)
 #   ./game.sh suites               list the test suites
 #   ./game.sh shot [ARGS]          save a screenshot to screenshots/ (tools/shot.sh or tools/screenshot.sh)
+#   ./game.sh soak [BOWL] [MIN]    bot soak on tools/soak.tscn (report in .godot/test-logs/soak-BOWL.json)
 #
 # Options (before the command):
 #   --godot PATH     the Godot 4.7 binary to use (default: $GODOT, then godot on PATH)
@@ -231,6 +232,17 @@ case "$cmd" in
         ;;
     test)
         do_test "$@"
+        ;;
+    soak)
+        [ -f tools/soak.tscn ] || die "$GAME_NAME has no bot soak (tools/soak.tscn)." 2
+        check_addons
+        soak_args=()
+        [ -n "${1:-}" ] && { soak_args+=(--map "$1"); shift; }
+        [ -n "${1:-}" ] && { soak_args+=(--minutes "$1"); shift; }
+        mkdir -p .godot/test-logs
+        timeout "$TIMEOUT" "$GODOT" --headless --path . res://tools/soak.tscn -- "${soak_args[@]}" "$@" \
+            2>&1 | tee .godot/test-logs/soak.log | grep -E '^SOAK|^soak|SCRIPT ERROR|Parse Error|ERROR|FAIL'
+        exit "${PIPESTATUS[0]}"
         ;;
     suites)
         printf '%s\n' $SUITES

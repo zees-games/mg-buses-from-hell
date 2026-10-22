@@ -37,7 +37,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 | `assets/models/`, `art-src/` | our own models, each a modified CC0 base: the bus is Kenney's garbage truck rebuilt by `art-src/bus/build.py` (wheels untouched, bounds held; `art-src/.gdignore` stops Godot importing the script and renders); credits in `assets/models/CREDITS.md` |
 | `scenes/bfh_server.tscn`, `game.yml` | what a deployed server instantiates; the descriptor in the pack |
 | `examples/` | `headless_run`, `headless_net`, `headless_workshop`, `dedicated` |
-| `tools/` | `shot.sh` / `shot.gd` / `net_shot.gd`: render a frame, and the network jitter and prediction probes; `drive_shot.sh`: a person driving a bus, from above, as a contact sheet |
+| `tools/` | `shot.sh` / `shot.gd` / `net_shot.gd`: render a frame, and the network jitter and prediction probes; `drive_shot.sh`: a person driving a bus, from above, as a contact sheet; `soak.tscn` (`./game.sh soak [bowl] [min]`, [soak](docs/soak.md)) |
 
 ## Running and testing
 
