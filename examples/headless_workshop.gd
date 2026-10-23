@@ -135,6 +135,9 @@ func _test_solo() -> void:
 	_check(not _names(rows).has("Fixture Run [Fixture Pack]"), "and not the other kind")
 	_check(game.bowl_rows().size() == rows.size() - 1, "without an index the menu is the game's own")
 	vote.queue_free()
+	# The arena was hand-made outside the tree, so game.free() does not reach its bodies.
+	if is_instance_valid(game.arena) and game.arena.get_parent() == null:
+		game.arena.free()
 	game.free()
 	_completed += 1
 
