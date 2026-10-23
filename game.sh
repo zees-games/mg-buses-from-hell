@@ -120,7 +120,7 @@ run_suite() {
         out="did not finish within ${TIMEOUT}s"
     elif [ "$status" -ne 0 ]; then
         out="exited $status"
-    elif grep -qE 'SCRIPT ERROR|Parse Error' "$log"; then
+    elif grep -qE 'SCRIPT ERROR|Parse Error|Lambda capture' "$log"; then
         # A script error aborts one test, not the run, so the suite can still exit 0.
         out="script error in the output"
     elif grep -qE 'resources still in use at exit|ObjectDB instances? ((were|was) )?leaked|RID allocations? of type .* (were|was) leaked' "$log"; then
