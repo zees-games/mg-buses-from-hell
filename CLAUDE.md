@@ -36,7 +36,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 | `assets/kenney/` | vendored CC0 models and atlases, one folder per kit (see its README) |
 | `assets/models/`, `art-src/` | our own models, each a modified CC0 base: the bus is Kenney's garbage truck rebuilt by `art-src/bus/build.py` (wheels untouched, bounds held; `art-src/.gdignore` stops Godot importing the script and renders); credits in `assets/models/CREDITS.md` |
 | `scenes/bfh_server.tscn`, `game.yml` | what a deployed server instantiates; the descriptor in the pack |
-| `examples/` | `headless_run`, `headless_net`, `headless_workshop`, `dedicated` |
+| `examples/` | `headless_mapcfg`, `headless_run`, `headless_net`, `headless_workshop`, `dedicated` |
 | `tools/` | `shot.sh` / `shot.gd` / `net_shot.gd`: render a frame, and the network jitter and prediction probes; `drive_shot.sh`: a person driving a bus, from above, as a contact sheet; `soak.tscn` (`./game.sh soak [bowl] [min]`, [soak](docs/soak.md)) |
 
 ## Running and testing
@@ -82,6 +82,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 - Measure to surfaces, per obstacle radius, never centre distances against a constant.
 - No gap under `BUS_GAP` (4.8 m clear), checked by `narrowest_gap()` on the built arena at the shipped and every minimum radius. A lane under `LANE_THROUGH` (7.2 m) is a door the bot cannot follow through; a place where a runner standing still is never reached is a refuge, and no lane may be one.
 - Every bowl on the ballot (`BfhBowls`) is held to the gap rule by `headless_run`; a new bowl is a new map. [map](docs/map.md#minimum-radii)
+- **A bowl may carry settings** (dot-game's `DotGameMapConfig`): `cfg/game/mg-buses-from-hell/dot_map/map/<bowl>.yml` (`bfh_*.yml` is the commented starter; `cfg/server/...` overrides), only the `BfhMapConfig.KEYS` tunables, applied by `BfhModule` on `bowl_changed` and restored on the next, and on the client for the three it uses (`CLIENT_KEYS`). The game has no BSP-imported maps, so there is no converter output; `headless_mapcfg` checks apply and restore.
 - Known refuge, pinned by the suite and left as Christian's call: the hook's two gaps against a bot (`hook_layout`, nightly `runner-standing-1`).
 - Spawn props dropped from a few centimetres, never touching the floor. The scatter keeps out of obstacles, the scaffold margin, the bus start lanes, and the toys.
 - Six loose dot-props toys on a ring (`BfhArena.toy_placements`, a pure function of the build) on their own bit (`TOY_LAYER`): buses and crates hit them, a hammer whacks them, a person walks through; a client registers every toy mirror on TOYS before its bowl is built. [map](docs/map.md#toys)

@@ -1,0 +1,12 @@
+# Starter settings for every bowl (the `bfh_*` glob). Every value is commented out: uncomment one to give the bowl its own.
+# Only the keys dot-game's whitelist knows apply (game/bfh_map_config.gd); the previous bowl's values return on the next change.
+# bfh_round_seconds: 180
+# bfh_crates: 34
+# bfh_barrels: 20
+# bfh_drivers: 3
+# bfh_bus_top_speed: 22
+# bfh_bus_lethal_speed: 9
+# bfh_bus_lane_width: 6
+# bfh_scaffold_margin: 4
+# bfh_bus_stuck_break: 2
+# bfh_bus_stuck_reset: 6

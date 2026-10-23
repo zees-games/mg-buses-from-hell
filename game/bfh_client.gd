@@ -11,6 +11,7 @@ const BfhConfig := preload("bfh_config.gd")
 const BfhGame := preload("bfh_game.gd")
 const BfhKillcam := preload("bfh_killcam.gd")
 const BfhHud := preload("bfh_hud.gd")
+const BfhMapConfig := preload("bfh_map_config.gd")
 const BfhScoreboard := preload("bfh_scoreboard.gd")
 const BfhPlayer := preload("bfh_player.gd")
 const BfhSettings := preload("bfh_settings.gd")
@@ -189,11 +190,16 @@ func _ready() -> void:
 ## until the end of that frame, by which time the round has laid its props on it. The first
 ## hold (from [method _build_gate]) is released when the first layout is in.
 func _hold_for_bowls() -> void:
+	platform.map_config_keys = BfhMapConfig.client_keys()
+	platform.map_config_game = BfhMapConfig.GAME_ID
+	platform.map_config_get_fn = func(key: String) -> Variant: return BfhMapConfig.client_get(game, key)
+	platform.map_config_set_fn = func(key: String, value: Variant) -> bool: return BfhMapConfig.client_set(game, key, value)
 	game.arena.built.connect(func() -> void:
 		if gate == null:
 			return
 		gate.hold(&"map", "Loading the bowl")
-		gate.release.call_deferred(&"map"))
+		gate.release.call_deferred(&"map")
+		platform.map_changed(String(game.bowl_id)))
 
 
 ## True while the load gate covers the screen: no input, no prediction sampling, no round clock.

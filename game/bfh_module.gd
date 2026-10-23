@@ -8,6 +8,7 @@ const BfhGame := preload("bfh_game.gd")
 const BfhStats := preload("bfh_stats.gd")
 const BfhAvatars := preload("bfh_avatars.gd")
 const BfhBowls := preload("bfh_bowls.gd")
+const BfhMapConfig := preload("bfh_map_config.gd")
 const BfhVote := preload("bfh_vote.gd")
 
 ## Where the services keep punishments. Empty is [DotGameServices]'s own default,
@@ -153,6 +154,8 @@ func _game_load() -> DotResult:
 	_wire_identity(world)
 
 	_add_tunables(world)
+	world.bowl_changed.connect(func(id: StringName) -> void: _apply_map_config(String(id)))
+	_apply_map_config(String(world.bowl_id))
 	_build_vote(world)
 	_add_rotation(world)
 
@@ -219,6 +222,15 @@ func _game_load() -> DotResult:
 
 	log_info("the bowl is open", world.describe())
 	return DotResult.success(null)
+
+
+## A bowl's file (`cfg/game/mg-buses-from-hell/dot_map/map/`) may set only [constant BfhMapConfig.KEYS].
+func _map_config_keys() -> Dictionary:
+	return BfhMapConfig.KEYS
+
+
+func _map_config_game() -> String:
+	return BfhMapConfig.GAME_ID
 
 
 ## The numbers an operator is actually going to want to change, as cvars.
