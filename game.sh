@@ -17,7 +17,7 @@
 #
 # Options (before the command):
 #   --godot PATH     the Godot 4.7 binary to use (default: $GODOT, then godot on PATH)
-#   --timeout SEC    the longest one test suite may run (default 900)
+#   --timeout SEC    the longest one test suite may run (default 900; headless_run has 1800 unless this is given)
 #   --no-parse       skip the parse pass in `test`
 #
 # `online` and `server` use dot-server-deploy, found next to this repository (or at
@@ -43,6 +43,10 @@ cd "$ROOT" || exit 1
 
 GODOT="${GODOT:-godot}"
 TIMEOUT=900
+TIMEOUT_GIVEN=0
+# A suite that legitimately runs longer than the default, as name=seconds; headless_run took 849 s
+# of 900 on a laptop GPU box. An explicit --timeout still wins for every suite.
+SUITE_TIMEOUTS="headless_run=1800"
 PARSE=1
 RED=$'\033[31m'; GRN=$'\033[32m'; YLW=$'\033[33m'; OFF=$'\033[0m'
 CR=$'\r\033[K'
@@ -55,8 +59,8 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --godot) GODOT="${2:?--godot needs a path}"; shift 2 ;;
         --godot=*) GODOT="${1#*=}"; shift ;;
-        --timeout) TIMEOUT="${2:?--timeout needs seconds}"; shift 2 ;;
-        --timeout=*) TIMEOUT="${1#*=}"; shift ;;
+        --timeout) TIMEOUT="${2:?--timeout needs seconds}"; TIMEOUT_GIVEN=1; shift 2 ;;
+        --timeout=*) TIMEOUT="${1#*=}"; TIMEOUT_GIVEN=1; shift ;;
         --no-parse) PARSE=0; shift ;;
         -h|--help|help) usage; exit 0 ;;
         *) break ;;
@@ -101,7 +105,10 @@ pack_all() {
 }
 
 run_suite() {
-    local scene="$1" log out status summary
+    local scene="$1" log out status summary kv TIMEOUT="$TIMEOUT"
+    if [ "$TIMEOUT_GIVEN" -eq 0 ]; then
+        for kv in $SUITE_TIMEOUTS; do [ "${kv%%=*}" = "$scene" ] && TIMEOUT="${kv#*=}"; done
+    fi
     [ -f "examples/$scene.tscn" ] || { printf '  %s??%s   %s: no examples/%s.tscn\n' "$YLW" "$OFF" "$scene" "$scene"; return 1; }
     mkdir -p .godot/test-logs
     log=".godot/test-logs/$scene.log"
