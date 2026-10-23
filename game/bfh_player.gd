@@ -209,7 +209,7 @@ func _ready() -> void:
 ## `describe()`, and moved at 6.5. The family's own "produced correctly and consumed by
 ## nothing", in the shape where the consumer exists and reads a literal.
 static func tunables_for(config: BfhConfig) -> DotFpsTunables:
-	var t := DotFpsTunables.new()
+	var t := DotFpsTunables.with_profile("legacy")
 
 	# [b]No bunny hopping, and that is a design decision rather than an omission.[/b]
 	# Every other 3D game in this family turns auto-hop on because their genres are

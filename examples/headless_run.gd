@@ -291,7 +291,7 @@ func _test_wheel_jump() -> void:
 		if StringName(row["action"]) == &"dot_fps_jump" and (str(row["default"]) == "Wheel up" or str(row["default"]) == "Wheel down"):
 			found += 1
 	_check(found == 2, "the rows are Wheel up and Wheel down", str(found))
-	var sampler := DotFpsSampler.new(DotFpsTunables.new())
+	var sampler := DotFpsSampler.new(DotFpsTunables.with_profile("legacy"))
 	DotFpsSampler.register_default_actions(sampler)
 	var up := InputEventMouseButton.new()
 	up.button_index = MOUSE_BUTTON_WHEEL_UP
@@ -4966,7 +4966,7 @@ func _test_settings() -> void:
 	first.free()
 
 	# ...and the next one loads, binds, and has changed nothing.
-	var look := DotFpsTunables.new()
+	var look := DotFpsTunables.with_profile("legacy")
 	var camera := Camera3D.new()
 	add_child(camera)
 	var mixed := DotAudioManager.new()
