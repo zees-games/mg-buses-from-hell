@@ -380,9 +380,10 @@ func _tunable(
 	if cvar == null:
 		return
 
-	cvar.changed.connect(func(_old: String, _new: String) -> void:
-		apply.call(cvar.get_float())
-		log_info("a tunable changed", {"cvar": cvar_name, "now": cvar.get_string()})
+	# The handler must not capture `cvar`: it would be a reference cycle the engine never frees.
+	cvar.changed.connect(func(_old: String, new_value: String) -> void:
+		apply.call(new_value.to_float())
+		log_info("a tunable changed", {"cvar": cvar_name, "now": new_value})
 	)
 
 
