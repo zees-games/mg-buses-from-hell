@@ -449,6 +449,15 @@ func _build_combat() -> void:
 	add_child(combat)
 
 
+## The intermission is the pause plus the killcam the clients play inside it, so the server never waits on one.
+func apply_intermission(rules: DotMatchRules = null) -> void:
+	var target: DotMatchRules = rules if rules != null else (match_node.rules if match_node != null else null)
+	if target == null:
+		return
+	var pause := config.intermission_seconds
+	target.intermission_sec = pause + (config.killcam_seconds if pause > 0.0 else 0.0)
+
+
 func _build_match() -> void:
 	match_node = DotMatch.new()
 	match_node.name = "Match"
@@ -461,7 +470,7 @@ func _build_match() -> void:
 	match_node.config = match_config
 
 	var rules := DotRulesElimination.make(config.round_seconds)
-	rules.intermission_sec = config.intermission_seconds
+	apply_intermission(rules)
 	rules.warmup_sec = config.warmup_seconds
 	rules.countdown_sec = 0.0
 	rules.rounds_to_win = 99

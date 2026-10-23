@@ -42,6 +42,11 @@ var held: bool = false
 ## Between a round's end and the next one's start, when it is up without being asked.
 var after_round: bool = false
 
+## The client sets this so the board waits for the killcam and the reveal; [method release_after_round] lets it up.
+var hold_after_round: bool = false
+
+var _released: bool = false
+
 ## The last round's winner, a `BfhGame.TEAM_*` or 0, for the line under the tables.
 var last_winner: int = 0
 
@@ -88,6 +93,7 @@ func bind(p_game: BfhGame, own: Callable = Callable(), p_board: DotMenuScoreboar
 
 	game.round_over.connect(func(_number: int, winner: int) -> void:
 		after_round = true
+		_released = false
 		last_winner = winner
 		refresh()
 	)
@@ -118,7 +124,13 @@ func shown() -> bool:
 	# The menu holds its board on the Tab row, and a round's start must not take it down
 	# under a finger that is still on the key.
 	var tab_down := InputMap.has_action(BfhBindings.SCOREBOARD) and Input.is_action_pressed(BfhBindings.SCOREBOARD)
-	return held or after_round or tab_down
+	return held or (after_round and (_released or not hold_after_round)) or tab_down
+
+
+## The killcam and the reveal are over: the after-round board may come up.
+func release_after_round() -> void:
+	_released = true
+	refresh()
 
 
 ## Up or down to match [method shown], and redrawn when up.

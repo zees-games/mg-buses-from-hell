@@ -22,6 +22,9 @@ extends DotConfig
 ## Seconds between rounds, for the buses to be put back.
 @export_range(0.0, 60.0, 1.0) var intermission_seconds: float = 8.0
 
+## Seconds of the round's final killcam, added to the intermission (`mp_killcam_time`); 0 is off. Not added when the intermission is 0.
+@export_range(0.0, 30.0, 0.5) var killcam_seconds: float = 7.0
+
 ## Seconds of warmup before the first round. 0 starts immediately.
 @export_range(0.0, 300.0, 1.0) var warmup_seconds: float = 10.0
 

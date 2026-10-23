@@ -63,7 +63,19 @@ static func schema_for() -> DotSettingsSchema:
 	s.add(DotSettingsDef.integer(&"field_of_view", DEFAULT_FOV, 70, 120, &"video").with_scope(
 		DotSettingsDef.Scope.SERVER_CLAMPED
 	))
+	s.add(DotSettingsDef.boolean(&"reduce_motion", false, &"accessibility").with_scope(DotSettingsDef.Scope.ACCOUNT)
+		.with_description("The end-of-round announcement appears at once, with nothing sliding, rising or bursting."))
 	return DotMenuStock.declare(s, DotMenuStock.DEFAULT_GROUPS, null, NOT_APPLIED)
+
+
+func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
+	var made := super.setup(store, with_menu)
+	if menu != null:
+		var general := menu.page(&"general")
+		if general != null:
+			general.section("Comfort").add(DotMenuRow.toggle(&"reduce_motion", "Reduce motion",
+				"The end-of-round announcement appears at once."))
+	return made
 
 
 ## The help screen's goal and rules; the keys come from [BfhBindings].

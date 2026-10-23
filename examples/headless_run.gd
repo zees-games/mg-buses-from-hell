@@ -37,7 +37,7 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 352
+const CHECKS := 354
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -3916,6 +3916,15 @@ func _test_bus_brakes() -> void:
 	game.start()
 	await _step(game, 30)
 
+	_check(is_equal_approx(game.match_node.rules.intermission_sec, 0.0) and game.config.killcam_seconds > 0.0,
+		"the killcam adds nothing to an intermission of 0")
+	game.config.intermission_seconds = 8.0
+	game.apply_intermission()
+	_check(is_equal_approx(game.match_node.rules.intermission_sec, 8.0 + game.config.killcam_seconds),
+		"and is added to the pause otherwise", str(game.match_node.rules.intermission_sec))
+	game.config.intermission_seconds = 0.0
+	game.apply_intermission()
+
 	var driver: BfhPlayer = game.players[&"d"]
 	var handbrake: Dictionary = await _bus_stop(game, driver, "handbrake")
 	var foot: Dictionary = await _bus_stop(game, driver, "brake")
@@ -4926,7 +4935,8 @@ func _test_settings() -> void:
 	print("a player's settings")
 
 	var schema := BfhSettings.schema_for()
-	var applied := DotMenuApplier.APPLIES + DotMenuApplier.APPLIED_BY_MENU
+	# reduce_motion is read by the client when the winner reveal is presented, not pushed by the menu.
+	var applied := DotMenuApplier.APPLIES + DotMenuApplier.APPLIED_BY_MENU + [&"reduce_motion"]
 	var unapplied := schema.keys().filter(func(k: StringName) -> bool: return not applied.has(k))
 	_check(
 		schema.validate().ok and unapplied.is_empty() and schema.has(&"ui_volume") and schema.has(&"shake_scale"),

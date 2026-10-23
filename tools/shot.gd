@@ -37,6 +37,7 @@ func _run() -> void:
 	var scoreboard := false
 	var ballot := false
 	var cover := false
+	var killcam := false
 	var bowl_id := ""
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--seconds="):
@@ -85,6 +86,8 @@ func _run() -> void:
 			ballot = true
 		elif arg == "--view=cover":
 			cover = true
+		elif arg == "--view=killcam":
+			killcam = true
 		elif arg.begins_with("--bowl="):
 			bowl_id = arg.substr(7)
 		elif arg.begins_with("--watch="):
@@ -159,6 +162,10 @@ func _run() -> void:
 		cam.look_at(foot + Vector3(0.0, 0.0, 4.0), Vector3.UP)
 		cam.current = true
 
+	# --view=killcam spends --seconds after the round ends, not before.
+	var killcam_seconds := seconds
+	if killcam:
+		seconds = 4.0
 	var elapsed := 0.0
 	while elapsed < seconds:
 		elapsed += get_process_delta_time()
@@ -472,6 +479,28 @@ func _run() -> void:
 			settle_board += get_process_delta_time()
 			await get_tree().process_frame
 		print("held: ", client.get("scoreboard").call("describe"))
+
+	# The last runner flattened by a bus, the buses win: ~2 s later is the replay, ~7.5 the podium.
+	var world_for_cam: BfhGame = client.get("game")
+	if killcam and world_for_cam != null:
+		for name in ["Ada", "Bea"]:
+			var _r := world_for_cam.add_player(StringName(name.to_lower()), name,
+				BfhGame.TEAM_RUNNERS, false, true)
+		var live := 0.0
+		while not world_for_cam.match_node.is_live() and live < 20.0:
+			live += get_process_delta_time()
+			await get_tree().process_frame
+		var lead := 0.0
+		while lead < 3.0:
+			lead += get_process_delta_time()
+			await get_tree().process_frame
+		var by: StringName = world_for_cam.drivers()[0].player_id
+		for runner in world_for_cam.runners():
+			world_for_cam.call("_bus_hit", runner, by, 30.0, Vector3(0.0, 0.0, 1.0))
+		var after := 0.0
+		while after < killcam_seconds:
+			after += get_process_delta_time()
+			await get_tree().process_frame
 
 	# The whole bowl from straight above, north (the deck) at the top. The one view that
 	# shows where everything is against everything else -- which is the question when
