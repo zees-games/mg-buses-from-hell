@@ -714,6 +714,10 @@ func _test_the_bowl_vote() -> void:
 		"the new round starts the vote over", str(director.current_id()))
 	# Past dot-vote's cooldown between two ballots, on the director alone so the round's own
 	# ballot timer does not open one first. In play a round outlasts it.
+	director.rules.rtv_delay_sec = 0.0
+	director.rules.min_players_to_vote = 1
+	director.rules.rtv_min_players = 1
+	director.rules.allow_single_voter_auto = true
 	director.advance(director.rules.vote_cooldown_sec + 0.1)
 	# Rocked in the warmup, which is what an empty current id means, so the same ballot also
 	# shows it is drawn there. The feed was polled after the warmup return, so a ballot opened
