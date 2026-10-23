@@ -2309,13 +2309,10 @@ static func clear_cache() -> void:
 	DotHumanoidFigure.clear_cache()
 	DotHudPiece.clear_cache()
 	DotMenuKit.clear_cache()
-	# dot-props has no clear_cache yet (nightly item), so reach its private statics.
-	DotPropToyLook._materials.clear()
-	DotPropModel._cache.clear()
-	DotLog.clear_sinks()
-	DotLog._bus = null
-	DotRegistry._bus = null
-	DotRegistry.clear()
+	DotPropToyLook.clear_cache()
+	DotPropModel.clear_cache()
+	DotLog.clear_cache()
+	DotRegistry.clear_cache()
 
 
 ## Where a bot aims past a runner, from where they are now: their run times the seconds the

@@ -1035,6 +1035,7 @@ func _draw_road(parent: Node3D, road: Dictionary) -> void:
 	else:
 		var ends := _clip_to_floor(road["from"], road["to"], float(road["width"]) * 0.5)
 		if ends.is_empty():
+			mesh.free()
 			return
 		var from: Vector3 = ends[0]
 		var to: Vector3 = ends[1]

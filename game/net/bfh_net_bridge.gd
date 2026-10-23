@@ -268,7 +268,7 @@ func open_link(parent: Node) -> void:
 	if parent == null or link != null:
 		return
 
-	link = BfhNetLink.attached_to(parent, self, net != null and net.is_server)
+	link = BfhNetLink.attached_to(parent, self, net != null and net.is_server) as BfhNetLink
 	# Not a bare add_child: nothing would free the link when the module unloads, a reload
 	# would add a second, and the live one would be renamed @Node@n and lose every RPC.
 	DotGameLink.attach(link, parent, self, BfhNetLink.NODE_NAME)

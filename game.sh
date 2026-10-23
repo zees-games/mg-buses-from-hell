@@ -123,6 +123,9 @@ run_suite() {
     elif grep -qE 'SCRIPT ERROR|Parse Error' "$log"; then
         # A script error aborts one test, not the run, so the suite can still exit 0.
         out="script error in the output"
+    elif grep -qE 'resources still in use at exit|ObjectDB instances were leaked|RID allocations of type .* were leaked' "$log"; then
+        # Exit 0 and "0 failed" with objects left alive: a suite that does not free what it built.
+        out="leaked objects at exit (run the scene with --verbose to name them)"
     else
         printf '%s  %sok%s   %s  %s\n' "$CR" "$GRN" "$OFF" "$scene" "$summary"
         return 0

@@ -1,7 +1,5 @@
 extends DotNetInput
 
-const BfhNetCommand := preload("bfh_net_command.gd")
-
 ## One tick of a player's intent, on the wire: a [DotFpsCommand] and nothing else.
 ##
 ## [b]The same command drives a runner and a bus, and that is this game's design rather
@@ -38,5 +36,7 @@ func _sanitise() -> void:
 
 
 func _equals(other: DotNetInput) -> bool:
-	var them := other as BfhNetCommand
-	return them != null and move.equals(them.move)
+	# No self-preload for the type: a script holding itself is never freed at exit.
+	if other == null or other.get_script() != get_script():
+		return false
+	return move.equals(other.get(&"move"))

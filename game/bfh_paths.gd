@@ -19,15 +19,11 @@ extends RefCounted
 ## Built in, [method rebase] returns exactly what it was passed, so nothing about
 ## today's behaviour changes. That is the point: one form that is right in both.
 
-const _SELF := preload("bfh_paths.gd")
-
-
 ## This game's content root: `res://` built in, the mount prefix delivered.
 static func root() -> String:
-	# Through [Resource], because a const-preloaded script is typed as its own class and
-	# `resource_path` is not reachable on that — "Cannot find member resource_path in
-	# base res://…". The cast costs nothing and is the only spelling that compiles.
-	var here: Resource = _SELF
+	# The script is reached from an instance, not a self-preload: a script holding itself
+	# is never freed at exit, and neither is anything it reaches.
+	var here: Script = new().get_script()
 	return here.resource_path.get_base_dir().get_base_dir()
 
 

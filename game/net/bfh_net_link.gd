@@ -1,7 +1,5 @@
 extends Node
 
-const BfhNetLink := preload("bfh_net_link.gd")
-
 ## The four remote calls this game needs, on one node that exists on both ends.
 ##
 ## A copy of the other games' links in shape — deliberately, per the family rule that a
@@ -69,8 +67,9 @@ var voice_sent: int = 0
 var voice_received: int = 0
 
 
-static func attached_to(parent: Node, p_bridge: Node, server: bool) -> BfhNetLink:
-	var link := BfhNetLink.new()
+static func attached_to(parent: Node, p_bridge: Node, server: bool) -> Node:
+	# new(), not a self-preload: a script holding itself is never freed at exit.
+	var link := new()
 	link.name = NODE_NAME
 	link.bridge = p_bridge
 	link.is_server = server
