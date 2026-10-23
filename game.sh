@@ -123,7 +123,7 @@ run_suite() {
     elif grep -qE 'SCRIPT ERROR|Parse Error' "$log"; then
         # A script error aborts one test, not the run, so the suite can still exit 0.
         out="script error in the output"
-    elif grep -qE 'resources still in use at exit|ObjectDB instances were leaked|RID allocations of type .* were leaked' "$log"; then
+    elif grep -qE 'resources still in use at exit|ObjectDB instances? ((were|was) )?leaked|RID allocations? of type .* (were|was) leaked' "$log"; then
         # Exit 0 and "0 failed" with objects left alive: a suite that does not free what it built.
         out="leaked objects at exit (run the scene with --verbose to name them)"
     else
@@ -136,7 +136,7 @@ run_suite() {
     return 1
 }
 
-PARSE_NOISE='ObjectDB instances( were)? leaked|resources still in use|Pages in use exist at exit|at: (cleanup|clear|~PagedAllocator)|Text-based project'
+PARSE_NOISE='ObjectDB instances?( were| was)? leaked|resources still in use|Pages in use exist at exit|at: (cleanup|clear|~PagedAllocator)|Text-based project'
 
 # Prints each script that does not parse and returns how many. ANY output for a script,
 # past the noise above, is a failure: a warning-as-error reads as nothing else.
