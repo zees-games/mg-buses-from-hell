@@ -184,6 +184,7 @@ func _run() -> void:
 		get_tree().quit(1)
 		return
 
+	BfhGame.clear_cache()
 	get_tree().quit(1 if _failed > 0 else 0)
 
 

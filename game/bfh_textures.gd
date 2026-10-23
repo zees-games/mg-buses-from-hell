@@ -34,6 +34,11 @@ const LINE := 0.72
 static var _cache: Dictionary = {}
 
 
+## Drops the cached textures; a suite calls it before quitting so they are not reported as leaks.
+static func clear_cache() -> void:
+	_cache.clear()
+
+
 ## A one-metre grid tinted toward [param colour].
 static func grid(colour: Color) -> ImageTexture:
 	var key := colour.to_html(false)

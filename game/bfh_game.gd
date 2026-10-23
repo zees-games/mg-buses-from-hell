@@ -3,6 +3,7 @@ extends Node3D
 const BfhArena := preload("bfh_arena.gd")
 const BfhBowls := preload("bfh_bowls.gd")
 const BfhConfig := preload("bfh_config.gd")
+const BfhTextures := preload("bfh_textures.gd")
 const BfhContent := preload("bfh_content.gd")
 const BfhReach := preload("bfh_reach.gd")
 const BfhVote := preload("bfh_vote.gd")
@@ -2298,6 +2299,23 @@ const RAMP_TURN_THROTTLE := 0.7
 
 ## The preset a bot's numbers are taken relative to, so medium drives as before presets.
 static var _MEDIUM: DotBotProfile = DotBotProfile.new()
+
+
+## Releases every static resource the game holds, plus the family's shared caches, for a suite
+## to call before quit(); after it the statics are unusable until the script reloads.
+static func clear_cache() -> void:
+	_MEDIUM = null
+	BfhTextures.clear_cache()
+	DotHumanoidFigure.clear_cache()
+	DotHudPiece.clear_cache()
+	DotMenuKit.clear_cache()
+	# dot-props has no clear_cache yet (nightly item), so reach its private statics.
+	DotPropToyLook._materials.clear()
+	DotPropModel._cache.clear()
+	DotLog.clear_sinks()
+	DotLog._bus = null
+	DotRegistry._bus = null
+	DotRegistry.clear()
 
 
 ## Where a bot aims past a runner, from where they are now: their run times the seconds the
