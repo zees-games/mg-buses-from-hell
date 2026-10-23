@@ -493,6 +493,7 @@ func _build_settings() -> void:
 	platform.settings = settings
 	# Not handed over: BfhHud is a CanvasLayer, so it follows the menu itself, below.
 	platform.chat = chat
+	platform.look_position_fn = _look_position
 	platform.board_snapshot_fn = func() -> Dictionary:
 		return scoreboard.snapshot() if scoreboard != null else {}
 	_wire_maps()
@@ -1088,3 +1089,13 @@ func describe() -> Dictionary:
 		out["world"] = game.describe()
 
 	return out
+
+
+## Where a roster row's player stands, for dot-game's look-to-gag key (G, K).
+func _look_position(row: Dictionary) -> Variant:
+	if game == null:
+		return null
+	for who: BfhPlayer in game.players.values():
+		if who != player and who.display_name == row["name"]:
+			return who.global_position + Vector3.UP * 1.5
+	return null
