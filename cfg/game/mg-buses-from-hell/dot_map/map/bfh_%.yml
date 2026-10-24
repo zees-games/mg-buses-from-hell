@@ -10,3 +10,13 @@
 # bfh_scaffold_margin: 4
 # bfh_bus_stuck_break: 2
 # bfh_bus_stuck_reset: 6
+# bfh_bus_mass: 2000
+# bfh_bus_engine_force: 26000
+# bfh_bus_brake_force: 30000
+# bfh_bus_handbrake_grip: 0.15
+# bfh_bus_steering_limit_deg: 26
+# bfh_bus_steering_falloff: 0.25
+# bfh_bus_friction_slip: 2.6
+# bfh_horn_seconds: 0.8
+# bfh_bot_horn_seconds: 6
+# bfh_bot_ramp_speed: 9

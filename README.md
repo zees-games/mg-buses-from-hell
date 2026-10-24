@@ -76,6 +76,8 @@ On Windows, run `bootstrap.ps1` instead and open the project in Godot.
 ## Running a server
 Settings are cvars. Set them in the server's config, on the command line, or live from the console. Changes to the layout take effect from the next round.
 
+Every `BfhConfig` field is also a `bfh_<field>` cvar and a key in `cfg/game/mg-buses-from-hell/config/game.yml` (or the same file under `cfg/server/`); a typo stops a dedicated server's boot. `bfh_config_diff save` writes what differs from the defaults, ready to copy back as shipped defaults, and F9 (or the `workbench` console command) opens the tuning panel, off on a dedicated server unless `workbench: enabled: true` is in `cfg/server.yml`. The buses' feel (mass, engine, brakes, steering, springs) is server-side, so it is a config field too and a change reaches buses built from then on. `mp_teamblock` (0) and `mp_enemyblock` (1) with `!block` and `!noblock` come from dot-team through dot-game; players are not solid to each other in this game, so they change nothing physical yet.
+
 ```
 bfh_round_seconds 180        // length of a round
 bfh_drivers 4                // how many buses (and, unmanned, bots)

@@ -31,12 +31,16 @@ func _ready() -> void:
 	# The family's `defaults < JSON < environment < argv` chain, on the server too. It is
 	# how an operator sets `BFH_ROUND_SECONDS` or `--bfh-arena-radius` without editing
 	# anything, and the cvars the module adds are the live half of the same numbers.
-	var loaded := config.load_layered("user://cfg/buses-from-hell.json")
+	# Plus the cfg/ yml layers; strict (a typo or bad value stops the boot) on a dedicated server.
+	var binder := DotGameConfigBinder.create(config, "mg-buses-from-hell", "bfh", "user://cfg/buses-from-hell.json")
+	var loaded := binder.load_layers()
 
 	if not loaded.ok:
-		DotLog.warn(CHANNEL, "falling back to defaults", {"why": loaded.error.message})
+		DotGameConfigBinder.fail_boot(get_tree(), loaded)
+		return
 
 	game = BfhGame.new()
+	game.config_binder = binder
 	game.name = "World"
 	game.config = config
 	# [b]The engine's rate, which the server has already set from `sv_tickrate`.[/b] Read

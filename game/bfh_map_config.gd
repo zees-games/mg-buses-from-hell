@@ -18,6 +18,16 @@ const KEYS := {
 	"bfh_scaffold_margin": {"type": "float", "min": 0.0, "max": 50.0},
 	"bfh_bus_stuck_break": {"type": "float", "min": 0.1, "max": 60.0},
 	"bfh_bus_stuck_reset": {"type": "float", "min": 0.1, "max": 120.0},
+	"bfh_bus_mass": {"type": "float", "min": 500.0, "max": 20000.0},
+	"bfh_bus_engine_force": {"type": "float", "min": 1000.0, "max": 200000.0},
+	"bfh_bus_brake_force": {"type": "float", "min": 1000.0, "max": 200000.0},
+	"bfh_bus_handbrake_grip": {"type": "float", "min": 0.02, "max": 1.0},
+	"bfh_bus_steering_limit_deg": {"type": "float", "min": 5.0, "max": 60.0},
+	"bfh_bus_steering_falloff": {"type": "float", "min": 0.0, "max": 1.0},
+	"bfh_bus_friction_slip": {"type": "float", "min": 0.5, "max": 10.0},
+	"bfh_horn_seconds": {"type": "float", "min": 0.0, "max": 10.0},
+	"bfh_bot_horn_seconds": {"type": "float", "min": 0.0, "max": 60.0},
+	"bfh_bot_ramp_speed": {"type": "float", "min": 2.0, "max": 30.0},
 }
 
 ## The subset a client uses itself (offline play, prediction); the rest is the server's alone.

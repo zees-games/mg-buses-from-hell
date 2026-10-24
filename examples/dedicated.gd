@@ -27,7 +27,7 @@ const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 157
+const CHECKS := 165
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -518,6 +518,7 @@ func _test_the_module_loads() -> void:
 	game = BfhGame.new()
 	game.name = "World"
 	game.config = config
+	game.config_binder = DotGameConfigBinder.create(config, "mg-buses-from-hell", "bfh")
 	game.tick_rate = Engine.physics_ticks_per_second
 	add_child(game)
 
@@ -586,7 +587,38 @@ func _test_the_module_loads() -> void:
 	_check(moderation != null and int(moderation.call("count")) == 0,
 		"and it starts empty, so nothing a previous run did is in it",
 		"%d records" % int(moderation.call("count")) if moderation != null else "no moderation")
+	_noblock_and_config(module)
 	_done()
+
+
+## Config cvars, a workbench edit reaching a hand-written cvar and the bus feel, and dot-team's block rules through dot-game's DotGameNoblock.
+func _noblock_and_config(module: DotModule) -> void:
+	var teamblock := server.console.find_cvar("mp_teamblock")
+	var enemyblock := server.console.find_cvar("mp_enemyblock")
+	_check(teamblock != null and teamblock.get_string() == "0" and enemyblock != null and enemyblock.get_string() == "1",
+		"mp_teamblock is 0 and mp_enemyblock is 1 by default")
+	_check(server.console.has_name("bfh_bus_mass") and server.console.has_name("bfh_bot_horn_range") and server.console.has_name("bfh_hammer_damage"),
+		"config fields with no hand-written cvar are bfh_ cvars")
+	_check(module.get("workbench") != null, "the module hosts the workbench")
+	game.config.crate_count = 12
+	module.call("_on_config_field", "crate_count", 12, "workbench")
+	_check(server.console.find_cvar("bfh_crates").get_string() == "12", "a workbench edit reaches the hand-written cvar",
+		server.console.find_cvar("bfh_crates").get_string())
+	server.console.set_cvar("bfh_bus_mass", "2500")
+	var def := game.vehicles.catalogue.get_vehicle(&"bus")
+	_check(game.config.bus_mass == 2500.0 and def.tunables.mass == 2500.0, "a bus feel cvar reaches the catalogue's bus",
+		str(def.tunables.mass))
+	var _a := game.add_player(&"u91", "Walker", BfhGame.TEAM_RUNNERS)
+	var _b := game.add_player(&"u92", "Other", BfhGame.TEAM_RUNNERS)
+	_check(not game.body_rules.blocks(&"u91", &"u92"), "players are not solid, so nothing is blocked")
+	game.body_rules.solid = true
+	_check(game.team_of_side(&"u91") == game.team_of_side(&"u92"), "two arrivals are on the same side, so they pass under mp_teamblock 0")
+	teamblock.set_value("1")
+	_check(game.body_rules.blocks(&"u91", &"u92"), "mp_teamblock 1 makes them block")
+	teamblock.set_value("0")
+	game.body_rules.solid = false
+	game.remove_player(&"u91")
+	game.remove_player(&"u92")
 
 
 ## The players' vote decides the next bowl, end to end through what a player types: a

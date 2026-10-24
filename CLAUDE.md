@@ -41,7 +41,8 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 
 ## Running and testing
 
-- `./game.sh` plays offline; `./game.sh online` runs a local server and browser client; `./game.sh test` parses everything and runs the four suites; `./game.sh test <suite>` runs one; `./game.sh shot` renders. Addon links come from `.gitignore` through dot-bootstrap.
+- **Every `BfhConfig` field is a `bfh_` cvar, a `cfg/game/mg-buses-from-hell/config/game.yml` key and a workbench setting** (`DotGameConfigBinder`, built in `bfh_server.gd` and `bfh_client.gd`, bound by the module after the hand-written cvars; `HAND_RENAMES` maps the older names). Runner speed, jump and gravity are predicted from the client's own config and are not sent, so they stay local; the bus feel is server-only and live. Players are never solid here, so dot-team's block rules (`block_rules`, `team_of_side`) change nothing physical.
+- `./game.sh` plays offline; `./game.sh online` runs a local server and browser client; `./game.sh test` parses everything and runs every suite; `./game.sh test <suite>` runs one; `./game.sh shot` renders. Addon links come from `.gitignore` through dot-bootstrap.
 - `headless_run -- --only=<method>` runs one section. [testing](docs/testing.md)
 - After touching a camera or the view key: `tools/camera_check.sh` (cameras round the bowl, armed; `--render` for both views). [client](docs/client.md#first-and-third-person)
 - **Render after any change to what is drawn** (`tools/shot.sh`, flags per feature). Four bugs here were only visible in a picture. [testing](docs/testing.md#renders-what-no-assertion-reaches)

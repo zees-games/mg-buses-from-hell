@@ -101,6 +101,24 @@ static func props(config: BfhConfig) -> DotPropCatalogue:
 	return catalogue
 
 
+## The bus feel numbers from the config onto [param tunables]; also run again on a live edit.
+static func apply_bus_feel(tunables: DotVehicleTunables, config: BfhConfig) -> void:
+	tunables.mass = config.bus_mass
+	tunables.engine_force = config.bus_engine_force
+	tunables.top_speed = config.bus_top_speed
+	tunables.brake_force = config.bus_brake_force
+	tunables.handbrake_force = config.bus_handbrake_force
+	tunables.handbrake_grip_fraction = config.bus_handbrake_grip
+	tunables.steering_limit_deg = config.bus_steering_limit_deg
+	tunables.steering_rate_deg = config.bus_steering_rate_deg
+	tunables.steering_speed_falloff = config.bus_steering_falloff
+	tunables.friction_slip = config.bus_friction_slip
+	tunables.suspension_stiffness = config.bus_suspension_stiffness
+	tunables.suspension_travel = config.bus_suspension_travel
+	tunables.centre_of_mass_drop = config.bus_centre_of_mass_drop
+	tunables.max_exit_speed = config.bus_exit_speed
+
+
 ## The bus, and nothing else.
 ##
 ## [b]One vehicle on purpose.[/b] The reference this is built from has a school bus and
@@ -121,9 +139,7 @@ static func vehicles(config: BfhConfig) -> DotVehicleCatalogue:
 	bus.max_health = 0.0
 
 	var tunables := DotVehicleTunables.new()
-	tunables.mass = 2000.0
-	tunables.engine_force = 26000.0
-	tunables.top_speed = config.bus_top_speed
+	apply_bus_feel(tunables, config)
 	# Newtons since dot-vehicle 4f4afaf (they were an impulse per step, and the bus stopped
 	# from 15 m/s in 1.9 m on the foot brake and 4.5 m on the handbrake). 30 kN is 15 m/s²,
 	# three quarters of this bowl's gravity: 7.6 m from 15 m/s. 22 kN, the old figure as a
@@ -131,30 +147,21 @@ static func vehicles(config: BfhConfig) -> DotVehicleCatalogue:
 	# to give a runner up there a second and a half more (the deck chase in headless_run).
 	# The handbrake is a person's Ctrl and stops in 6.3 m in a straight line. A person's S is
 	# this foot brake until the bus has stopped and reverse after (`_drive_buses`), 7.5 m.
-	tunables.brake_force = 30000.0
-	tunables.handbrake_force = 40000.0
 	# The rear tyres' grip while Ctrl is held, so a handbrake turn slides. Measured from 12 m/s
 	# at full lock for a second (headless_run's "a handbrake turn"): at 1.0 (no change) the bus
 	# turned 14 degrees and stopped dead, the handbrake only a brake; at 0.25 and 0.2 still
 	# under the plain turn's 41; at 0.15 the back end steps out, 71 degrees with 7 m/s left;
 	# at 0.1 it spins round. The change between 0.2 and 0.15 is a threshold, not a slope.
-	tunables.handbrake_grip_fraction = 0.15
-	tunables.steering_limit_deg = 26.0
-	tunables.steering_rate_deg = 90.0
 	# [b]Low, and it is the single most important number in the file.[/b] A bus that
 	# turns as fast as it accelerates is a homing missile and there is no counterplay
 	# to one; the whole of a runner's game is that a bus committed to a line cannot
 	# take it back. Everything else here is feel.
-	tunables.steering_speed_falloff = 0.25
-	tunables.friction_slip = 2.6
 	# [b]150, not the 45 a car uses, and 45 is what this shipped with.[/b] Stiffness has
 	# to carry the mass above it: at 45 the springs on a 4.2 tonne bus bottomed out on
 	# the first frame, the hull came to rest on the ground, and the body's own collider
 	# dragged on the deck — so a bus with four wheels in contact and 26 kN of engine
 	# force behind it sat perfectly still. Every number in the report read correctly
 	# except the speed.
-	tunables.suspension_stiffness = 150.0
-	tunables.suspension_travel = 0.3
 	# Dropped hard, because a 2.6 m tall box on a 2.5 m track rolls over on the first
 	# hard turn otherwise — and a bus lying on its roof is a driver out of the round
 	# through no decision anybody made.
@@ -162,8 +169,6 @@ static func vehicles(config: BfhConfig) -> DotVehicleCatalogue:
 	# vehicle resolves its springs about the centre of mass; put that below the contact
 	# plane and the springs push the body the wrong way about it. A drop is meant to
 	# stop a tall box rolling over, not to move the pivot underground.
-	tunables.centre_of_mass_drop = 0.4
-	tunables.max_exit_speed = 3.0
 	bus.tunables = tunables
 
 	var seat := DotVehicleSeat.new()

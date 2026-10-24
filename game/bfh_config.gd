@@ -98,6 +98,7 @@ extends DotConfig
 
 @export_group("The buses")
 
+## A bus's top speed, in metres per second.
 @export_range(1.0, 60.0, 0.5) var bus_top_speed: float = 22.0
 
 ## Closing speed, in m/s, above which a bus kills a runner outright.
@@ -108,6 +109,54 @@ extends DotConfig
 
 ## Damage a non-lethal bump does, per m/s of closing speed.
 @export_range(0.0, 100.0, 0.5) var bus_bump_damage: float = 6.0
+
+## A bus's mass in kilograms. Buses are server-authoritative bodies, so the feel numbers here are read on the server when a bus is built or `refresh_bus_feel` runs, and need no client copy.
+@export_range(500.0, 20000.0, 50.0) var bus_mass: float = 2000.0
+
+## Engine force in newtons.
+@export_range(1000.0, 200000.0, 500.0) var bus_engine_force: float = 26000.0
+
+## Foot brake force in newtons (a driver's S until the bus has stopped).
+@export_range(1000.0, 200000.0, 500.0) var bus_brake_force: float = 30000.0
+
+## Handbrake force in newtons (a driver's Ctrl).
+@export_range(0.0, 200000.0, 500.0) var bus_handbrake_force: float = 40000.0
+
+## Fraction of the rear tyres' grip left while the handbrake is held; below 0.2 the back end steps out, so a handbrake turn slides.
+@export_range(0.02, 1.0, 0.01) var bus_handbrake_grip: float = 0.15
+
+## Steering lock in degrees.
+@export_range(5.0, 60.0, 0.5) var bus_steering_limit_deg: float = 26.0
+
+## How fast the wheel turns towards what was asked, in degrees per second.
+@export_range(10.0, 360.0, 5.0) var bus_steering_rate_deg: float = 90.0
+
+## How much steering is lost with speed. Low on purpose: a bus that turns as fast as it accelerates is a homing missile and a runner has no counterplay.
+@export_range(0.0, 1.0, 0.01) var bus_steering_falloff: float = 0.25
+
+## Tyre friction slip; higher slides sooner.
+@export_range(0.5, 10.0, 0.1) var bus_friction_slip: float = 2.6
+
+## Spring stiffness. It has to carry the bus's mass: too soft and the hull rests on the ground and the bus sits still.
+@export_range(10.0, 400.0, 5.0) var bus_suspension_stiffness: float = 150.0
+
+## Spring travel in metres.
+@export_range(0.05, 1.0, 0.01) var bus_suspension_travel: float = 0.3
+
+## Metres the centre of mass is dropped; keeps a tall box from rolling on the first hard turn. Do not take it below the wheels' contact plane.
+@export_range(0.0, 1.0, 0.05) var bus_centre_of_mass_drop: float = 0.4
+
+## Fastest a bus may be going for its driver to get out, in m/s.
+@export_range(0.0, 30.0, 0.5) var bus_exit_speed: float = 3.0
+
+## Seconds between a driver's horn blasts.
+@export_range(0.0, 10.0, 0.1) var horn_seconds: float = 0.8
+
+## Seconds between a bot's horn blasts.
+@export_range(0.0, 60.0, 0.5) var bot_horn_seconds: float = 6.0
+
+## How close a runner has to be, in metres, before a bot sounds its horn.
+@export_range(1.0, 100.0, 1.0) var bot_horn_range: float = 22.0
 
 @export_group("The bots")
 
@@ -147,6 +196,18 @@ extends DotConfig
 ## bus vanishing sooner.
 @export_range(0.2, 10.0, 0.1) var bus_stuck_break_seconds: float = 1.0
 @export_range(0.5, 60.0, 0.5) var bus_stuck_reset_seconds: float = 5.0
+
+## When a stuck bus hops back, in seconds (never more than half the reset time), and how far, in metres.
+@export_range(0.2, 30.0, 0.1) var bus_stuck_hop_seconds: float = 2.0
+@export_range(0.5, 20.0, 0.5) var bus_stuck_hop_metres: float = 4.0
+
+## A bus asking for throttle that has not left a circle of this radius, in metres, for `bus_pinned_seconds` counts as stuck.
+@export_range(0.5, 20.0, 0.5) var bus_pinned_radius: float = 3.0
+@export_range(1.0, 60.0, 0.5) var bus_pinned_seconds: float = 7.0
+
+## Speed in m/s a bot bus drives while lining up on and climbing the ramp, and the speed under which it counts as stalled on a leg of the climb.
+@export_range(2.0, 30.0, 0.5) var bot_ramp_speed: float = 9.0
+@export_range(1.0, 20.0, 0.5) var bot_ramp_leg_speed: float = 6.0
 
 @export_group("The arena")
 

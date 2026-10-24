@@ -156,6 +156,21 @@ var spectate: BfhSpectate = null
 ## and a hull on it would be something every bus hits.)
 var view_rules: DotPlayerViewRules = DotPlayerViewRules.new()
 
+## dot-player-controller's body rules, there for dot-team's block rules to feed. Players are never solid to each other here (no hull is built), so it changes nothing physical; `mp_solidplayers` is deliberately not bound.
+var body_rules: DotPlayerBodyRules = DotPlayerBodyRules.new()
+
+## Binds [member config] to cvars, the cfg/ yml layers and the workbench; made by the server scene or the client.
+var config_binder: DotGameConfigBinder = null
+
+## dot-team's block rules (`!block`, `!noblock`, `mp_teamblock`), set by the server module or `DotGameClient.add_noblock`. They feed [member body_rules]'s `pair_fn`.
+var block_rules: Object = null:
+	set(value):
+		if block_rules != null and block_rules.is_connected(&"changed", body_rules.refresh):
+			block_rules.disconnect(&"changed", body_rules.refresh)
+		block_rules = value
+		if block_rules != null and block_rules.has_signal(&"changed"):
+			block_rules.connect(&"changed", body_rules.refresh)
+
 ## Statistics and achievements. The authority's only; null on a connected client and
 ## when [member track_progress] is off. See [BfhProgress].
 var progress: BfhProgress = null
@@ -278,6 +293,9 @@ func _ready() -> void:
 
 	_layout_seed = config.arena_seed
 
+	if not body_rules.changed.is_connected(apply_pass_through):
+		body_rules.changed.connect(apply_pass_through)
+	body_rules.solid = false
 	_apply_gravity()
 	_build_random()
 	_build_arena()
@@ -663,6 +681,7 @@ func add_player(
 	# Last, after the hammer and the health: the bridge answers this by building the
 	# replicated entity and announcing the join, and an entity built over a half-made
 	# player replicates the half.
+	apply_pass_through()
 	player_added.emit(player_id)
 
 	# After the announcement, because seating fires `ride.entered` and the bridge answers
@@ -745,6 +764,9 @@ func remove_player(player_id: StringName) -> void:
 		match_node.remove_player(String(player_id))
 
 	players.erase(player_id)
+	if block_rules != null:
+		block_rules.call(&"forget", player_id)
+	apply_pass_through()
 	sides.erase(player_id)
 	_horn_ready.erase(player_id)
 	player.queue_free()
@@ -814,18 +836,13 @@ func sound_horn(player: BfhPlayer) -> bool:
 	if int(_horn_ready.get(player.player_id, 0)) > _tick:
 		return false
 
-	var interval := BOT_HORN_SEC if player.is_bot else HORN_SEC
+	var interval := config.bot_horn_seconds if player.is_bot else config.horn_seconds
 	_horn_ready[player.player_id] = _tick + int(interval * float(maxi(tick_rate, 1)))
 	noise.emit(BfhSounds.BUS_HORN, player.ridden.global_position)
 	return true
 
 
-## Seconds between a person's horn blasts, and a bot's.
-const HORN_SEC := 0.8
-const BOT_HORN_SEC := 6.0
-
-## How close, and how squarely in front, a runner has to be before a bot sounds its horn.
-const BOT_HORN_RANGE := 22.0
+## How squarely in front a runner has to be before a bot sounds its horn.
 const BOT_HORN_ALIGNMENT := 0.85
 
 
@@ -852,6 +869,29 @@ func _set_riding(
 
 func team_of(player_id: StringName) -> int:
 	return int(sides.get(player_id, 0))
+
+
+## The side id dot-team's block rules compare ("" for none): drivers pass drivers and runners pass runners under `mp_teamblock 0`.
+func team_of_side(player_id: Variant) -> Variant:
+	var side := team_of(StringName(str(player_id)))
+	return str(side) if side > 0 else ""
+
+
+## Hands every controller the bodies it passes through under `block_rules`; the same call on every machine, or a client predicts a wall.
+func apply_pass_through() -> void:
+	var entries := {}
+	for id: Variant in players:
+		var who := players[id] as BfhPlayer
+		if who != null and who.controller != null:
+			entries[id] = {"body": who, "controller": who.controller}
+	body_rules.apply_exceptions(entries)
+
+
+## Puts the config's bus feel onto the catalogue's bus, for buses built from now on.
+func refresh_bus_feel() -> void:
+	var def := vehicles.catalogue.get_vehicle(BfhContent.BUS) if vehicles != null and vehicles.catalogue != null else null
+	if def != null and def.tunables != null:
+		BfhContent.apply_bus_feel(def.tunables, config)
 
 
 func runners() -> Array[BfhPlayer]:
@@ -1691,7 +1731,7 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 	# nothing.
 	var forward := -bus.body().global_basis.z
 	forward.y = 0.0
-	if line.length() < BOT_HORN_RANGE and line.length() > 0.5 and forward.length() > 0.01 \
+	if line.length() < config.bot_horn_range and line.length() > 0.5 and forward.length() > 0.01 \
 			and line.normalized().dot(forward.normalized()) > BOT_HORN_ALIGNMENT:
 		sound_horn(player)
 
@@ -1714,7 +1754,7 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 			and bus.position().distance_to(arena.ramp_foot()) > STREET_RAMP_NEAR:
 		bound = false
 	var pace := config.bus_top_speed * clampf(1.0 + 0.4 * (skill.aggression - _MEDIUM.aggression), 0.5, 1.0)
-	player.autopilot.target_speed = minf(pace, RAMP_SPEED) if bound else pace
+	player.autopilot.target_speed = minf(pace, config.bot_ramp_speed) if bound else pace
 	# Written every tick rather than once, so `bfh_bot_steer_clearance` takes effect on the
 	# next tick. Only the bots read it; see [member BfhArena.steer_clearance].
 	arena.steer_clearance = config.bot_steer_clearance
@@ -2137,7 +2177,7 @@ func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
 			var turn := acos(clampf(wanted.dot(forward), -1.0, 1.0))
 			var toward := 1.0 if wanted.dot(right) >= 0.0 else -1.0
 			command.steer = toward * clampf(rad_to_deg(turn) / RAMP_LINE_STEER, 0.0, 1.0)
-			var fast := RAMP_SPEED if lined else RAMP_LINE_SLOW
+			var fast := config.bot_ramp_speed if lined else RAMP_LINE_SLOW
 			if speed < fast:
 				command.throttle = RAMP_TURN_THROTTLE
 			elif speed > fast + 1.0:
@@ -2149,7 +2189,7 @@ func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
 		var angle := rad_to_deg(acos(clampf(axis.dot(forward), -1.0, 1.0)))
 		var side := 1.0 if axis.dot(right) >= 0.0 else -1.0
 		command.steer = -side * clampf(angle / 20.0, 0.0, 1.0)
-		if absf(speed) < RAMP_LEG_SPEED:
+		if absf(speed) < config.bot_ramp_leg_speed:
 			command.throttle = -1.0
 		command.sanitise()
 		return command
@@ -2185,7 +2225,7 @@ func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
 			plan["settling"] = false
 			plan["held"] = 0.0
 			plan["leg_from"] = pos
-	elif absf(speed) < RAMP_LEG_SPEED:
+	elif absf(speed) < config.bot_ramp_leg_speed:
 		command.throttle = -1.0 if reverse else RAMP_TURN_THROTTLE
 	command.sanitise()
 	return command
@@ -2266,7 +2306,6 @@ const RAMP_EDGE_X := 1.5
 ## wheel has to swing, between legs; how long a leg can push without moving before it
 ## counts as stopped; how long a leg runs before the turning point's bounds apply; and the
 ## longest a leg lasts whatever the floor says (s).
-const RAMP_LEG_SPEED := 6.0
 const RAMP_LEG_STILL := 0.8
 const RAMP_LEG_SETTLE := 0.2
 const RAMP_LEG_STALL := 0.6
@@ -2288,7 +2327,6 @@ var _bus_turn_rest: Dictionary = {}
 const PARKED_ON_WAYPOINT := 1.0
 
 ## How fast a bot drives while it is lining up on and climbing the ramp, in m/s.
-const RAMP_SPEED := 9.0
 
 ## How near the ramp's foot a district bus is before the ramp rules take over from its route (m).
 const STREET_RAMP_NEAR := 24.0
@@ -2515,26 +2553,12 @@ func _break_props_under(bus: DotVehicleInstance, speed: float, by: StringName) -
 		prop_damage.impact(prop.instance_id, speed, by)
 
 
-## Seconds of asking to move before a bus is assumed to be caught on something, and
-## before it is put back on its start line, by default. The live numbers are
-## `BfhConfig.bus_stuck_break_seconds` and `bus_stuck_reset_seconds`.
-const STUCK_BREAK_SEC := 1.0
-const STUCK_RESET_SEC := 5.0
-
-## When a stuck bus hops back (at most half the reset time), and how far, in metres.
-const STUCK_HOP_SEC := 2.0
-const STUCK_HOP_METRES := 4.0
-
 ## Instance ids that have hopped in this stuck spell; forgotten once the bus moves.
 var _bus_hopped: Dictionary = {}
 
 
 ## Instance id -> `{at, held}`: where a bus asking for throttle was last clear of, and for how long.
 var _bus_pinned: Dictionary = {}
-
-## The circle a bus must leave, and how long it may stay in it while asking to go (s).
-const PINNED_RADIUS := 3.0
-const PINNED_SECONDS := 7.0
 
 
 ## A bus that is throttling and going nowhere, and what to do about it.
@@ -2559,16 +2583,16 @@ func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
 	# [b]Rocking in place is not moving.[/b] The back-off reverses and goes forward again, and
 	# each lurch passes 1 m/s and restarts the clock below, so a bus wedged among crates in a
 	# street shuffled within three metres for 20 s without ever being caught (hill town).
-	# Asking for throttle and not having left a 3 m circle for `PINNED_SECONDS` counts as stuck
+	# Asking for throttle and not having left the `bus_pinned_radius` circle for `bus_pinned_seconds` counts as stuck
 	# whatever the speed.
 	var pin: Dictionary = _bus_pinned.get(bus.instance_id, {})
 	var here := bus.position()
-	if pin.is_empty() or not asking or here.distance_to(pin["at"]) > PINNED_RADIUS:
+	if pin.is_empty() or not asking or here.distance_to(pin["at"]) > config.bus_pinned_radius:
 		pin = {"at": here, "held": 0.0}
 	else:
 		pin["held"] = float(pin["held"]) + delta
 	_bus_pinned[bus.instance_id] = pin
-	var pinned := float(pin["held"]) >= PINNED_SECONDS
+	var pinned := float(pin["held"]) >= config.bus_pinned_seconds
 	if pinned:
 		moving = false
 
@@ -2606,7 +2630,7 @@ func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
 	# 2026-10-18 with four bot buses: three of four maps held a bus on a block or crate for the
 	# full five seconds and then sent it across the bowl. A hop of a few metres along its own
 	# axis puts it where it was driving a moment ago, still in the chase.
-	var hop_at := minf(STUCK_HOP_SEC, config.bus_stuck_reset_seconds * 0.5)
+	var hop_at := minf(config.bus_stuck_hop_seconds, config.bus_stuck_reset_seconds * 0.5)
 	if held >= hop_at and not _bus_hopped.has(bus.instance_id):
 		_bus_hopped[bus.instance_id] = true
 		var behind := bus.body().global_basis.z
@@ -2615,7 +2639,7 @@ func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
 			var hop_body := bus.body()
 			hop_body.linear_velocity = Vector3.ZERO
 			hop_body.angular_velocity = Vector3.ZERO
-			hop_body.global_position += behind.normalized() * STUCK_HOP_METRES + Vector3.UP * 0.4
+			hop_body.global_position += behind.normalized() * config.bus_stuck_hop_metres + Vector3.UP * 0.4
 			DotLog.debug(CHANNEL, "a stuck bus hopped back", {"stuck_for": held})
 			return
 

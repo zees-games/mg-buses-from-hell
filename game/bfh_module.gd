@@ -212,6 +212,11 @@ func _game_load() -> DotResult:
 	# the world (`BfhGame._autopilot` reads `bot_prediction` and `bot_aggression`).
 	var _bot_cvars := DotBotSettings.of(world).bind_cvars(add_cvar, DotConVar.FLAG_NOTIFY, add_command)
 
+	# After every hand-written cvar, so the binder skips those and makes the rest.
+	var configured := _bind_config(world)
+	if not configured.ok:
+		return configured
+
 	# [b]Started here and not in the world's own `_ready`.[/b] `start()` lays the bowl out
 	# and puts the buses on it, and a world that did that before the bridge existed would
 	# have spawned every crate with nothing listening to `props.spawned` — thirty-four
@@ -305,6 +310,87 @@ func _add_tunables(world: BfhGame) -> void:
 		func(value: float) -> void: config.bus_stuck_reset_seconds = maxf(value, 0.1))
 
 
+## Config fields whose hand-written cvar is not `bfh_<field>`.
+const HAND_RENAMES := {
+	"crate_count": "bfh_crates", "barrel_count": "bfh_barrels", "driver_count": "bfh_drivers",
+	"bus_stuck_break_seconds": "bfh_bus_stuck_break", "bus_stuck_reset_seconds": "bfh_bus_stuck_reset",
+	"scaffold_scatter_margin": "bfh_scaffold_margin", "killcam_seconds": "mp_killcam_time",
+}
+
+## The workbench: the F9 panel off a dedicated server, the HTTP page only with `workbench.enabled` in cfg/server.yml.
+var workbench: DotGameWorkbench = null
+
+
+## The hand-written cvar of a config field, or "" when the binder makes its own.
+func _hand_cvar(key: String) -> String:
+	var name: String = HAND_RENAMES.get(key, "bfh_%s" % key)
+	return name if console.has_name(name) else ""
+
+
+## Every config field as a `bfh_<field>` cvar (the hand-written ones keep their handlers and follow workbench edits), the cfg/ diff commands, the workbench and dot-team's block rules.
+func _bind_config(world: BfhGame) -> DotResult:
+	var binder := world.config_binder
+	if binder == null:
+		return DotResult.success(null)
+	workbench = DotGameWorkbench.new()
+	workbench.name = "Workbench"
+	workbench.dedicated = DisplayServer.get_name() == "headless"
+	workbench.listen_host_fn = func() -> bool: return DisplayServer.get_name() != "headless"
+	# Admission: the console's admins, and dot-game's ticket login for the uids and groups listed under `workbench:` in cfg/server.yml.
+	workbench.permit_fn = func(actor: Variant, flag: String) -> bool:
+		return server != null and server.admins != null and actor is String \
+			and bool(server.admins.uid_has_permission(actor, flag))
+	workbench.add_set(binder.profile_set(), "Game settings")
+	add_child(workbench)
+	var started := workbench.start()
+	var runtime: DotProfileRuntime = workbench.api.runtime if started.ok and workbench.api != null else null
+	if not started.ok:
+		log_warn("the workbench did not start", {"why": started.error.message})
+
+	binder.bind_cvars(add_cvar, DotConVar.FLAG_ARCHIVE,
+		func(name: String) -> bool: return console.has_name(name))
+	binder.bind_commands(add_command)
+	binder.field_changed.connect(_on_config_field)
+	if runtime != null:
+		binder.attach(runtime)
+	return DotResult.success(null)
+
+
+## Drivers and runners are the two sides dot-team's block rules compare.
+func _noblock_side(id: Variant) -> Variant:
+	return game.call(&"team_of_side", id) if game != null else ""
+
+
+## The workbench's runtime, so its "noblock" kind is listed beside the config.
+func _noblock_runtime() -> Object:
+	return workbench.api.runtime if workbench != null and workbench.api != null else null
+
+
+## The block commands are keyed by the player ids the world uses (`u<userid>`), not the bare userid.
+func _build_noblock() -> DotResult:
+	var built := super()
+	if built.ok and noblock != null and noblock.commands != null:
+		noblock.commands.set(&"key_fn", func(ctx: Object) -> Variant:
+			var session: Variant = ctx.get("session")
+			return BfhNetBridge.player_key(int(session.get("userid"))) if session is Object else null)
+	return built
+
+
+## A workbench or file edit of a field: pushed through its hand-written cvar so the handler runs; the bus feel is put back on the catalogue.
+func _on_config_field(key: String, _value: Variant, source: String) -> void:
+	if key.begins_with("bus_") and game != null:
+		(game as BfhGame).refresh_bus_feel()
+	if source == "cvar":
+		return
+	var hand := _hand_cvar(key)
+	if hand == "":
+		return
+	var text: Variant = game.config.get(key)
+	if text is bool:
+		text = "1" if text else "0"
+	console.set_cvar(hand, _number(text) if text is float else str(text))
+
+
 ## A number as an operator would type it: `34`, not `34.000000`.
 ##
 ## [b]Not `%g`, which GDScript's format strings do not have.[/b] It is accepted by the
@@ -393,6 +479,15 @@ func _tunable(
 ## tree before the module loaded and a server can unload and reload a game module without
 ## the bowl going away, which is what `module reload` is for.
 func _game_unload() -> void:
+	if workbench != null:
+		workbench.queue_free()
+		workbench = null
+
+	if game != null and "block_rules" in game:
+		game.set(&"block_rules", null)
+
+	noblock = null
+
 	if game != null and "loading_fn" in game:
 		game.set(&"loading_fn", Callable())
 
