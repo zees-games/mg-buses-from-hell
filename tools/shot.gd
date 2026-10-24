@@ -39,7 +39,12 @@ func _run() -> void:
 	var cover := false
 	var killcam := false
 	var bowl_id := ""
-	for arg in OS.get_cmdline_user_args():
+	var action: Array = []
+	var user_args := OS.get_cmdline_user_args()
+	var action_at := user_args.find("--action")
+	if action_at >= 0 and action_at + 2 < user_args.size():
+		action = [StringName(user_args[action_at + 1]), String(user_args[action_at + 2])]
+	for arg in user_args:
 		if arg.begins_with("--seconds="):
 			seconds = float(arg.substr(10))
 		elif arg.begins_with("--out="):
@@ -170,6 +175,11 @@ func _run() -> void:
 	while elapsed < seconds:
 		elapsed += get_process_delta_time()
 		await get_tree().process_frame
+
+	if not action.is_empty():
+		await _stage_action(client, action[0], action[1], out)
+		get_tree().quit(0)
+		return
 
 	# An administrator's marks, set the way the handlers set them and then given a few
 	# frames to draw. `--beacon` beacons everybody — the bot driver's is round the bus, which
@@ -585,3 +595,39 @@ func _show_ballot(list: Array, current: StringName) -> void:
 	while waited < 1.0:
 		waited += get_process_delta_time()
 		await get_tree().process_frame
+
+
+## `--action <kind> <id>` (`--action emote dance`): the local runner, in third person, playing an
+## avatar action through the client's own input path, from the front, early and later in the
+## clip. Writes <out>_a.png and <out>_b.png.
+func _stage_action(client: Node, kind: StringName, id: String, out: String) -> void:
+	var me: Node3D = client.get("player")
+	if me == null:
+		print("action: no local player")
+		return
+	client.set("third_person", true)
+	for _i in range(20):
+		await get_tree().process_frame
+	var figure: Object = client.call("_avatar_figure", 0)
+	print("action %s/%s: figure=%s third_person=%s" % [kind, id, figure != null, client.get("third_person")])
+	var entry := DotAvatarActions.defaults().find(kind, id)
+	var input: Object = (client.get("platform") as DotGameClient).avatar_actions.input
+	input.emit_signal(&"action_requested", entry)
+	var yaw := deg_to_rad((me.get("controller") as DotFpsController).state.yaw)
+	var ahead := Vector3(-sin(yaw), 0.0, -cos(yaw))
+	var feet: Vector3 = me.global_position
+	var camera := Camera3D.new()
+	camera.fov = 60.0
+	add_child(camera)
+	camera.current = true
+	for part in ["a", "b"]:
+		for _i in range(12 if part == "a" else 30):
+			await get_tree().process_frame
+		camera.global_position = feet + ahead * 3.2 + Vector3.UP * 1.6
+		camera.look_at(feet + Vector3.UP * 1.0, Vector3.UP)
+		for _i in range(3):
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var path := out.trim_suffix(".png") + "_%s.png" % part
+		var _saved := get_viewport().get_texture().get_image().save_png(ProjectSettings.globalize_path(path))
+		print("wrote ", path, " action=", figure.get("action") if figure != null else "n/a")

@@ -28,6 +28,7 @@
 #   tools/shot.sh 8 ballot.png --ballot       # the bowl vote's ballot, mid-vote, as the client shell draws it
 #   tools/shot.sh 6 net.png --net             # a CONNECTED client watching another runner:
 #                                             # four consecutive frames and a jitter probe
+#   tools/shot.sh 5 act.png --action emote dance   # the local runner, third person, playing an avatar action (act_a/_b.png)
 #   tools/shot.sh 6 net.png --net --no-interp # the same with the client's interpolation off
 #
 # Anything after the filename is passed through to the scene, which is how --bus,
