@@ -1,5 +1,6 @@
 extends Node
 
+const BfhAmbience := preload("bfh_ambience.gd")
 const BfhPlayer := preload("bfh_player.gd")
 const BfhSounds := preload("bfh_sounds.gd")
 
@@ -61,6 +62,9 @@ var _engines: Dictionary = {}
 var steps: DotAudioFootsteps = null
 var ambience: DotAudioAmbience = null
 
+## Quiet moods under the bowl (dot-audio's stock set); the wind bed plays only when none loaded.
+var ambient: DotAmbienceDirector = null
+
 
 ## Builds the manager and listens to [param world]. [param own] returns this client's
 ## player, or null before there is one.
@@ -107,8 +111,22 @@ func setup(world: Node3D, own: Callable = Callable()) -> DotResult:
 	ambience.name = "Ambience"
 	ambience.manager = audio
 	add_child(ambience)
-	# A walled bowl of sand in the open: the wind over its rim.
-	ambience.set_map_bed(&"amb_wind")
+	ambient = DotAmbienceDirector.new()
+	ambient.name = "Ambient"
+	ambient.manager = audio
+	ambient.default_mood = BfhAmbience.DEFAULT_MOOD
+	ambient.prefix_moods = BfhAmbience.PREFIX_MOODS
+	ambient.rules = BfhAmbience.make_rules()
+	add_child(ambient)
+	var _moods := ambient.setup()
+	ambient.follow_settings(null)
+	# A walled bowl of sand in the open: the wind over its rim, unless a mood is playing.
+	if ambient.has_moods():
+		ambient.on_map(world.get("bowl_id"), {})
+		if world.has_signal("bowl_changed"):
+			world.connect("bowl_changed", func(id: StringName) -> void: ambient.on_map(id, {}))
+	else:
+		ambience.set_map_bed(&"amb_wind")
 
 	world.connect("noise", _on_noise)
 	world.connect("barrel_exploded", _on_blast)

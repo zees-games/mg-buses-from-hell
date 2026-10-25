@@ -1,5 +1,7 @@
 extends Node
 
+const BfhAmbience := preload("../game/bfh_ambience.gd")
+const BfhAudio := preload("../game/bfh_audio.gd")
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhGame := preload("../game/bfh_game.gd")
 const BfhContent := preload("../game/bfh_content.gd")
@@ -27,7 +29,7 @@ const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 165
+const CHECKS := 170
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -40,7 +42,7 @@ const SERVER_DIR := "user://bfh_dedicated"
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 17
+const SECTIONS := 18
 
 ## The port this test listens on. Nothing else on a developer's machine is likely to be
 ## holding it, and a boot that failed on a busy 27015 would look like the module being
@@ -118,6 +120,7 @@ func _run() -> void:
 		_test_finish_round_waits_for_a_live_round()
 		await _test_it_unloads_cleanly()
 		await _test_a_reload_leaves_one_live_link()
+		await _test_ambient_cvars_reach_the_client()
 		_test_no_message_preloads_itself()
 
 	if not probe.is_empty():
@@ -1577,6 +1580,83 @@ func _test_a_reload_leaves_one_live_link() -> void:
 	await get_tree().physics_frame
 	side.queue_free()
 	_done()
+
+
+## [b]`bfh_ambient*` on a client.[/b] The server's ambience intent rides the replicated cvars over a real socket, and a director that follows the game's rules (as [BfhClient] wires it) has it in its layer's config; the Ambience bus follows Effects.
+func _test_ambient_cvars_reach_the_client() -> void:
+	print("")
+	print("the server's bfh_ambient* reaches a client's ambience director, live")
+	var side := Node.new()
+	side.name = "AmbientClient"
+	add_child(side)
+	get_tree().set_multiplayer(MultiplayerAPI.create_default_interface(), side.get_path())
+	var mirror := Node.new()
+	mirror.name = name
+	side.add_child(mirror)
+	var link := DotClientLink.new()
+	link.name = "Server"
+	link.player_name = "Ambient"
+	link.transport_preference = "udp"
+	link.udp_address = "127.0.0.1:%d" % server.config.port
+	mirror.add_child(link)
+	var attach := func(_a: Variant = null, _b: Variant = null) -> void:
+		if link.get_node_or_null(NodePath(String(BfhNetLink.NODE_NAME))) == null:
+			link.add_child(BfhNetLink.attached_to(link, null, false))
+	attach.call()
+	link.phase_changed.connect(attach)
+	link.connect_to_server("127.0.0.1:%d" % server.config.port)
+	var rules := BfhAmbience.make_rules()
+	var _followed := rules.follow_cvars(link)
+	var director := DotAmbienceDirector.new()
+	director.ambient = DotAmbience.new()
+	director.follow_settings(null, rules)
+	var joined := await _until(func() -> bool: return link.replicated_cvar("bfh_ambient_volume", "") != "", 30.0)
+	_check(joined and link.replicated_cvar("bfh_ambient_dir", "x") == "x",
+		"the join carried bfh_ambient_volume, and the machine-local bfh_ambient_dir stayed home", str(link.replicated_cvars))
+	var _vol := server.console.set_cvar("bfh_ambient_volume", "0.8")
+	var _mood := server.console.set_cvar("bfh_ambient_mood", "swamp")
+	var _off := server.console.set_cvar("bfh_ambient", "0")
+	var arrived := await _until(func() -> bool:
+		return is_equal_approx(director.ambient.config.volume, 0.8) and director.ambient.config.mood == "swamp" \
+			and not director.ambient.config.enabled, 15.0)
+	_check(arrived, "a change of volume, mood and the switch reaches the director live", str(rules.describe()))
+	var _back_vol := server.console.set_cvar("bfh_ambient_volume", "0.3")
+	var _back_mood := server.console.set_cvar("bfh_ambient_mood", "")
+	var _back_on := server.console.set_cvar("bfh_ambient", "1")
+	var back := await _until(func() -> bool: return rules.is_on() and rules.mood == "", 15.0)
+	_check(back, "and back", str(rules.describe()))
+
+	var world := BfhGame.new()
+	world.config = BfhConfig.new()
+	add_child(world)
+	var audio := BfhAudio.new()
+	add_child(audio)
+	var made := audio.setup(world)
+	_check(made.ok and audio.ambient != null and audio.ambient.manager == audio.audio,
+		"the client's audio builds a director on its manager", str(made.error.message if not made.ok else ""))
+	var mixer := audio.audio.mixer
+	mixer.sfx = 0.5
+	mixer.ambience = 0.8
+	var _applied := mixer.apply_to_buses()
+	_check(is_equal_approx(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Ambience")), linear_to_db(0.4)),
+		"the Effects slider reaches the Ambience bus the director plays on")
+
+	audio.queue_free()
+	world.queue_free()
+	director.ambient.free()
+	director.free()
+	link.disconnect_from_server("done")
+	await get_tree().create_timer(2.0).timeout
+	side.queue_free()
+	_done()
+
+
+func _until(condition: Callable, seconds: float) -> bool:
+	var left := seconds
+	while left > 0.0 and not bool(condition.call()):
+		await get_tree().create_timer(0.1).timeout
+		left -= 0.1
+	return bool(condition.call())
 
 
 # --- Exiting clean ----------------------------------------------------------------

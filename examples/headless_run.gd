@@ -4936,7 +4936,8 @@ func _test_settings() -> void:
 
 	var schema := BfhSettings.schema_for()
 	# reduce_motion is read by the client when the winner reveal is presented, not pushed by the menu.
-	var applied := DotMenuApplier.APPLIES + DotMenuApplier.APPLIED_BY_MENU + [&"reduce_motion"]
+	# ambient and ambient_volume are followed by the client's ambience director.
+	var applied := DotMenuApplier.APPLIES + DotMenuApplier.APPLIED_BY_MENU + [&"reduce_motion", &"ambient", &"ambient_volume"]
 	var unapplied := schema.keys().filter(func(k: StringName) -> bool: return not applied.has(k))
 	_check(
 		schema.validate().ok and unapplied.is_empty() and schema.has(&"ui_volume") and schema.has(&"shake_scale"),

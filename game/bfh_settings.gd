@@ -65,6 +65,8 @@ static func schema_for() -> DotSettingsSchema:
 	))
 	s.add(DotSettingsDef.boolean(&"reduce_motion", false, &"accessibility").with_scope(DotSettingsDef.Scope.ACCOUNT)
 		.with_description("The end-of-round announcement appears at once, with nothing sliding, rising or bursting."))
+	s.add(DotSettingsDef.boolean(&"ambient", true, &"audio").with_description("Quiet sounds under the bowl."))
+	s.add(DotSettingsDef.number(&"ambient_volume", 1.0, 0.0, 1.0, &"audio"))
 	return DotMenuStock.declare(s, DotMenuStock.DEFAULT_GROUPS, null, NOT_APPLIED)
 
 

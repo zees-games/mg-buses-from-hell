@@ -45,6 +45,7 @@
 /addons/dot_vote
 /addons/dot_replay
 /addons/dot_spawn
+/addons/dot_profile
 
 # Exports
 build/

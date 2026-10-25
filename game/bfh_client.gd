@@ -311,6 +311,7 @@ func _build_netcode() -> DotResult:
 		var _toys := game.toy_rules.follow_cvars(link)
 		# The server's mp_forceview: this end places its own camera.
 		var _view := game.view_rules.follow_cvars(link)
+		var _ambient := game.ambient_rules.follow_cvars(link)
 		# mp_forcecamera, mp_freeroam, mp_freeroam_speed: whether the free camera is offered,
 		# and how fast it flies.
 		if game.spectate != null and game.spectate.manager != null:
@@ -545,6 +546,9 @@ func _build_settings() -> void:
 
 	if audio != null:
 		settings.bind_audio(audio.audio)
+		# The server's bfh_ambient* drive the quiet layer; the player's sliders multiply on top.
+		if audio.ambient != null:
+			audio.ambient.follow_settings(settings.settings, game.ambient_rules)
 
 	if fx != null and fx.fx != null:
 		settings.bind_fx(fx.fx)

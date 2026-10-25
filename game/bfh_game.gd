@@ -1,5 +1,6 @@
 extends Node3D
 
+const BfhAmbience := preload("bfh_ambience.gd")
 const BfhArena := preload("bfh_arena.gd")
 const BfhBowls := preload("bfh_bowls.gd")
 const BfhConfig := preload("bfh_config.gd")
@@ -158,6 +159,9 @@ var view_rules: DotPlayerViewRules = DotPlayerViewRules.new()
 
 ## dot-player-controller's body rules, there for dot-team's block rules to feed. Players are never solid to each other here (no hull is built), so it changes nothing physical; `mp_solidplayers` is deliberately not bound.
 var body_rules: DotPlayerBodyRules = DotPlayerBodyRules.new()
+
+## The ambience cvars (`bfh_ambient*`): bound by the module (REPLICATED), followed by a client through its link.
+var ambient_rules: DotAmbienceRules = BfhAmbience.make_rules()
 
 ## Binds [member config] to cvars, the cfg/ yml layers and the workbench; made by the server scene or the client.
 var config_binder: DotGameConfigBinder = null
