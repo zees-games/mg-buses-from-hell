@@ -29,7 +29,7 @@ const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 170
+const CHECKS := 171
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -521,7 +521,7 @@ func _test_the_module_loads() -> void:
 	game = BfhGame.new()
 	game.name = "World"
 	game.config = config
-	game.config_binder = DotGameConfigBinder.create(config, "mg-buses-from-hell", "bfh")
+	game.config_binder = BfhConfig.make_binder(config)
 	game.tick_rate = Engine.physics_ticks_per_second
 	add_child(game)
 
@@ -607,6 +607,10 @@ func _noblock_and_config(module: DotModule) -> void:
 	module.call("_on_config_field", "crate_count", 12, "workbench")
 	_check(server.console.find_cvar("bfh_crates").get_string() == "12", "a workbench edit reaches the hand-written cvar",
 		server.console.find_cvar("bfh_crates").get_string())
+	var wb: DotGameWorkbench = module.get("workbench")
+	var amb: DotResult = wb.api.handle(DotGameWorkbench.LOCAL_ACTOR, {"op": "set", "kind": "ambience", "id": DotGameWorkbench.CVAR_SET_ID, "key": "bfh_ambient_volume", "value": 0.2})
+	_check(amb.ok and is_equal_approx(server.console.get_float("bfh_ambient_volume"), 0.2), "the bfh_ambient* cvars are a workbench set and an edit moves the cvar", "" if amb.ok else amb.error.message)
+	var _restore := server.console.set_cvar("bfh_ambient_volume", "0.3")
 	server.console.set_cvar("bfh_bus_mass", "2500")
 	var def := game.vehicles.catalogue.get_vehicle(&"bus")
 	_check(game.config.bus_mass == 2500.0 and def.tunables.mass == 2500.0, "a bus feel cvar reaches the catalogue's bus",

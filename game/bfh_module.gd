@@ -10,6 +10,9 @@ const BfhAvatars := preload("bfh_avatars.gd")
 const BfhBowls := preload("bfh_bowls.gd")
 const BfhMapConfig := preload("bfh_map_config.gd")
 const BfhVote := preload("bfh_vote.gd")
+const BfhAmbience := preload("bfh_ambience.gd")
+## The workbench kind of the ambience cvar set (saved to cfg/.../ambience/server.yml).
+const AMBIENT_KIND := "ambience"
 
 ## Where the services keep punishments. Empty is [DotGameServices]'s own default,
 ## `user://buses_punishments.json` — the store a real server enforces.
@@ -346,7 +349,11 @@ func _bind_config(world: BfhGame) -> DotResult:
 	workbench.permit_fn = func(actor: Variant, flag: String) -> bool:
 		return server != null and server.admins != null and actor is String \
 			and bool(server.admins.uid_has_permission(actor, flag))
-	workbench.add_set(binder.profile_set(), "Game settings")
+	for set: DotProfileSet in binder.profile_sets():
+		workbench.add_set(set, "Game settings: %s" % set.rel_path.trim_prefix("config_"))
+	var ambient_set := DotGameWorkbench.cvar_set(console, BfhAmbience.cvar_types(), AMBIENT_KIND)
+	if ambient_set != null:
+		workbench.add_set(ambient_set, "Ambience (bfh_ambient*)")
 	add_child(workbench)
 	var started := workbench.start()
 	var runtime: DotProfileRuntime = workbench.api.runtime if started.ok and workbench.api != null else null
@@ -359,6 +366,8 @@ func _bind_config(world: BfhGame) -> DotResult:
 	binder.field_changed.connect(_on_config_field)
 	if runtime != null:
 		binder.attach(runtime)
+		if ambient_set != null:
+			var _applied := DotGameWorkbench.bind_cvar_set(ambient_set, runtime, console)
 	return DotResult.success(null)
 
 

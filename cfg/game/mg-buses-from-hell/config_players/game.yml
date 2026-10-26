@@ -1,0 +1,26 @@
+# mg-buses-from-hell: every key of this file at its code default, commented out. Uncomment a line to change it;
+# an operator overrides in cfg/server/game/mg-buses-from-hell/config_players/game.yml. Layers: defaults < this < env < argv.
+
+# --- The runners
+#  [1.0..400.0]
+# runner_health: 100.0
+# How fast a runner moves, in m/s. [1.0..20.0]
+# runner_speed: 6.5
+# How high a runner jumps, in metres. A crate is 1 m tall, so this clears one. [0.1..5.0]
+# runner_jump_height: 1.15
+# A runner's mass, which is what a crate feels when they stand on it. [20.0..200.0]
+# runner_mass: 80.0
+
+# --- The world
+# Metres per second squared, for everything: the runners, the crates and the buses. [1.0..60.0]
+# gravity: 20.0
+
+# --- The hammer
+# Damage one swing does to a crate. [1.0..1000.0]
+# hammer_damage: 34.0
+# Metres the hammer reaches. [0.5..6.0]
+# hammer_reach: 2.4
+# Seconds between swings. [0.05..5.0]
+# hammer_interval: 0.55
+# How hard a swing shoves a crate it does not break, in newton-seconds. [0.0..5000.0]
+# hammer_push: 240.0

@@ -1,0 +1,72 @@
+# mg-buses-from-hell: every key of this file at its code default, commented out. Uncomment a line to change it;
+# an operator overrides in cfg/server/game/mg-buses-from-hell/config_buses/game.yml. Layers: defaults < this < env < argv.
+
+# --- The buses
+# A bus's top speed, in metres per second. [1.0..60.0]
+# bus_top_speed: 22.0
+# Closing speed, in m/s, above which a bus kills a runner outright. [1.0..60.0]
+# bus_lethal_speed: 9.0
+# Damage a non-lethal bump does, per m/s of closing speed. [0.0..100.0]
+# bus_bump_damage: 6.0
+# A bus's mass in kilograms. Buses are server-authoritative bodies, so the feel numbers here are read on the ... [500.0..20000.0]
+# bus_mass: 2000.0
+# Engine force in newtons. [1000.0..200000.0]
+# bus_engine_force: 26000.0
+# Foot brake force in newtons (a driver's S until the bus has stopped). [1000.0..200000.0]
+# bus_brake_force: 30000.0
+# Handbrake force in newtons (a driver's Ctrl). [0.0..200000.0]
+# bus_handbrake_force: 40000.0
+# Fraction of the rear tyres' grip left while the handbrake is held; below 0.2 the back end steps out, so a h... [0.02..1.0]
+# bus_handbrake_grip: 0.15
+# Steering lock in degrees. [5.0..60.0]
+# bus_steering_limit_deg: 26.0
+# How fast the wheel turns towards what was asked, in degrees per second. [10.0..360.0]
+# bus_steering_rate_deg: 90.0
+# How much steering is lost with speed. Low on purpose: a bus that turns as fast as it accelerates is a homin... [0.0..1.0]
+# bus_steering_falloff: 0.25
+# Tyre friction slip; higher slides sooner. [0.5..10.0]
+# bus_friction_slip: 2.6
+# Spring stiffness. It has to carry the bus's mass: too soft and the hull rests on the ground and the bus sit... [10.0..400.0]
+# bus_suspension_stiffness: 150.0
+# Spring travel in metres. [0.05..1.0]
+# bus_suspension_travel: 0.3
+# Metres the centre of mass is dropped; keeps a tall box from rolling on the first hard turn. Do not take it ... [0.0..1.0]
+# bus_centre_of_mass_drop: 0.4
+# Fastest a bus may be going for its driver to get out, in m/s. [0.0..30.0]
+# bus_exit_speed: 3.0
+# Seconds between a driver's horn blasts. [0.0..10.0]
+# horn_seconds: 0.8
+# Seconds between a bot's horn blasts. [0.0..60.0]
+# bot_horn_seconds: 6.0
+# How close a runner has to be, in metres, before a bot sounds its horn. [1.0..100.0]
+# bot_horn_range: 22.0
+
+# --- The bots
+# How far past a runner the bot bus aims, in metres. The driver eases off as it nears its target, so a target... [0.0..30.0]
+# bot_aim_past: 8.0
+# How far past an obstacle's surface the bot steers a bus, in metres. 3.6 is the number the map is laid out a... [1.5..8.0]
+# bot_steer_clearance: 3.6
+# How far a bot bus's centre is kept off a building, the wall and the ramp when it is routed along a district... [1.5..4.0]
+# bot_route_clearance: 3.4
+# Seconds between a bot bus planning its route again. The quarry moves, and so does the bus off the line; mor... [0.1..3.0]
+# bot_route_replan: 0.5
+# Seconds a bot bus may throttle against something before it backs off (`bot_unwedge_after`), and how long it... [0.1..3.0]
+# bot_unwedge_after: 0.5
+#  [0.3..4.0]
+# bot_unwedge_seconds: 1.4
+# Seconds a bus may ask for throttle and go nowhere before whatever is under it is broken, and before it is g... [0.2..10.0]
+# bus_stuck_break_seconds: 1.0
+#  [0.5..60.0]
+# bus_stuck_reset_seconds: 5.0
+# When a stuck bus hops back, in seconds (never more than half the reset time), and how far, in metres. [0.2..30.0]
+# bus_stuck_hop_seconds: 2.0
+#  [0.5..20.0]
+# bus_stuck_hop_metres: 4.0
+# A bus asking for throttle that has not left a circle of this radius, in metres, for `bus_pinned_seconds` co... [0.5..20.0]
+# bus_pinned_radius: 3.0
+#  [1.0..60.0]
+# bus_pinned_seconds: 7.0
+# Speed in m/s a bot bus drives while lining up on and climbing the ramp, and the speed under which it counts... [2.0..30.0]
+# bot_ramp_speed: 9.0
+#  [1.0..20.0]
+# bot_ramp_leg_speed: 6.0

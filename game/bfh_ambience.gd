@@ -20,3 +20,13 @@ static func make_rules() -> DotAmbienceRules:
 	r.volume = LEVEL
 	r.frequency = RATE
 	return r
+
+
+## The cvars a workbench set offers: name -> profile type.
+static func cvar_types() -> Dictionary:
+	var rules := make_rules()
+	var out := {}
+	for key: String in DotAmbienceRules.VARS:
+		var row: Array = DotAmbienceRules.VARS[key]
+		out[rules.cvar_of(row)] = "string" if row[2] == null else "float"
+	return out

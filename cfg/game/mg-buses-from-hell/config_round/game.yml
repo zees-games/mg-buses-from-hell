@@ -1,0 +1,48 @@
+# mg-buses-from-hell: every key of this file at its code default, commented out. Uncomment a line to change it;
+# an operator overrides in cfg/server/game/mg-buses-from-hell/config_round/game.yml. Layers: defaults < this < env < argv.
+
+# --- Round
+# Seconds a round runs before the runners win on the clock. [10.0..900.0]
+# round_seconds: 180.0
+# Seconds between rounds, for the buses to be put back. [0.0..60.0]
+# intermission_seconds: 8.0
+# Seconds of the round's final killcam, added to the intermission (`mp_killcam_time`); 0 is off. Not added wh... [0.0..30.0]
+# killcam_seconds: 7.0
+# Seconds of warmup before the first round. 0 starts immediately. [0.0..300.0]
+# warmup_seconds: 10.0
+# Rounds before the sides swap. 0 never swaps. [0..50]
+# rounds_before_swap: 3
+
+# --- Sides
+# How many drivers the round starts with: how many buses, and (in fill mode, the default) how many bots there... [1..8]
+# driver_count: 4
+
+# --- The arena
+# Radius of the bowl floor, in metres. The bowl a server starts on, and `bfh_bowl` on the players' ballot (se... [10.0..200.0]
+# arena_radius: 46.0
+# Which bowls the players may vote between, by id (`bfh_bowl`, `bfh_small_bowl`, `bfh_big_bowl`; see `BfhBowl...
+# bowl_ids: []
+# The file that says which bowls this server ROTATES: `cfg/maps.yml` (dot-map's `DotMapRotationFile`: named r...
+# map_rotation_file: "cfg/maps.yml"
+# How many crates are scattered at the start of a round. [0..200]
+# crate_count: 34
+# Whether the scatter keeps a lane clear in front of every bus start, and how big: a crate, barrel or block d...
+# scatter_clears_bus_lanes: true
+# The kept-clear lane's width and length, in metres, from the bus's start along the way it faces. [0.0..20.0]
+# bus_lane_width: 6.0
+#  [0.0..60.0]
+# bus_lane_length: 24.0
+# Metres of floor round the scaffold's footprint that nothing is scattered into, to the prop's centre. A prop... [0.0..20.0]
+# scaffold_scatter_margin: 4.0
+# How many barrels. [0..100]
+# barrel_count: 9
+# How high a barrel throws a runner standing against it, in metres of apex. Falls off with the blast, linearl... [0.0..10.0]
+# barrel_lift_height: 4.2
+# Which hook the stacks end in (the three pillars past the dog-leg), by name. tight, the default, is the hook...
+# hook_layout: "tight"
+# The clear floor of the tank farm's courtyard's west lane, in metres: its 4.4 m drum is moved out along the ... [4.8..10.0]
+# courtyard_west_lane: 7.6
+# Seed for where they land.
+# arena_seed: 1337
+# Whether a new layout is rolled each round.
+# reseed_each_round: true

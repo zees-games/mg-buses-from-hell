@@ -32,7 +32,7 @@ func _ready() -> void:
 	# how an operator sets `BFH_ROUND_SECONDS` or `--bfh-arena-radius` without editing
 	# anything, and the cvars the module adds are the live half of the same numbers.
 	# Plus the cfg/ yml layers; strict (a typo or bad value stops the boot) on a dedicated server.
-	var binder := DotGameConfigBinder.create(config, "mg-buses-from-hell", "bfh", "user://cfg/buses-from-hell.json")
+	var binder := BfhConfig.make_binder(config, "user://cfg/buses-from-hell.json")
 	var loaded := binder.load_layers()
 
 	if not loaded.ok:
