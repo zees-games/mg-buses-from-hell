@@ -4,8 +4,8 @@ extends RefCounted
 
 const PREFIX := "bfh"
 ## Under the engines and the hammers, with rare one-shots.
-const LEVEL := 0.3
-const RATE := 0.5
+const LEVEL := 0.15
+const RATE := 0.4
 const DEFAULT_MOOD := &"industrial"
 
 ## By bowl id prefix; the bowls take the default, the three towns the ruins.
