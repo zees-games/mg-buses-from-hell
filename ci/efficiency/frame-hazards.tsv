@@ -1,0 +1,9 @@
+# frame-hazards
+# Baselines only shrink: scripts/<gate> --update lowers or drops entries and refuses to add.
+game/bfh_game.gd::_players_on::alloc_array	1
+game/bfh_game.gd::_roof_of::node_lookup	1
+game/bfh_game.gd::_street_path::duplicate	1
+game/bfh_hud.gd::_process::string_build	1
+game/bfh_hud.gd::watching_line::string_build	6
+tools/load_probe.gd::_process::string_build	2
+tools/net_shot.gd::_flush::duplicate	2
