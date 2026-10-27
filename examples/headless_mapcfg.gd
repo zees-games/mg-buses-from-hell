@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhMapConfig := preload("../game/bfh_map_config.gd")
@@ -15,9 +15,6 @@ const CHECKS := 10
 const DIR := "res://cfg/server/game/mg-buses-from-hell/dot_map/map"
 const FILE := "bfh_zz_mapcfg_check.yml"
 
-var _passed := 0
-var _failed := 0
-var _failures := PackedStringArray()
 
 
 class FakeWorld:
@@ -77,22 +74,4 @@ func _run() -> void:
 	_check(not BfhMapConfig.client_set(world, "bfh_exec", "x"), "the client setter refuses an unknown key")
 
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(DIR.path_join(FILE)))
-	print("")
-	print("%d passed, %d failed" % [_passed, _failed])
-	for line in _failures:
-		print("  FAIL  %s" % line)
-	if _passed + _failed != CHECKS:
-		print("ERROR: %d checks ran, %d expected." % [_passed + _failed, CHECKS])
-		get_tree().quit(1)
-		return
-	get_tree().quit(1 if _failed > 0 else 0)
-
-
-func _check(ok: bool, what: String) -> void:
-	if ok:
-		_passed += 1
-		print("  ok    %s" % what)
-	else:
-		_failed += 1
-		_failures.append(what)
-		print("  FAIL  %s" % what)
+	_report(CHECKS)
