@@ -166,6 +166,17 @@ var ambient_rules: DotAmbienceRules = BfhAmbience.make_rules()
 ## Binds [member config] to cvars, the cfg/ yml layers and the workbench; made by the server scene or the client.
 var config_binder: DotGameConfigBinder = null
 
+## The workbench's profile rows, made on first ask: the bridge's profile link must exist before the netcode seals, the workbench after.
+var profile_runtime: DotProfileRuntime = null
+
+
+func ensure_runtime() -> DotProfileRuntime:
+	if profile_runtime == null:
+		profile_runtime = DotProfileRuntime.new()
+		profile_runtime.permit = func(actor: Variant, _flag: String) -> bool:
+			return typeof(actor) == TYPE_STRING_NAME and actor == &"local"
+	return profile_runtime
+
 ## dot-team's block rules (`!block`, `!noblock`, `mp_teamblock`), set by the server module or `DotGameClient.add_noblock`. They feed [member body_rules]'s `pair_fn`.
 var block_rules: Object = null:
 	set(value):

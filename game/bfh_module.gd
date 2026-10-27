@@ -355,7 +355,10 @@ func _bind_config(world: BfhGame) -> DotResult:
 	if ambient_set != null:
 		workbench.add_set(ambient_set, "Ambience (bfh_ambient*)")
 	add_child(workbench)
-	var started := workbench.start()
+	var started := workbench.start(world.ensure_runtime())
+	# Off until the owner sets sv_workbench_remote 1; then flagged admins edit from a client.
+	if started.ok and net != null:
+		var _served := workbench.serve_remote(net)
 	var runtime: DotProfileRuntime = workbench.api.runtime if started.ok and workbench.api != null else null
 	if not started.ok:
 		log_warn("the workbench did not start", {"why": started.error.message})

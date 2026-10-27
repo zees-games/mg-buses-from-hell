@@ -96,6 +96,10 @@ const BUS_PIVOT_RISE := 2.6
 var net: DotNetManager = null
 var bridge: BfhNetBridge = null
 var link: Node = null
+## Asks a server whether this player may edit it (sv_workbench_remote); null offline.
+var workbench_remote: DotGameWorkbenchRemoteClient = null
+## The tuning panel's host: F9 solo or hosting, the admin's remote panel on a server that allows it.
+var workbench: DotGameWorkbench = null
 
 var _offline: bool = true
 var _sampler: DotFpsSampler = null
@@ -175,7 +179,10 @@ func _ready() -> void:
 		# which is the order that leaves nothing to be missed. Measured against a real
 		# server in a second process: the join completes and the first snapshot arrives
 		# with the bowl already replicated.
-		DotLog.result(CHANNEL, "the netcode", _build_netcode())
+		var netted := _build_netcode()
+		DotLog.result(CHANNEL, "the netcode", netted)
+		if netted.ok and link != null:
+			_start_remote_workbench()
 
 
 ## The load gate is [member DotGameClient.gate]: covered, and the local body and the input
@@ -359,6 +366,8 @@ func _build_netcode() -> DotResult:
 	bridge.open_link(link)
 	# Before the seal and in the server's order (after the bridge), or the actions stay local.
 	DotLog.result(CHANNEL, "avatar action message", DotGameAvatarActionMessage.register(net))
+	# The server's order again (after the avatar frame): the remote workbench's frame.
+	workbench_remote = DotGameWorkbenchRemoteClient.attach(net)
 	net.messages.seal()
 
 	bridge.hello_received.connect(_on_hello)
@@ -396,6 +405,8 @@ func _build_netcode() -> DotResult:
 
 
 func _say_ready() -> void:
+	if workbench_remote != null:
+		workbench_remote.ask()
 	if bridge != null:
 		bridge.ask_ready()
 
@@ -629,6 +640,28 @@ func _build_chat() -> void:
 
 # --- The end of a round: killcam, winner reveal, board -------------------------
 
+## Online: no local trust and no panel until the server names this player an admin (sv_workbench_remote). The sets are the game's own; the rows are the server's, through the bridge's profile link.
+func _start_remote_workbench() -> void:
+	if workbench_remote == null:
+		return
+	var wb := DotGameWorkbench.new()
+	wb.name = "Workbench"
+	wb.remote_client = workbench_remote
+	wb.remote_fn = func() -> bool: return true
+	wb.config = {"enabled": false}
+	if game.config_binder != null:
+		for set: DotProfileSet in game.config_binder.profile_sets():
+			wb.add_set(set, "Game settings: %s" % set.rel_path.trim_prefix("config_"))
+	add_child(wb)
+	var started := wb.start(game.ensure_runtime())
+	DotLog.result(CHANNEL, "the remote workbench", started)
+	if not started.ok:
+		wb.queue_free()
+		return
+	workbench = wb
+	platform.add_workbench(wb)
+
+
 ## dot-team's block rules followed from the server, or, solo, the F9 tuning panel over this process's own config.
 func _add_noblock_and_workbench() -> void:
 	if link != null:
@@ -637,6 +670,7 @@ func _add_noblock_and_workbench() -> void:
 	var wb := DotGameWorkbench.new()
 	wb.name = "Workbench"
 	wb.listen_host_fn = func() -> bool: return true
+	workbench = wb
 	wb.config = {"enabled": false}
 	if game.config_binder != null:
 		for set: DotProfileSet in game.config_binder.profile_sets():

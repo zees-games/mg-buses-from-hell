@@ -167,6 +167,8 @@ var _net_of: Dictionary = {}
 var _player_of_peer: Dictionary = {}
 var _peer_of_player: Dictionary = {}
 var _ready_peers: Dictionary = {}
+## Carries the game's profile runtime over this manager; null when the types would not register.
+var profile_link: DotNetProfileLink = null
 ## Server: peers whose READY came before their seat ([method add_player]). A client sends READY
 ## when its link says PLAYING, which the link decides itself after sending `loaded` on another
 ## channel; over ENet with loss the READY can overtake `loaded`, and a READY dropped here left
@@ -179,6 +181,13 @@ var _client_ticked_for: int = -1
 
 
 # --- Wiring ----------------------------------------------------------------
+
+func _exit_tree() -> void:
+	# The link and the runtime hold each other through broadcast; left, both outlive the process's exit.
+	if profile_link != null:
+		profile_link.release()
+		profile_link = null
+
 
 ## [param p_game] and [param p_net], in the shape [DotGameNetcode] calls it.
 func attach(p_game: Object, p_net: DotNetManager) -> DotResult:
@@ -219,6 +228,9 @@ func attach(p_game: Object, p_net: DotNetManager) -> DotResult:
 
 	net.messages.on(BfhEvent.NAME, _on_event)
 	net.messages.on(BfhRequest.NAME, _on_request)
+
+	# Edited profiles reach every client, so a remote admin's panel shows what the server holds; edits themselves go through the remote workbench.
+	profile_link = DotNetProfileLink.attach(net, world.ensure_runtime())
 
 	# Both ends. The server's tick is `server_tick` and the client's is `client_tick`,
 	# which simulates what it predicts and leaves the rest to interpolation. A world still
@@ -1240,6 +1252,9 @@ func _admit(peer_id: int) -> void:
 
 	if not net.peers().has(peer_id):
 		net.add_peer(peer_id)
+
+	if profile_link != null:
+		profile_link.peer_joined(peer_id)
 
 	var session_id := int(_player_of_peer[peer_id])
 
