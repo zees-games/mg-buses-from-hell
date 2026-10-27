@@ -117,6 +117,7 @@ func setup(world: Node3D, own: Callable = Callable()) -> DotResult:
 	ambient.default_mood = BfhAmbience.DEFAULT_MOOD
 	ambient.prefix_moods = BfhAmbience.PREFIX_MOODS
 	ambient.rules = BfhAmbience.make_rules()
+	ambient.beds = ambience
 	add_child(ambient)
 	var _moods := ambient.setup()
 	ambient.follow_settings(null)
