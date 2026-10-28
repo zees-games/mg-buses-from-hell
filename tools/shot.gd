@@ -37,6 +37,7 @@ func _run() -> void:
 	var scoreboard := false
 	var ballot := false
 	var cover := false
+	var swing := false
 	var killcam := false
 	var bowl_id := ""
 	var action: Array = []
@@ -49,6 +50,8 @@ func _run() -> void:
 			seconds = float(arg.substr(10))
 		elif arg.begins_with("--out="):
 			out = arg.substr(6)
+		elif arg == "--swing":
+			swing = true
 		elif arg == "--bus":
 			look_at_bus = true
 		elif arg == "--stacks":
@@ -175,6 +178,14 @@ func _run() -> void:
 	while elapsed < seconds:
 		elapsed += get_process_delta_time()
 		await get_tree().process_frame
+
+	# --swing: the hand's hammer a third of the way through its swing.
+	if swing and client.get("viewmodel") != null:
+		client.get("viewmodel").call("swing")
+		var into := 0.0
+		while into < 0.1:
+			into += get_process_delta_time()
+			await get_tree().process_frame
 
 	if not action.is_empty():
 		await _stage_action(client, action[0], action[1], out)

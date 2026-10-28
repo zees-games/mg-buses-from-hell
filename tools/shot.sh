@@ -22,6 +22,7 @@
 #                                             # death, cab, follow or chase
 #   tools/shot.sh 2 kill.png --view=killcam   # the round's last moment replayed (7.5: the winner reveal)
 #   tools/shot.sh 3 maps.png --maps           # M: the solo bowl list with a Workshop fixture bowl (Name [Pack])
+#   tools/shot.sh 8 swing.png --swing         # the runner's hammer mid-swing (without the flag: at rest)
 #   tools/shot.sh 5 settings.png --settings   # the settings screen Escape opens
 #   tools/shot.sh 5 blast.png --blast         # a barrel going off 12 m ahead, as the client draws it
 #   tools/shot.sh 12 board.png --scoreboard   # the scoreboard, Tab held, after a round the buses won

@@ -16,6 +16,7 @@ const BfhScoreboard := preload("bfh_scoreboard.gd")
 const BfhPlayer := preload("bfh_player.gd")
 const BfhSettings := preload("bfh_settings.gd")
 const BfhSpectate := preload("bfh_spectate.gd")
+const BfhViewmodel := preload("bfh_viewmodel.gd")
 
 ## One local player, a camera and a HUD over a [BfhGame] — offline, or against a server.
 ##
@@ -44,6 +45,9 @@ const CHANNEL := "bfh.client"
 var game: BfhGame = null
 var player: BfhPlayer = null
 var camera: Camera3D = null
+
+## The hammer in the local runner's hand, under [member camera].
+var viewmodel: BfhViewmodel = null
 var hud: BfhHud = null
 
 ## Keeps the screen covered, and the local body and the input still, until the bowl, the
@@ -502,6 +506,10 @@ func _build_camera() -> void:
 	camera.add_child(_fade)
 	third_person = game.view_rules.resolve(third_person)
 
+	viewmodel = BfhViewmodel.new()
+	camera.add_child(viewmodel)
+	viewmodel.bind(player.hammer)
+
 
 func _build_hud() -> void:
 	hud = BfhHud.new()
@@ -859,6 +867,8 @@ func _process(delta: float) -> void:
 	if camera == null or player == null:
 		return
 
+	_present_viewmodel()
+
 	# Somebody else's eyes, while this player is out. After the frame's interpolation, so
 	# the camera is where this frame draws whoever it is on.
 	if is_roaming():
@@ -912,6 +922,16 @@ func _process(delta: float) -> void:
 
 	if audio != null:
 		audio.present(delta, camera.global_position)
+
+
+func _present_viewmodel() -> void:
+	if viewmodel == null:
+		return
+	if viewmodel.hammer != player.hammer:
+		viewmodel.bind(player.hammer)
+	var out := is_roaming() or (game.spectate != null and game.spectate.is_spectating(player.player_id))
+	viewmodel.show_for(BfhViewmodel.wanted(
+		player.hammer, player.health == null or player.health.alive, player.riding, out, third_person))
 
 
 ## Moves the camera from the eye to behind it in third person, swept by dot-core's
@@ -1102,6 +1122,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			# the next command and the SERVER swings.
 			if _offline and button.pressed:
 				_swing_locally()
+			elif button.pressed and viewmodel != null and player != null and not player.riding:
+				# Connected the server resolves the swing; the hand swings on the press.
+				viewmodel.swing()
 
 	if player == null:
 		return

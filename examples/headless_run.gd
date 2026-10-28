@@ -5,6 +5,7 @@ const BfhAudio := preload("../game/bfh_audio.gd")
 const BfhAwards := preload("../game/bfh_awards.gd")
 const BfhBowls := preload("../game/bfh_bowls.gd")
 const BfhClient := preload("../game/bfh_client.gd")
+const BfhViewmodel := preload("../game/bfh_viewmodel.gd")
 const BfhClientChat := preload("../game/bfh_client_chat.gd")
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhContent := preload("../game/bfh_content.gd")
@@ -37,11 +38,11 @@ const BfhStats := preload("../game/bfh_stats.gd")
 ## control, so `set_physics_process(false)` goes on first and every section advances
 ## the world itself.
 
-const CHECKS := 354
+const CHECKS := 360
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 40
+const SECTIONS := 41
 
 const TICK := 1.0 / 60.0
 
@@ -130,6 +131,7 @@ func _run() -> void:
 	await _test_sides()
 	await _test_standing_on_a_crate()
 	await _test_hammer()
+	await _test_hammer_viewmodel()
 	await _test_the_toys()
 	await _test_barrel()
 	await _test_bus()
@@ -3403,6 +3405,59 @@ func _test_hammer() -> void:
 	_check(not game.prop_damage.is_breakable(block.instance_id),
 		"a concrete block cannot be broken at all")
 
+	await _dispose(game)
+	_done()
+
+
+func _test_hammer_viewmodel() -> void:
+	print("the first-person hammer")
+
+	var game := _world(func(c: BfhConfig) -> void:
+		c.crate_count = 0
+		c.barrel_count = 0)
+	var runner := game.add_player(&"r", "Runner", BfhGame.TEAM_RUNNERS)
+	var driver := game.add_player(&"d", "Driver", BfhGame.TEAM_DRIVERS)
+	game.start()
+	await _step(game, 4)
+
+	var mine := BfhClient.new()
+	mine.game = game
+	mine.player = runner
+	mine._build_camera()
+	var theirs := BfhClient.new()
+	theirs.game = game
+	theirs.player = driver
+	theirs._build_camera()
+
+	mine._present_viewmodel()
+	theirs._present_viewmodel()
+	_check(mine.viewmodel != null and mine.viewmodel.visible, "a runner's camera carries a visible hammer")
+	_check(theirs.viewmodel != null and not theirs.viewmodel.visible, "a driver's does not")
+
+	var bare := BfhViewmodel.wanted(runner.hammer, true, false, false, false)
+	_check(bare and not BfhViewmodel.wanted(runner.hammer, false, false, false, false)
+		and not BfhViewmodel.wanted(runner.hammer, true, true, false, false)
+		and not BfhViewmodel.wanted(runner.hammer, true, false, true, false)
+		and not BfhViewmodel.wanted(runner.hammer, true, false, false, true)
+		and not BfhViewmodel.wanted(null, true, false, false, false),
+		"shown only alive, on foot, in their own eyes, with a hammer")
+
+	runner.health.alive = false
+	mine._present_viewmodel()
+	_check(not mine.viewmodel.visible, "and hidden when the runner is dead")
+	runner.health.alive = true
+
+	runner.hammer.cooldown = 0.0
+	var before: int = mine.viewmodel.swings
+	var _swung := runner.hammer.swing(game, Vector3(0.0, 1.0, 0.0), Vector3.UP, game.props,
+		game.prop_damage, game.carry, runner.player_id, 0xFFFFFFF)
+	_check(mine.viewmodel.swings == before + 1 and mine.viewmodel.swinging(),
+		"the hammer's use starts the swing")
+	mine.viewmodel._process(BfhViewmodel.SWING_TIME + 0.01)
+	_check(not mine.viewmodel.swinging(), "and the swing ends back at rest")
+
+	mine.free()
+	theirs.free()
 	await _dispose(game)
 	_done()
 
