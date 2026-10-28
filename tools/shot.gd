@@ -342,13 +342,8 @@ func _run() -> void:
 		cam.current = true
 		await get_tree().process_frame
 
-	# Or stand in the mouth of one of the tank farm's lanes and look through it.
-	#
-	# [b]Not from above and not from the middle.[/b] What has to be judged about the
-	# farm is the one thing a plan view cannot show: whether a drum actually hides a
-	# bus. A camera at a runner's height, at the lip of a lane, is the view the whole
-	# feature was designed around -- if the tanks read as bollards from there, they are
-	# not doing the job they were put in for.
+	# The mouth of one of the tank farm's lanes at a runner's height, the view the farm was designed
+	# around: do the tanks hide a bus, or read as bollards.
 	var world_for_tanks: BfhGame = client.get("game")
 	if look_at_tanks and world_for_tanks != null and world_for_tanks.arena != null:
 		var farm := world_for_tanks.arena.tanks()
@@ -359,23 +354,14 @@ func _run() -> void:
 
 			var cam := Camera3D.new()
 			add_child(cam)
-			# Off the north-west mouth of the farm and clear of the RAMP, which is the
-			# one thing in this bowl a camera can end up standing inside: it runs down
-			# the middle at x = 0, so a viewpoint pulled further back to see more of the
-			# farm sees a grey slab filling a quarter of the frame instead.
+			# Off the north-west mouth, clear of the RAMP (x = 0), which a camera can end up inside.
 			cam.global_position = middle + Vector3(-19.0, 4.5, -14.0)
 			cam.look_at(middle + Vector3(1.0, 2.5, 0.0), Vector3.UP)
 			cam.current = true
 			await get_tree().process_frame
 
-	# Or the tank farm's back yard, from the two places it joins.
-	#
-	# [code]--yard[/code] (or [code]=peak[/code]) is a runner's eyes on the scaffold's peak,
-	# looking north down the covered way into the yard: the question is whether the yard
-	# reads from the height as somewhere to run TO, two drums and a gap, rather than as
-	# more of the farm's wall. [code]--yard=courtyard[/code] stands in the first courtyard
-	# at a runner's height and looks through the lane the two rooms share, which is the
-	# view that has to say "there is a second room" -- and a bus-width of floor into it.
+	# The tank farm's back yard. `--yard` (or `=peak`) is the scaffold's peak looking north down the
+	# covered way; `--yard=courtyard` stands in the first courtyard and looks through the shared lane.
 	var world_for_yard: BfhGame = client.get("game")
 	if look_at_yard != "" and world_for_yard != null and world_for_yard.arena != null \
 			and world_for_yard.arena.tanks().size() > 4:
@@ -396,12 +382,8 @@ func _run() -> void:
 		cam.current = true
 		await get_tree().process_frame
 
-	# Or stand off the scaffold's low end, a little above a runner's eyes, and look up it.
-	#
-	# [b]From the end a runner climbs, because that is the question.[/b] What has to be
-	# judged is whether three steps read as three steps — a way UP — rather than as a pile
-	# of crates somebody left there, and whether the top reads as higher than a bus. From
-	# above, every stack of boxes is a staircase.
+	# Off the scaffold's low end, a little above a runner's eyes, looking up it: three steps should
+	# read as a way UP, and the top as higher than a bus.
 	var world_for_scaffold: BfhGame = client.get("game")
 	if look_at_scaffold and world_for_scaffold != null and world_for_scaffold.arena != null \
 			and world_for_scaffold.arena.has_scaffold():

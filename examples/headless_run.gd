@@ -363,7 +363,6 @@ func _test_blind_and_beacon_drawn() -> void:
 	add_child(hud)
 	hud.bind(game, runner)
 
-	# Christian's first play test: a darker HUD by default, restyled live by the menu's theme.
 	var settings := BfhSettings.new()
 	add_child(settings)
 	var _built: Variant = settings.setup(DotSettingsStoreMemory.new())
@@ -400,7 +399,6 @@ func _test_blind_and_beacon_drawn() -> void:
 	hud.present_blind(BfhHud.BLIND_FADE_SEC + 0.05)
 	_check(not hud.blind_overlay.visible, "and lifting it takes it away again")
 
-	# Health and the clock are dot-ui's glance pieces, handed this world's numbers.
 	runner.health.health = 17.4
 	await get_tree().process_frame
 	var left := maxf(game.config.round_seconds - game.round_elapsed, 0.0)
@@ -412,8 +410,7 @@ func _test_blind_and_beacon_drawn() -> void:
 	)
 	runner.health.health = runner.health.max_health
 
-	# Both bottom-anchored, so the arithmetic holds at any height: the health plate ends
-	# below where the chat box starts.
+	# Both bottom-anchored, so this holds at any height.
 	var chat_box: Node = BfhClientChat.new()
 	add_child(chat_box)
 	chat_box.call("_build_window")
@@ -425,8 +422,7 @@ func _test_blind_and_beacon_drawn() -> void:
 	)
 	chat_box.queue_free()
 
-	# A pack naming these classes does not parse on a shell whose dot-ui predates them, so
-	# the requires.json dot-ci derives must ask for dot-ui 4, and nothing may lower it.
+	# A pack naming these classes needs dot-ui 4 in the derived requires.json; nothing may lower it.
 	var asks := DotAddonApi.derive()
 	_check(
 		int(asks.get("dot_ui", 0)) >= 4 and not FileAccess.file_exists("res://" + DotAddonApi.FLOOR_FILE),
@@ -484,18 +480,8 @@ func _test_blind_and_beacon_drawn() -> void:
 	_done()
 
 
-## A world to run a section in, at the size the game actually ships.
-##
-## [b]The radius is the shipped default and used not to be, and that cost a whole feature
-## its coverage.[/b] This said 30 m — a reasonable-looking choice for keeping sections
-## tight — while `BfhConfig` ships 46, and the stacks are left out of any bowl under 34.
-## So every check in this file ran a map with no pillars in it, silently, and the two
-## sections that cared had to override the radius for themselves. Fixing the symptom in
-## those two left the trap in place for whatever is added to the arena next: the rule is
-## that a suite runs the shipped configuration unless a section says why not.
-##
-## The crate and barrel counts are still cut down, and that is a different kind of
-## decision: they change how MANY of a thing there is, not whether a feature exists.
+## A world at the shipped radius: a section runs the shipped configuration unless it says why not.
+## Only the crate and barrel counts are cut down.
 func _world(configure: Callable = Callable()) -> BfhGame:
 	var config := BfhConfig.new()
 	config.crate_count = 12
@@ -5046,15 +5032,8 @@ func _test_settings() -> void:
 	_done()
 
 
-## A delivered pack's own paths, as the scripts write them.
-##
-## [b]Form three of the family's one delivery bug:[/b] a script that names this game's own
-## file by a bare `"res://…"` resolves it against the HOST's root once the game is mounted
-## at `res://dot_cloud/<id>/<version>/` — another game's file, or nothing. Every such path
-## here is rebased where it is defined (`static var X := BfhPaths.rebase("res://…")`),
-## because a `const` rebased at each use is one new use away from a crate that silently
-## does not spawn in a delivered round. Armed: with `bfh_content.gd`'s CRATE_SCENE put back
-## to a bare `const`, the second check fails and names the line.
+## A delivered pack's own paths: each is rebased where it is defined (`static var X := BfhPaths.rebase(...)`),
+## never a bare `const`, or a crate silently fails to spawn once the game is mounted.
 func _test_pack_paths() -> void:
 	print("a delivered pack's own paths")
 

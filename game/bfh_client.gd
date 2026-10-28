@@ -1,20 +1,13 @@
-extends Node
+extends "bfh_client_round_end.gd"
 
 const BfhAudio := preload("bfh_audio.gd")
 const BfhBindings := preload("bfh_bindings.gd")
-const BfhClientChat := preload("bfh_client_chat.gd")
 const BfhFx := preload("bfh_fx.gd")
 const BfhNetBridge := preload("net/bfh_net_bridge.gd")
 const BfhNetCommand := preload("net/bfh_net_command.gd")
 
 const BfhConfig := preload("bfh_config.gd")
-const BfhGame := preload("bfh_game.gd")
-const BfhKillcam := preload("bfh_killcam.gd")
-const BfhHud := preload("bfh_hud.gd")
 const BfhMapConfig := preload("bfh_map_config.gd")
-const BfhScoreboard := preload("bfh_scoreboard.gd")
-const BfhPlayer := preload("bfh_player.gd")
-const BfhSettings := preload("bfh_settings.gd")
 const BfhSpectate := preload("bfh_spectate.gd")
 const BfhViewmodel := preload("bfh_viewmodel.gd")
 
@@ -42,13 +35,11 @@ const CHANNEL := "bfh.client"
 ## How many bot drivers the offline bowl gets. One bus is a game; two is a demonstration.
 @export_range(0, 8, 1) var offline_bots: int = 1
 
-var game: BfhGame = null
 var player: BfhPlayer = null
 var camera: Camera3D = null
 
 ## The hammer in the local runner's hand, under [member camera].
 var viewmodel: BfhViewmodel = null
-var hud: BfhHud = null
 
 ## Keeps the screen covered, and the local body and the input still, until the bowl, the
 ## player and the camera are all in. See [member DotGameClient.gate].
@@ -58,11 +49,7 @@ var gate: DotLoadGate = null
 ## the input block. See [DotGameClient].
 var platform: DotGameClient = null
 
-## The score and the sides: held on Tab, and up on its own between rounds. See [BfhScoreboard].
-var scoreboard: BfhScoreboard = null
 
-## The chat box and the microphone. Built in both halves: offline it echoes what you type.
-var chat: BfhClientChat = null
 
 ## What this client hears. See [BfhAudio]. Null only if dot-audio refused its catalogue.
 var audio: BfhAudio = null
@@ -71,12 +58,7 @@ var audio: BfhAudio = null
 ## only if dot-fx refused its catalogue.
 var fx: BfhFx = null
 
-## The player's own settings and the screen that changes them. See [BfhSettings].
-var settings: BfhSettings = null
 
-## Records every frame and replays the round's last moment, then the reveal ([BfhKillcam]).
-var killcam: BfhKillcam = null
-var winner_reveal: DotWinnerReveal = null
 
 ## The player's console, the platform's.
 var console: DotConsoleController = null
@@ -99,7 +81,6 @@ const BUS_PIVOT_RISE := 2.6
 
 var net: DotNetManager = null
 var bridge: BfhNetBridge = null
-var link: Node = null
 ## Asks a server whether this player may edit it (sv_workbench_remote); null offline.
 var workbench_remote: DotGameWorkbenchRemoteClient = null
 ## The tuning panel's host: F9 solo or hosting, the admin's remote panel on a server that allows it.
@@ -128,10 +109,7 @@ func _ready() -> void:
 
 	var config := BfhConfig.new()
 
-	# [b]`load_layered` on the CLIENT too, and another game in this family records what
-	# happens without it.[/b] The family's `defaults < JSON < env < argv` chain is a
-	# convention, and a client that quietly skipped it was one where every command-line
-	# flag worked against a dedicated server and did nothing at all offline.
+	# Layered on the CLIENT too: otherwise every command-line flag does nothing offline.
 	var binder := BfhConfig.make_binder(config, config_file)
 	var loaded := binder.load_layers()
 
@@ -147,9 +125,7 @@ func _ready() -> void:
 	game.config = config
 	game.config_binder = binder
 	game.authoritative = _offline
-	# A connected client's world is not what a module looks up, and registering it would
-	# mean a client and a server sharing a process fight over the name — which is what
-	# every section of this game's own suite does.
+	# A connected client's world is not what a module looks up; sharing a process would fight over the name.
 	game.register_service = _offline
 	game.tick_rate = int(
 		ProjectSettings.get_setting("physics/common/physics_ticks_per_second", 60)
@@ -223,8 +199,6 @@ func _covered() -> bool:
 
 # --- Dead bodies -----------------------------------------------------------
 
-## Where the dead lie: dot-player-char's ragdolls under the game's (the server's) rules.
-var ragdolls: DotPlayerRagdolls = null
 
 
 ## [b]From the world's `player_died`, in both halves[/b]: offline the world is the authority and
@@ -333,9 +307,7 @@ func _build_netcode() -> DotResult:
 	net.is_server = false
 	net.local_peer_id = multiplayer.get_unique_id() if multiplayer != null else 2
 	net.auto_tick = false
-	# [b]Empty, and it is not tidiness.[/b] The manager reads a JSON file by default, so a
-	# client with a stale `user://dot_net.json` runs at a tick rate the game did not
-	# choose and nothing says so.
+	# Empty: a stale `user://dot_net.json` would silently change the tick rate.
 	net.config_file = ""
 
 	var config := DotNetConfig.new()
@@ -346,8 +318,7 @@ func _build_netcode() -> DotResult:
 	# client resolves nobody's.
 	config.enable_lag_compensation = false
 	config.max_entities_per_snapshot = 96
-	# From the game, not written here. Two files holding this number is how another game
-	# in this family ended up decoding positions against a range the server never used.
+	# From the game: two files holding this number can disagree about the range.
 	config.world_extent = BfhGame.NET_WORLD_EXTENT
 	net.config = config
 	add_child(net)
@@ -377,9 +348,7 @@ func _build_netcode() -> DotResult:
 	bridge.hello_received.connect(_on_hello)
 	bridge.roster_changed.connect(_on_roster_changed)
 	bridge.blast_received.connect(_on_blast)
-	# [b]Where a refusal is drawn.[/b] The server answers a gagged or too-fast line with a
-	# notice to that one player, and a notice nothing draws is the server explaining itself
-	# to nobody — which is indistinguishable from chat being broken.
+	# Where a refusal (gagged, too fast) is drawn; undrawn it looks like broken chat.
 	bridge.notice_received.connect(func(text: String) -> void:
 		if chat != null:
 			chat.notice(text)
@@ -689,116 +658,6 @@ func _add_noblock_and_workbench() -> void:
 	if started.ok and game.config_binder != null and wb.api != null:
 		game.config_binder.attach(wb.api.runtime as DotProfileRuntime)
 	platform.add_workbench(wb)
-
-
-## The server's `mp_killcam_time`; -1 until it has said, so the config's number stands.
-var _killcam_sec: float = -1.0
-var _round_ending: bool = false
-var _round_end_number: int = 0
-var _round_end_winner: int = 0
-var _hud_was_visible: bool = true
-
-
-func _build_killcam() -> void:
-	killcam = BfhKillcam.new()
-	killcam.name = "RoundKillcam"
-	killcam.players_fn = func() -> Array: return game.players.values() if game != null else []
-	killcam.player_for_fn = func(key: StringName) -> Variant: return game.players.get(key) if game != null else null
-	killcam.driver_fn = func(p: BfhPlayer) -> bool: return game.team_of(p.player_id) == BfhGame.TEAM_DRIVERS
-	killcam.seconds_fn = func() -> float: return _killcam_sec if _killcam_sec >= 0.0 else game.config.killcam_seconds
-	killcam.hide_while_playing = [hud, chat.window if chat != null else null, ragdolls]
-	killcam.over.connect(func(_skipped: bool) -> void: _reveal_round())
-	add_child(killcam)
-	winner_reveal = DotWinnerReveal.new()
-	winner_reveal.name = "WinnerReveal"
-	winner_reveal.skip_actions = BfhKillcam.SKIP_ACTIONS
-	winner_reveal.hold_seconds = 4.0
-	winner_reveal.finished.connect(_on_reveal_finished)
-	add_child(winner_reveal)
-	if scoreboard != null:
-		scoreboard.hold_after_round = true
-	game.player_died.connect(_note_death)
-	game.round_over.connect(_begin_round_end)
-	game.round_began.connect(func(_number: int) -> void: _end_round_presentation())
-	if link != null and link.has_method(&"replicated_cvar"):
-		_on_killcam_cvar("mp_killcam_time", String(link.call(&"replicated_cvar", "mp_killcam_time", "")))
-		if link.has_signal(&"replicated_cvar_changed"):
-			link.connect(&"replicated_cvar_changed", _on_killcam_cvar)
-
-
-## `mp_killcam_time`, from the server's replicated cvar.
-func _on_killcam_cvar(cvar_name: String, value: String) -> void:
-	if cvar_name == "mp_killcam_time" and value.strip_edges().is_valid_float():
-		_killcam_sec = clampf(value.to_float(), 0.0, 30.0)
-
-
-## A death is the round's last moment if nothing follows it. A bus puts the runner in its
-## driver's eyes; anything else (a blast) in the runner's own.
-func _note_death(victim: StringName, by: StringName) -> void:
-	if killcam == null:
-		return
-	var who: BfhPlayer = game.players.get(victim)
-	var name_of := who.display_name if who != null else String(victim)
-	if by != &"" and by != victim and game.players.has(by):
-		killcam.note_moment(by, "ran over", name_of)
-	else:
-		killcam.note_moment(victim, "caught in a blast")
-
-
-func _begin_round_end(number: int, winner: int) -> void:
-	_round_end_number = number
-	_round_end_winner = winner
-	_round_ending = true
-	# Only the buses end a round on a death; a clock that runs out has nothing worth replaying.
-	if winner == BfhGame.TEAM_DRIVERS:
-		var _playing := killcam.round_ended()
-	else:
-		_reveal_round()
-
-
-## The winning side's best three on a podium, after the killcam and before the board.
-func _reveal_round() -> void:
-	if not _round_ending:
-		return
-	var winner := _round_end_winner
-	var entries: Array = []
-	if winner == BfhGame.TEAM_DRIVERS or winner == BfhGame.TEAM_RUNNERS:
-		for row: Dictionary in BfhScoreboard.rows_for(game, winner).slice(0, 3):
-			entries.append({"name": row[&"name"], "score": row[&"status"],
-				"colour": BfhScoreboard.side_colour(game, winner)})
-	if entries.is_empty():
-		_open_round_board()
-		return
-	winner_reveal.reduced_motion = settings != null and settings.settings != null and settings.settings.get_bool(&"reduce_motion", false)
-	var shown := winner_reveal.present(entries, {"title": "ROUND %d" % _round_end_number,
-		"subtitle": "The buses win" if winner == BfhGame.TEAM_DRIVERS else "The runners win", "hint": "Jump to skip"})
-	if not shown.ok:
-		_open_round_board()
-		return
-	if hud != null:
-		_hud_was_visible = hud.visible
-		hud.visible = false
-
-
-func _on_reveal_finished(_skipped: bool) -> void:
-	if hud != null and not killcam.is_playing():
-		hud.visible = _hud_was_visible
-	if _round_ending:
-		_open_round_board()
-
-
-func _open_round_board() -> void:
-	if scoreboard != null:
-		scoreboard.release_after_round()
-
-
-## A new round: whatever is still up goes, so it never covers the start.
-func _end_round_presentation() -> void:
-	_round_ending = false
-	if killcam != null:
-		killcam.skip()
-	if winner_reveal != null:
-		winner_reveal.skip()
 
 
 ## Whether the pointer is the game's: captured. A menu frees it and the platform takes it back.

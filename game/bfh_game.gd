@@ -1925,29 +1925,11 @@ const STREET_REPLAN_MOVED := 6.0
 const STREET_PASSED := 3.5
 
 
-## A bot bus that has to face the other way to get up the ramp turns round in legs, or
-## null to drive on as usual.
-##
-## [b]Because the bowl has no room for a bus to turn round in.[/b] Buses start beside the
-## ramp, under the deck, facing the bowl, so a bot chasing somebody on the deck has to
-## come back past the foot the other way. Forward-only, that is a circle about 22 m
-## across, and the floor in front of the foot is boxed by the stacks to the west, the
-## hook to the south and the farm to the east: measured 2026-10-01, the bus came round
-## the foot and wedged on a stacks pillar or against the slab, was sent home by the stuck
-## rule, and did it again for as long as the runner stood up there.
-##
-## So when the point it is steering for is more than [constant RAMP_BACK_FROM] degrees
-## behind it (or [constant RAMP_LINED_UP] once it is on the line-up, where there is no
-## room to straighten before the slab), it turns round the way a driver does: reverse with
-## the wheel one way, which swings the nose towards the point, then forward with the wheel
-## the other, each leg for at most [constant RAMP_BACK_LONGEST] and
-## [constant RAMP_FORWARD_LONGEST] seconds, until the nose is within
-## [constant RAMP_BACK_TO] degrees. [b]Both legs, and the forward one is the half that was
-## missing:[/b] the first version only reversed, and a bus whose reverse leg ran out went
-## forward for one tick, found itself still facing the wrong way and reversed again, so it
-## dithered in front of the foot for the rest of the round. Done here rather than in
-## `DotVehicleDriver`, which reverses only when stuck, and only for the ramp, so every
-## other drive in the bowl is the one it was.
+## A bot bus that has to face the other way to get up the ramp turns round in legs, or null to drive on.
+## The bowl has no room for a circle (about 22 m, boxed by stacks, hook and farm), so past
+## [constant RAMP_BACK_FROM] degrees off it reverses with the wheel over, then goes forward the other
+## way, each leg for at most [constant RAMP_BACK_LONGEST] / [constant RAMP_FORWARD_LONGEST] seconds,
+## until the nose is within [constant RAMP_BACK_TO]. Both legs: reversing alone dithered at the foot.
 func _turn_for_the_ramp(bus: DotVehicleInstance, aim: Vector3, delta: float) -> DotVehicleCommand:
 	var basis := bus.body().global_basis
 	var forward := -basis.z
@@ -1992,53 +1974,14 @@ func _turn_for_the_ramp(bus: DotVehicleInstance, aim: Vector3, delta: float) -> 
 	return command
 
 
-## A bot bus bound up the ramp that cannot simply drive at it: one with its back to it,
-## which turns round in front of the foot, and one climbing the ramp's first metres off the
-## middle, which backs down and lines up again. Null when neither applies, and the ordinary
-## line-up (and [method _turn_for_the_ramp]) drives.
-##
-## [b]Planned against the floor that is there, where [method _turn_for_the_ramp] is
-## planned against the clock.[/b] Buses start beside the slab facing the bowl, so the
-## spawn lane's bus has the ramp straight behind it and has to come round the foot and
-## turn the whole way round. The timed legs never got it up (measured 2026-10-02 and again
-## 2026-10-08): the turn began on the line-up strip with the bus still doing 8.5 m/s away
-## from the ramp, the 2.5 s reverse leg was mostly spent stopping it, so the nose swung 40
-## degrees and the bus was carried off the strip; the aim then flipped between the line-up
-## point and a point beside the pillar at (6.5, 10.3), and the legs dithered round that
-## pillar until the round ran out. What is different here, each answering one of those:
-##
-## - [b]Where.[/b] It drives to [method BfhArena.ramp_turn_point], the point on the
-##   centreline in front of the foot with the most clear floor round it, and begins the
-##   first leg as soon as its tail is clear of the foot, on the way in.
-## - [b]How long a leg is.[/b] A leg ends when the end of the bus it is moving towards is
-##   about to run out of floor ([method _end_blocked]: an obstacle, the slab, the deck), or
-##   out of reach of the turning point or more than [constant RAMP_TURN_ACROSS] off the
-##   centreline, or when the bus stops against something; never on a timer except as a
-##   backstop. Between legs it brakes to a standstill with the wheel already going over, so
-##   no leg begins by undoing the last one.
-## - [b]What it turns to.[/b] The ramp's axis, fixed for the whole turn, and the way round
-##   is chosen once. The aim of the moment moves as the bus does (6 m up the centreline from
-##   wherever it is, or the line-up point, or a pillar's shoulder), and a turn measured
-##   against it started and ended on different tests, which is the dithering above.
-## - [b]How it hands over.[/b] Not when it faces the ramp but when it will arrive ON the
-##   centreline: the "line" phase steers for where a full-lock straightening would put it
-##   ([constant RAMP_LINE_RADIUS]), drives slowly until that is within
-##   [constant RAMP_LINED_X] of the middle, backs off straight along the axis when it is
-##   too close to the foot to come right, and lets go only once the bus is on the slab.
-##   With the turn done the spawn bus stood 2-4 m off the centreline, and the ordinary
-##   line-up from there came at the foot across the line.
-##
-## [b]And a bus on the ramp heading for its edge backs down it,[/b] which is the `sw`
-## start's failure: it came into the strip diagonally at 7.6 m/s, crossed the foot at 33
-## degrees and climbed off the side, wedging 2.4 m up with a wheel over the edge. Caught
-## there, rather than at the foot, because coming at the foot like that is not always
-## fatal: the `east` start crosses at 38 degrees, the mirror image, and climbs. It and
-## `west` reach 1.7 m off the middle on the way up, so this catches them too, and they are
-## 3.5 and 2.7 s slower for it (13.6 and 14.5 s); a rule that could tell them from `sw`
-## before the fact was looked for and the numbers at the foot do not separate them.
-##
-## Done here rather than in `DotVehicleDriver`, and only for the ramp, for the same reason
-## as [method _turn_for_the_ramp]: every other drive in the bowl is the one it was.
+## A bot bus bound up the ramp that cannot simply drive at it (back to it, or climbing off the middle) turns
+## or backs down and lines up again. Null when neither applies and the ordinary line-up drives.
+## Planned against the floor that is there, where [method _turn_for_the_ramp] is planned against the clock:
+## it drives to [method BfhArena.ramp_turn_point], ends each leg when the end it moves towards is about to
+## run out of floor ([method _end_blocked]) or off the centreline ([constant RAMP_TURN_ACROSS]), turns to the
+## ramp's fixed axis, and hands over only when it will arrive ON the centreline ([constant RAMP_LINE_RADIUS],
+## [constant RAMP_LINED_X]). A bus on the ramp heading for its edge backs down it. Done here, not in
+## `DotVehicleDriver`, and only for the ramp. See docs/bots.md.
 func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
 		delta: float) -> DotVehicleCommand:
 	var id := bus.instance_id

@@ -32,21 +32,10 @@ const BfhSounds := preload("../bfh_sounds.gd")
 ## bridge.client_tick(tick, command)
 ## [/codeblock]
 ##
-## [b]What is predicted and what is not, and in this game the answer is unusually
-## lopsided.[/b] A runner's own movement is predicted, like every other first-person game
-## in this family. Everything else — the crates, the barrels, the blocks and the buses —
-## is server-authoritative and NOT predicted, because Godot's rigid-body solver is not
-## reproducible across machines. That is most of what is on screen here, and it is why
-## this game's snapshot is mostly furniture: thirty-odd bodies that a client draws and
-## never simulates.
-##
-## [b]A driver is not predicted either, and that is the interesting half.[/b] While
-## somebody is in a bus their controller has no answer to predict — the bus's position
-## comes from the server — so their keys are sent and the answer comes back. What makes
-## that acceptable is the vehicle itself: a bus is 4 tonnes of momentum that takes a
-## second to respond to anything, so a round trip lands inside the time the vehicle was
-## going to ignore the input anyway. The same latency on a runner would be intolerable,
-## which is exactly why the runner IS predicted.
+## [b]Only a runner's own movement is predicted.[/b] Crates, barrels, blocks and buses are
+## server-authoritative, because Godot's rigid-body solver is not reproducible across machines.
+## A driver's keys go round trip: a bus takes a second to respond to anything, so the trip lands
+## inside the time it would have ignored the input, which would be intolerable on a runner.
 ##
 ## [b]The ordering is the other half of the file.[/b] dot-net drives simulation per
 ## entity; this game's tick is a whole-world property — every player moves, then the
@@ -232,14 +221,10 @@ func attach(p_game: Object, p_net: DotNetManager) -> DotResult:
 	# Edited profiles reach every client, so a remote admin's panel shows what the server holds; edits themselves go through the remote workbench.
 	profile_link = DotNetProfileLink.attach(net, world.ensure_runtime())
 
-	# Both ends. The server's tick is `server_tick` and the client's is `client_tick`,
-	# which simulates what it predicts and leaves the rest to interpolation. A world still
-	# running its own `_physics_process` would move every player twice.
+	# Both ends: a world still running its own `_physics_process` would move every player twice.
 	game.external_tick = true
 
-	# The bowl's toys: the server's leave the registry before their nodes go and the new ones
-	# are named; a client's mirrors stay registered and are handed this end's toys when its
-	# bowl is built.
+	# Server toys leave the registry before their nodes go; a client's mirrors stay registered.
 	if net.is_server:
 		game.toys_clearing.connect(_release_toys)
 		game.toys_built.connect(_register_toys)
@@ -754,12 +739,8 @@ func watch_state(player_id: StringName) -> Vector2i:
 ## with, and adopting that would build a spectator view per remote player that says
 ## nothing.
 ##
-## This was written as a workaround, when `is_owner` was false for this client's own
-## player (every mirror was built with owner 0; see [method _apply_join]). Since that was
-## fixed the two keys agree, and the session id is kept because it is the better one: it is
-## what the server keys the view by, it is what `local_player_id` IS, and it is right from
-## the moment HELLO lands — where `is_owner` is right only once the entity has been claimed,
-## and would be true of EVERY owner-0 mirror on a registry whose local peer was 0.
+## The session id is the better key: the server keys the view by it, and it is right from the moment
+## HELLO lands, where `is_owner` is right only once the entity is claimed.
 func adopt_watch(player_id: StringName, mode: int, target_session: int) -> void:
 	if game == null or game.spectate == null or net == null or net.is_server:
 		return

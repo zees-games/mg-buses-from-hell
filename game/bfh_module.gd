@@ -32,13 +32,8 @@ const BOWL_BALLOT_TOPIC := &"map_ballot"
 
 ## This game, as a module a dedicated server loads.
 ##
-## [b]The first game in this family to subclass [DotGameModule], and the reason it is the
-## first is that it is the newest.[/b] The other five were written before that addon
-## existed and each carries its own copy of the two hundred lines it holds — the netcode
-## and its four load-bearing constants, the bridge, the seal, the identity layer, the
-## roster, the tick, and a teardown in the reverse order. Two of those five copies had the
-## same line wrong and nobody could join those servers. This file is what is actually
-## this game's, and it is ninety lines.
+## [b]The first game to subclass [DotGameModule].[/b] The netcode, the bridge, the seal, the identity layer,
+## the roster, the tick and the teardown are the base's; this file is only what is this game's.
 ##
 ## [b]No `class_name`, and that is a requirement rather than a style.[/b]
 ## [method DotModuleHost.load_module] takes a PATH and constructs the module itself — it

@@ -1902,13 +1902,7 @@ func _test_loading_cover() -> void:
 	_done()
 
 
-## Statistics, achievements and the spectator camera, as a server's world builds them.
-##
-## [b]What the other two suites cannot say: that a world built by a module under a real
-## `DotServer` has both, and that the operator can read them.[/b] A runner joins through the
-## roster the way a client does, breaks a crate, and `bfh_stats` reports it; a bot is not
-## counted; a slain runner is put on a death camera by the server's own world; and a leaver
-## is forgotten by the counters.
+## A module-built world has stats, achievements and the death camera, and the operator can read them.
 func _test_progress_and_spectating() -> void:
 	print("statistics, achievements and where the out look")
 
