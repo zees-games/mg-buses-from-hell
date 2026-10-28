@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 const BfhAmbience := preload("../game/bfh_ambience.gd")
 const BfhAudio := preload("../game/bfh_audio.gd")
@@ -55,10 +55,7 @@ const QUERY_PORT := 28872
 ## sides would pass with the chain disconnected.
 const TICK_RATE := 40
 
-var _passed := 0
-var _failed := 0
 var _completed := 0
-var _failures := PackedStringArray()
 
 var server: DotServer = null
 var game: BfhGame = null
@@ -126,35 +123,12 @@ func _run() -> void:
 	if not probe.is_empty():
 		_test_exits_clean(probe)
 
-	print("")
-	print("%d passed, %d failed" % [_passed, _failed])
-
-	for line in _failures:
-		print("  FAIL  %s" % line)
-
-	var code := 1 if _failed > 0 else 0
-
-	# And the section counter, which is the other half: a section that aborted before its
-	# last line never reached its `_done()`. Neither guard is enough alone; see
-	# docs/testing.md for the run that reported "0 failed" with eight checks missing.
-	#
-	# The copy of this suite that the exit probe runs does not run the probe itself.
 	var sections := SECTIONS - (1 if _is_exit_probe() else 0)
 	var checks := CHECKS - (EXIT_PROBE_CHECKS if _is_exit_probe() else 0)
 
-	if _completed != sections:
-		print("ERROR: %d of %d sections ran to their last line." % [_completed, sections])
-		code = 1
-
-	if _passed + _failed != checks:
-		print("ERROR: %d checks ran, %d expected. A section aborted part-way." % [
-			_passed + _failed, checks
-		])
-		code = 1
-
 	await _shut_down()
 	DotPaths.remove_tree(SERVER_DIR)
-	get_tree().quit(code)
+	_report_sections(_completed, _completed, sections, checks)
 
 
 ## Takes the server down before quitting, and this run does not end without it.
@@ -318,18 +292,6 @@ func _test_who_they_are() -> void:
 ## A section reached its end. See [constant SECTIONS].
 func _done() -> void:
 	_completed += 1
-
-
-func _check(ok: bool, what: String, detail: String = "") -> void:
-	if ok:
-		_passed += 1
-		print("  ok    %s" % what)
-		return
-
-	_failed += 1
-	var line := what if detail == "" else "%s  (%s)" % [what, detail]
-	_failures.append(line)
-	print("  FAIL  %s" % line)
 
 
 ## The loaded module, looked up rather than kept.

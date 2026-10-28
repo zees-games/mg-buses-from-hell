@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 const BfhArena := preload("../game/bfh_arena.gd")
 const BfhAudio := preload("../game/bfh_audio.gd")
@@ -74,10 +74,7 @@ const SERVER_TICK_RATE := 60
 ## Ticks a client stamps ahead of the server, so its command arrives before its tick.
 const INPUT_LEAD := 3
 
-var _passed := 0
-var _failed := 0
 var _completed := 0
-var _failures := PackedStringArray()
 
 var _server_game: BfhGame = null
 var _client_game: BfhGame = null
@@ -146,32 +143,8 @@ func _run() -> void:
 	_check(seen.is_empty(), "the engine reported no error over the whole run",
 		"%d: %s" % [seen.size(), ", ".join(seen.slice(0, 3))])
 
-	print("")
-	print("%d passed, %d failed" % [_passed, _failed])
-
-	for line in _failures:
-		print("  FAIL  %s" % line)
-
-	# And the section counter, which is the other half: a section that aborted before its
-	# last line never reached its `_done()`. Neither guard is enough alone; see
-	# docs/testing.md for the run that reported "0 failed" with eight checks missing.
-	if _completed != SECTIONS:
-		print("ERROR: %d of %d sections ran to their last line." % [_completed, SECTIONS])
-		get_tree().quit(1)
-		return
-
-	# The total the section counter cannot be. A runtime error inside a section aborts
-	# that function and the section counter is satisfied, because the section had already
-	# announced itself. See docs/testing.md.
-	if _passed + _failed != CHECKS:
-		print("ERROR: %d checks ran, %d expected. A section aborted part-way." % [
-			_passed + _failed, CHECKS
-		])
-		get_tree().quit(1)
-		return
-
 	BfhGame.clear_cache()
-	get_tree().quit(1 if _failed > 0 else 0)
+	_report_sections(_completed, _completed, SECTIONS, CHECKS)
 
 
 func _section(title: String) -> void:
@@ -181,18 +154,6 @@ func _section(title: String) -> void:
 ## A section reached its end. See [constant SECTIONS].
 func _done() -> void:
 	_completed += 1
-
-
-func _check(ok: bool, what: String, detail: String = "") -> void:
-	if ok:
-		_passed += 1
-		print("  ok    %s" % what)
-		return
-
-	_failed += 1
-	var line := what if detail == "" else "%s  (%s)" % [what, detail]
-	_failures.append(line)
-	print("  FAIL  %s" % line)
 
 
 # --- The wire --------------------------------------------------------------
