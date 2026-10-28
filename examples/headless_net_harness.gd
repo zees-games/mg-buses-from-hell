@@ -70,10 +70,8 @@ func _make_game(server: bool, parent: Node) -> BfhGame:
 	config.crate_count = 10
 	config.barrel_count = 2
 	config.arena_radius = SERVER_RADIUS if server else CLIENT_RADIUS
-	# And the client on the layout alternatives rather than the defaults, so a client that
-	# ignored the server's in the HELLO would keep a different hook and courtyard (checked).
-	# The client, not the server: the server's runner walks a line in these sections that
-	# the wide hook's middle pillar stands across on a 44 m bowl.
+	# The client alone gets the alternative layout, so one that ignored the server's HELLO shows;
+	# the server's runner walks a line the wide hook's middle pillar would block.
 	if not server:
 		config.hook_layout = "wide"
 		config.courtyard_west_lane = BfhArena.COURTYARD_WEST_LANE_NARROW
@@ -128,9 +126,8 @@ func _build() -> bool:
 	server_side.name = "ServerSide"
 	add_child(server_side)
 
-	# The client's own physics space. See the class note: without it the client's frozen
-	# mirrors and the server's real bodies are in one world, occupying the same cubic
-	# metres, and the server's bowl is quietly pushed apart by a copy of itself.
+	# The client's own physics space: without it the client's frozen mirrors and the
+	# server's real bodies share one world and the server's bowl is pushed apart by a copy.
 	var client_view := SubViewport.new()
 	client_view.name = "ClientView"
 	client_view.own_world_3d = true
@@ -145,7 +142,27 @@ func _build() -> bool:
 	_client_game = _make_game(false, client_side)
 
 	await get_tree().process_frame
+	_check_worlds()
 
+	Engine.physics_ticks_per_second = CLIENT_ENGINE_TICK_RATE
+
+	_make_managers(server_side, client_side)
+	var attached := _attach_bridges(server_side, client_side)
+	_open_links(server_side, client_side)
+	_start_world()
+	await get_tree().physics_frame
+
+	_check(
+		_server_bridge.describe()["bodies"] as int > 0,
+		"and the server's bowl is replicated from the moment it is laid out",
+		"%d bodies" % int(_server_bridge.describe()["bodies"])
+	)
+
+	_done()
+	return attached
+
+
+func _check_worlds() -> void:
 	_check(
 		_server_game.get_world_3d() != _client_game.get_world_3d(),
 		"the two halves are in separate physics worlds, as two processes would be"
@@ -161,19 +178,20 @@ func _build() -> bool:
 		"%.0f m vs %.0f m" % [_client_game.arena.radius, _server_game.arena.radius]
 	)
 
-	Engine.physics_ticks_per_second = CLIENT_ENGINE_TICK_RATE
 
+func _make_managers(server_side: Node, client_side: Node) -> void:
 	_server_net = _make_manager(true, &"server", 1, server_side, _server_game.tick_rate)
 	_client_net = _make_manager(
 		false, &"client", CLIENT_PEER, client_side, _client_game.tick_rate
 	)
-	# This harness stamps every command itself (`_tick + INPUT_LEAD`), not from the client's
-	# clock, so the client must not ask for dot-net's input-lead report: steered by reports
-	# about commands it never stamped, the clock runs away from them (only dot-net's cap
-	# holds it). By the constant map, so this parses against a dot-net from before the report.
+	# This harness stamps commands itself, so asking for the input-lead report would steer the
+	# clock by commands it never stamped. Read by constant map so older dot-net still parses.
 	var lead_bit := int((DotNetMessageRegistry as Script).get_script_constant_map().get("FEATURE_INPUT_LEAD", 0))
 	_client_net.messages.features &= ~lead_bit
 
+
+## True when both bridges attach.
+func _attach_bridges(server_side: Node, client_side: Node) -> bool:
 	_server_bridge = BfhNetBridge.new()
 	_server_bridge.name = "Bridge"
 	server_side.add_child(_server_bridge)
@@ -201,7 +219,10 @@ func _build() -> bool:
 		"a client world on a server manager is refused"
 	)
 	wrong.queue_free()
+	return attached.ok and client_attached.ok
 
+
+func _open_links(server_side: Node, client_side: Node) -> void:
 	_server_bridge.open_link(server_side)
 	_client_bridge.open_link(client_side)
 	_check(
@@ -219,11 +240,9 @@ func _build() -> bool:
 	_server_bridge.link.loopback = _on_server_send
 	_client_bridge.link.loopback = _on_client_send
 
-	# What a real client wires to `DotClientLink.ping_ms()`. Nothing in dot-net writes an
-	# RTT sample, and a client that feeds none has a clock that believes the link is
-	# instant — so every command it stamps arrives after its tick has passed.
-	_client_bridge.rtt_source = func() -> float:
-		return 40.0
+	# Stands in for `DotClientLink.ping_ms()`: with no RTT sample the clock believes the
+	# link is instant and every command it stamps arrives after its tick has passed.
+	_client_bridge.rtt_source = _rtt_ms
 
 	_check(_server_game.external_tick, "the server world hands its tick to the bridge")
 	_check(
@@ -231,15 +250,18 @@ func _build() -> bool:
 		"and so does the client's, which predicts and interpolates instead"
 	)
 
+
+func _rtt_ms() -> float:
+	return 40.0
+
+
+func _start_world() -> void:
 	_server_net.start()
 	_client_net.start()
 
-	# [b]The bot driver goes in BEFORE the first player joins, and that ordering is the
-	# game's rule rather than the harness's convenience.[/b] `_side_for_new_player` fills
-	# the driving seats first, so the first person to connect to an empty server is a
-	# driver — which is correct, and would make this suite's "client" the one in the bus.
-	# A server that is already holding its bot drivers hands a joining player the side the
-	# rest of these sections are about.
+	# The bot driver goes in BEFORE the first player joins: `_side_for_new_player` fills the
+	# driving seats first, so the first person on an empty server would be a driver, and
+	# this suite's "client" would be the one in the bus.
 	var driver := _server_bridge.add_bot("Bus driver", BfhGame.TEAM_DRIVERS)
 	_check(driver != null and driver.is_bot, "a bot driver is seated before anybody joins")
 	_check(
@@ -247,20 +269,9 @@ func _build() -> bool:
 		"and is replicated exactly like a person, minus the socket"
 	)
 
-	# The world is started AFTER the bridge is attached, which is what the module does and
-	# for the reason written there: a bowl laid out before anything was listening to
-	# `props.spawned` is a bowl no client is ever told about.
+	# Started AFTER the bridge attaches, as the module does: a bowl laid out before anything
+	# listens to `props.spawned` is a bowl no client is ever told about.
 	_server_game.start()
-	await get_tree().physics_frame
-
-	_check(
-		_server_bridge.describe()["bodies"] as int > 0,
-		"and the server's bowl is replicated from the moment it is laid out",
-		"%d bodies" % int(_server_bridge.describe()["bodies"])
-	)
-
-	_done()
-	return attached.ok and client_attached.ok
 
 
 func _on_server_send(method: StringName, peer_id: int, payload: PackedByteArray) -> void:
@@ -302,13 +313,8 @@ func _exchange() -> void:
 
 
 ## One tick on both ends, with a real physics frame between them.
-##
-## [b]The awaited physics frame is not padding.[/b] Almost everything in this game is a
-## [RigidBody3D] — the crates, the barrels and the bus — and a rigid body is integrated by
-## Godot's physics server on the physics frame and by nothing else. A suite that drove
-## ticks in a tight loop would move no crate at all: the server's bowl would stay exactly
-## where it was put, the client's copy would match it exactly, and every assertion about
-## replication would pass without anything having been replicated.
+## The awaited physics frame is not padding: crates, barrels and the bus are rigid bodies,
+## integrated only on the physics frame, so a tight loop would replicate nothing and pass.
 func _step(command: DotFpsCommand = null) -> void:
 	_tick += 1
 	_client_net.clock.advance(1.0 / float(maxi(_client_game.tick_rate, 1)))
@@ -326,10 +332,8 @@ func _steps(count: int, command: DotFpsCommand = null) -> void:
 		await _step(command)
 
 
-## How many times the predictor has had to correct this client.
-##
-## Off the predictor rather than off [DotNetStats], which counts packets. A correction is
-## the number that says whether the two ends are computing the same thing.
+## How many times the predictor has had to correct this client: the number that says whether
+## the two ends compute the same thing (packet counts do not).
 func _corrections() -> int:
 	if _client_net == null or _client_net.predictor == null:
 		return 0

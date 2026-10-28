@@ -2,15 +2,15 @@
 # Baselines only shrink: scripts/<gate> --update lowers or drops entries and refuses to add.
 examples/dedicated.gd::banner	4
 examples/dedicated.gd::history	1
-examples/dedicated.gd::long_block	27
+examples/dedicated.gd::long_block	26
 examples/headless_config.gd::long_block	1
 examples/headless_mapcfg.gd::long_block	1
-examples/headless_net.gd::banner	19
+examples/headless_net.gd::banner	18
 examples/headless_net.gd::history	4
-examples/headless_net.gd::long_block	30
+examples/headless_net.gd::long_block	25
 examples/headless_run.gd::banner	19
 examples/headless_run.gd::history	30
-examples/headless_run.gd::long_block	80
+examples/headless_run.gd::long_block	78
 examples/headless_workshop.gd::long_block	1
 fx/bfh_blast.gd::long_block	1
 game/bfh_arena.gd::banner	4
@@ -25,7 +25,7 @@ game/bfh_bindings.gd::history	1
 game/bfh_bindings.gd::long_block	1
 game/bfh_bowls.gd::long_block	1
 game/bfh_client.gd::banner	6
-game/bfh_client.gd::long_block	25
+game/bfh_client.gd::long_block	24
 game/bfh_client_chat.gd::long_block	9
 game/bfh_config.gd::history	4
 game/bfh_config.gd::long_block	18
@@ -37,7 +37,7 @@ game/bfh_figure.gd::long_block	1
 game/bfh_fx.gd::history	1
 game/bfh_fx.gd::long_block	1
 game/bfh_game.gd::banner	6
-game/bfh_game.gd::history	16
+game/bfh_game.gd::history	13
 game/bfh_game.gd::long_block	88
 game/bfh_hammer.gd::long_block	3
 game/bfh_hud.gd::history	1
@@ -99,5 +99,5 @@ tools/net_shot.gd::history	1
 tools/net_shot.gd::long_block	3
 tools/render_cover.gd::long_block	1
 tools/shot.gd::history	2
-tools/shot.gd::long_block	11
+tools/shot.gd::long_block	7
 tools/soak.gd::long_block	1
