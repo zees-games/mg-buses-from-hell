@@ -1816,6 +1816,12 @@ func _test_loading_cover() -> void:
 	link.transport_preference = "udp"
 	link.udp_address = "127.0.0.1:%d" % server.config.port
 	mirror.add_child(link)
+	# The server's snapshots are RPCs to Server/Buses; without that node the client rejects each packet.
+	var attach := func(_a: Variant = null, _b: Variant = null) -> void:
+		if link.get_node_or_null(NodePath(String(BfhNetLink.NODE_NAME))) == null:
+			link.add_child(BfhNetLink.attached_to(link, null, false))
+	attach.call()
+	link.phase_changed.connect(attach)
 	link.connect_to_server("127.0.0.1:%d" % server.config.port)
 
 	var seat: Array = [null]
