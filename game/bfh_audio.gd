@@ -1,6 +1,7 @@
 extends Node
 
 const BfhAmbience := preload("bfh_ambience.gd")
+const BfhBowls := preload("bfh_bowls.gd")
 const BfhPlayer := preload("bfh_player.gd")
 const BfhSounds := preload("bfh_sounds.gd")
 
@@ -121,6 +122,7 @@ func setup(world: Node3D, own: Callable = Callable()) -> DotResult:
 	add_child(ambient)
 	var _moods := ambient.setup()
 	ambient.follow_settings(null)
+	ambient.map_lookup = func(id: StringName) -> Variant: return {"meta": BfhBowls.by_id(null, id)}
 	# A walled bowl of sand in the open: the wind over its rim, unless a mood is playing.
 	if ambient.has_moods():
 		ambient.on_map(world.get("bowl_id"), {})

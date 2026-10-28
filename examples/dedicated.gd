@@ -29,7 +29,7 @@ const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 ## still a dedicated server as far as its console, its cvars and its modules are
 ## concerned, and those are what this is about.
 
-const CHECKS := 171
+const CHECKS := 173
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -1606,6 +1606,12 @@ func _test_ambient_cvars_reach_the_client() -> void:
 	var _applied := mixer.apply_to_buses()
 	_check(is_equal_approx(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Ambience")), linear_to_db(0.4)),
 		"the Effects slider reaches the Ambience bus the director plays on")
+	audio.ambient.on_map(&"bfh_small_bowl")
+	_check(audio.ambience != null and is_equal_approx(audio.ambience._gain(), audio.ambience.level * 0.8),
+		"on_map(id) alone gives the small bowl's catalogue ambient level through the lookup", str(audio.ambience._gain()))
+	audio.ambient.on_map(&"bfh_big_bowl")
+	_check(is_equal_approx(audio.ambience._gain(), audio.ambience.level * 1.2),
+		"and the big bowl's", str(audio.ambience._gain()))
 
 	audio.queue_free()
 	world.queue_free()
