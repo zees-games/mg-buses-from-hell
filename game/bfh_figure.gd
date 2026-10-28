@@ -65,6 +65,8 @@ func build(height: float, atlas_path: String) -> void:
 	person.build(look, height)
 	person.auto_animate = true
 	from_art = person.from_art
+	if not from_art:
+		DotLog.warn(CHANNEL, "the person's art did not load; a capsule stands in", {"atlas": atlas.get_file()})
 
 
 ## Turns the figure to face [param yaw_radians], the controller's own yaw.
