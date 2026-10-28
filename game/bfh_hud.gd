@@ -28,7 +28,7 @@ var strip: DotScoreStrip = null
 ## Health: dot-ui's [DotVitals], bar and number on one plate, red at a quarter.
 var vitals: DotVitals = null
 var _cover: Label = null
-var _crosshair: Control = null
+var _crosshair: DotCrosshair = null
 var _root: Control = null
 
 ## An administrator's `blind`, over the world and under the four numbers.
@@ -150,15 +150,19 @@ func _build() -> void:
 
 	# A dot rather than a cross: the hammer has a reach of two metres and no spread,
 	# so what a player needs is "the point I will hit", not a spread indicator.
-	var dot := ColorRect.new()
+	var dot := DotCrosshair.new()
 	dot.name = "Crosshair"
-	dot.color = Color(1.0, 1.0, 1.0, 0.75)
-	dot.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	dot.offset_left = -3.0
-	dot.offset_top = -3.0
-	dot.offset_right = 3.0
-	dot.offset_bottom = 3.0
+	dot.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dot.length = 0.0
+	dot.base_gap = 0.0
+	dot.top_arm = false
+	dot.dynamic = false
+	dot.outline = false
+	dot.dot_radius = 3.0
+	dot.colour = Color(1.0, 1.0, 1.0, 0.75)
 	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if DotAddonApi.build_level("dot_ui") >= 14:
+		dot.set(&"alive_source", func() -> bool: return player == null or game == null or game.spectate == null or not game.spectate.is_spectating(player.player_id))
 	_root.add_child(dot)
 	_crosshair = dot
 
@@ -190,14 +194,6 @@ func _process(delta: float) -> void:
 		vitals.show_vitals(player.health.health, player.health.max_health)
 
 	_cover.text = "%d cover   %d alive" % [game.crates_left(), game.alive_runners()]
-
-	# No aiming point on somebody else's eyes: the dot is where THIS player's hammer lands,
-	# and a runner who is out has no hammer to land.
-	if _crosshair != null:
-		_crosshair.visible = not (
-			player != null and game.spectate != null
-			and game.spectate.is_spectating(player.player_id)
-		)
 
 
 ## Fades [member blind_overlay] toward whether this HUD's player is blinded.
