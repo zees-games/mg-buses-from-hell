@@ -32,7 +32,7 @@
 # bus_lane_width: 6.0
 #  [0.0..60.0]
 # bus_lane_length: 24.0
-# Metres of floor round the scaffold's footprint that nothing is scattered into, to the prop's centre. A prop... [0.0..20.0]
+# Metres of floor round the scaffold's footprint that nothing is scattered into, to the prop's centre. A brac... [0.0..20.0]
 # scaffold_scatter_margin: 4.0
 # How many barrels. [0..100]
 # barrel_count: 9

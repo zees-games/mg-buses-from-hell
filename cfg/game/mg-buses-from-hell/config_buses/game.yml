@@ -44,7 +44,7 @@
 # --- The bots
 # How far past a runner the bot bus aims, in metres. The driver eases off as it nears its target, so a target... [0.0..30.0]
 # bot_aim_past: 8.0
-# How far past an obstacle's surface the bot steers a bus, in metres. 3.6 is the number the map is laid out a... [1.5..8.0]
+# How far past an obstacle's surface the bot steers a bus, in metres. [1.5..8.0]
 # bot_steer_clearance: 3.6
 # How far a bot bus's centre is kept off a building, the wall and the ramp when it is routed along a district... [1.5..4.0]
 # bot_route_clearance: 3.4
