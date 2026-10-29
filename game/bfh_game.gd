@@ -187,8 +187,9 @@ var entities := DotEntityTable.new()
 
 ## What a dead body does, and which death reactions the server allows: dot-player-char's
 ## `sv_ragdoll*` cvars, bound by the module (REPLICATED) and followed by a client through its
-## link, because the client draws the bodies.
-var ragdoll_rules: DotPlayerRagdollRules = DotPlayerRagdollRules.new()
+## link, because the client draws the bodies. Exaggerated by default: a bus throws what it hits, and
+## the addon's plain drop would make that a limp fall (sv_ragdoll_exaggerate 0 turns it back).
+var ragdoll_rules: DotPlayerRagdollRules = _throwing_rules()
 
 ## dot-props' `sv_toys*`, bound by the module (REPLICATED) and followed by a client.
 var toy_rules: DotPropToyRules = DotPropToyRules.new()
@@ -2376,6 +2377,12 @@ func _on_prop_exploded(
 ## What a lethal hit was, on [member DotDamage.context] as `why`: run over, or thrown by a blast.
 const KILLED_BY_BUS := &"bus"
 const KILLED_BY_BARREL := &"barrel"
+
+
+func _throwing_rules() -> DotPlayerRagdollRules:
+	var rules := DotPlayerRagdollRules.new()
+	rules.exaggerate = true
+	return rules
 
 
 ## The fall a death gets: dot-player-char's reaction rule over the server's weights, seeded from the
