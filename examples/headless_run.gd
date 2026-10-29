@@ -22,7 +22,7 @@ const BfhStats := preload("../game/bfh_stats.gd")
 
 ## Proves the bowl, the crates, the hammer, the barrels and the buses all actually work.
 
-const CHECKS := 360
+const CHECKS := 362
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -707,6 +707,19 @@ func _test_districts() -> void:
 			if absf(at.x) < 17.0 + float(b["radius"]) and at.z < -arena.radius + 4.0 + 24.0 + 6.0 + float(b["radius"]):
 				blocked += 1
 		_check(blocked == 0, "and nothing stands on the buses' start lanes", "%d in the way" % blocked)
+
+		# Downtown's north quarter: towers south of its cross street, shops north of it and on the edges.
+		if id == "bfh_downtown":
+			var north := 0
+			var shops := 0
+			for b: Dictionary in buildings:
+				if b["at"].z < -10.0:
+					north += 1
+				if b["kind"] == BfhBowls.BfhDistricts.HOUSE:
+					shops += 1
+			print("  ..    %s: %d buildings, %d north of the middle, %d shops" % [id, buildings.size(), north, shops])
+			_check(north >= 2, "and downtown's north quarter is built", "%d north of z -10" % north)
+			_check(shops >= 2, "and its north corners hold shops", "%d shops" % shops)
 
 		# Runner spawns: every scattered point is on the floor and outside every obstacle.
 		var stream := DotRandomStream.new(7, &"district")
