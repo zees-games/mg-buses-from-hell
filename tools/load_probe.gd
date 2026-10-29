@@ -2,11 +2,9 @@ extends SceneTree
 
 const BfhClient := preload("../game/bfh_client.gd")
 
-## Boots the solo client and prints, per rendered frame, what a player would see: whether the
-## map, the player and the camera exist, where the body is, and whether the load gate (if any)
-## still covers the screen. A body that moves while uncovered, or a frame with no player, is the
-## glitch. Needs xvfb-run, never --headless:
-##   xvfb-run -a godot --path . --script tools/load_probe.gd -- [--frames=90] [--shot=N]
+## Boots the solo client and prints, per rendered frame, what a player would see: whether the map,
+## the player and the camera exist, where the body is, and whether the load gate (if any) still
+## covers the screen. A body that moves while uncovered, or a frame with no player, is the glitch.
 var _client: Node = null
 var _frame := 0
 var _frames := 90

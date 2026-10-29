@@ -4,20 +4,6 @@ const BfhGame := preload("../bfh_game.gd")
 const BfhSounds := preload("../bfh_sounds.gd")
 
 ## The wire format for everything that is not a snapshot or an input.
-##
-## Encoders and decoders in pairs, and nothing checks that they are inverses for you —
-## `headless_net` round-trips every one of them, because this family has already shipped
-## a serialisation whose two ends never met: dot-moderation wrote `"voice muted"` and
-## read back a warning, and the one thing that addon existed for silently did nothing.
-##
-## [b]Everything in the bowl is ANNOUNCED and then moved by snapshot, and it needs
-## both.[/b] A snapshot carries a position and a rotation; it cannot carry what a thing
-## IS. So a crate, a barrel, a block and a bus each arrive as an event naming the
-## catalogue id and the net id the snapshot will move, and the client builds the same
-## body from the same catalogue. A factory keyed on a script would be the alternative,
-## and a script cannot be named: a `class_name` inside a mounted dot-cloud pack is not
-## registered in the host, which is the whole reason this game's content is addressed by
-## path in [BfhContent].
 
 enum Kind {
 	## Who you are, how fast the server ticks, and how big the bowl is.
@@ -46,9 +32,6 @@ enum Kind {
 	## One chat line, already routed, sanitised and addressed by [DotChatRouter].
 	CHAT,
 	## Something in the bowl made a noise: which one of `BfhSounds.WORLD`, and where.
-	##
-	## [b]Appended, never inserted.[/b] A kind is its index on the wire, and the ones above
-	## are what every deployed client already decodes.
 	SOUND,
 	## The bowl was rebuilt between rounds, to the one the players voted for: the same three
 	## numbers the HELLO carries, so a client rebuilds exactly as it would on joining.
@@ -68,11 +51,6 @@ enum Ask {
 }
 
 ## Every decoder returns an `ok` beside its fields, and every caller checks it.
-##
-## [b]A reader past its end returns plausible zeros rather than failing.[/b] dot-net
-## shipped with exhaustion that was not sticky, so a decoder that skipped this check got
-## a believable value for the field AFTER the overrun — and a truncated packet decodes as
-## a valid message about nothing.
 const NAME_BYTES := 64
 const ID_BYTES := 64
 const TEXT_BYTES := 256
@@ -83,11 +61,6 @@ const TEXT_BYTES := 256
 const AVATAR_BYTES := 1024
 
 ## Where a body may be, in metres, on the wire.
-##
-## [b]Read from [BfhGame], not written here.[/b] A quantised position is decoded against
-## this range, so two files holding two numbers do not lose precision — they put the
-## crate somewhere else. game-arena had exactly this, 256 against 128, in two files that
-## each looked right on its own.
 const WORLD_EXTENT := BfhGame.NET_WORLD_EXTENT
 const POS_BITS := 24
 
@@ -111,20 +84,9 @@ static func _w() -> DotNetWriter:
 	return DotNetWriter.new()
 
 
-# --- Hello -----------------------------------------------------------------
+# --- Hello
 
 ## What a client needs before it can build anything.
-##
-## [b]The arena radius is in here, and a client that guessed it would build a different
-## bowl.[/b] This game's map is not a file, it is `BfhArena.build(radius)` run on both
-## ends — which is what makes it free to deliver and free to change — so the radius is
-## the whole map as far as the wire is concerned. A client on 46 against a server on 30
-## has a wall seven metres past where the server says the wall is.
-##
-## [b]And the two layout choices an operator can make (2026-10-07), appended:[/b] where the
-## hook is which and how wide the courtyard's west lane is. A client on the default hook
-## against a server on the tight one would walk through a pillar it cannot see and stop at
-## one that is not there. The hook by name, the lane to the millimetre.
 static func write_toys(map_id: StringName, net_ids: PackedInt64Array) -> PackedByteArray:
 	var w := _w()
 	w.write_string(String(map_id), ID_BYTES)
@@ -222,14 +184,9 @@ static func read_hello(r: DotNetReader) -> Dictionary:
 	}
 
 
-# --- Players ---------------------------------------------------------------
+# --- Players
 
 ## A join, or a change to who somebody is: their name, their side, their avatar.
-##
-## [b]The avatar is the document, not the skin it picks[/b] — as JSON, capped at
-## [constant AVATAR_BYTES], and empty for the stock person — so a slot this game adds later
-## needs no new wire. [b]Appended, never inserted[/b]: a field before it would move the
-## side for every reader of the old layout.
 static func write_join(
 	player_id: int, net_id: int, display_name: String, team: int,
 	avatar: DotAvatar = null
@@ -297,14 +254,9 @@ static func read_team(r: DotNetReader) -> Dictionary:
 	return {"player_id": player_id, "team": team, "ok": r.ok()}
 
 
-# --- What is in the bowl ---------------------------------------------------
+# --- What is in the bowl
 
 ## Something the world has put out: a crate, a barrel, a block or a bus.
-##
-## [param vehicle] says which catalogue [param kind_id] is in. It is a bit rather than a
-## second message kind because everything else about the two is identical — a net id, a
-## scene, a place to put it — and two near-identical messages is two decoders to keep in
-## step.
 static func write_prop(
 	net_id: int, kind_id: StringName, at: Vector3, vehicle: bool
 ) -> PackedByteArray:
@@ -344,12 +296,6 @@ static func read_prop_gone(r: DotNetReader) -> Dictionary:
 
 
 ## Who is driving what.
-##
-## [b]The client is told the answer rather than running the ride.[/b] It has no vehicle
-## spawner, no seats and no exit sweep — the server owns all three — and what it does
-## with this is stop predicting a player who is no longer walking. Without it a predicted
-## controller fights the snapshots that are carrying the bus, every tick, at a metre a
-## time.
 static func write_seat(player_id: int, net_id: int, seated: bool) -> PackedByteArray:
 	var w := _w()
 	w.write_varint(player_id)
@@ -365,15 +311,9 @@ static func read_seat(r: DotNetReader) -> Dictionary:
 	return {"player_id": player_id, "net_id": net_id, "seated": seated, "ok": r.ok()}
 
 
-# --- The round -------------------------------------------------------------
+# --- The round
 
 ## The clock and the two numbers a client cannot count for itself.
-##
-## [b]`cover` is why this message exists.[/b] A client does not run the prop spawner —
-## its crates are mirrored bodies — so `crates_left()` on a client counts nothing, and
-## that number is the most important one on this game's HUD: it is what tells a runner
-## whether standing still is still an option. Health and the clock a client can see for
-## itself; this it has to be told.
 static func write_clock(
 	round_number: int, elapsed: float, cover: int, alive: int, playable: bool,
 	drivers_won: int, runners_won: int
@@ -450,12 +390,6 @@ static func read_death(r: DotNetReader) -> Dictionary:
 
 
 ## Where a barrel went off and how far it reached.
-##
-## [b]An event and not a replicated property, because a blast is an instant.[/b] A client
-## that learned about it from a snapshot would learn about it once the barrel had already
-## been removed, at whatever the interpolation delay is — which is a bang with nothing
-## under it. Reliable, for the same reason: a missed one is a player wondering why
-## they are suddenly in the air.
 static func write_blast(at: Vector3, radius: float) -> PackedByteArray:
 	var w := _w()
 	w.write_vector3_range(at, -WORLD_EXTENT, WORLD_EXTENT, POS_BITS)
@@ -469,7 +403,7 @@ static func read_blast(r: DotNetReader) -> Dictionary:
 	return {"position": at, "radius": radius, "ok": r.ok()}
 
 
-# --- Chat ------------------------------------------------------------------
+# --- Chat
 
 ## A chat line's own field widths. Wider than the rules allow, so a rule can be raised
 ## without the wire silently truncating what it lets through.
@@ -486,12 +420,6 @@ static func chat_kinds_fit() -> bool:
 
 
 ## One routed line, in [DotChatMessage]'s own wire shape.
-##
-## [b]Field by field rather than `var_to_bytes`, like every other message here.[/b] A
-## dictionary serialised whole is a dictionary whose contents are whatever the sender put
-## in it — including keys a client will happily read — and the widths below are the
-## validation. `x.p` is the one meta field this game carries: the speaker's session id, so
-## a client can colour a line by whose it is.
 static func write_chat(wire: Dictionary) -> PackedByteArray:
 	var w := _w()
 	w.write_varint(int(wire.get("n", 0)))
@@ -543,11 +471,6 @@ static func read_chat(r: DotNetReader) -> Dictionary:
 
 
 ## What a client sends when somebody presses Enter: a channel and a line, and nothing else.
-##
-## [b]No speaker, no time, no colour.[/b] Everything about what a line MEANS is decided on
-## the server — who said it, whether they are gagged, whether they are talking too fast,
-## which of the four channels they may use and who can hear it. A client that sent any of
-## that would be a client that could claim it.
 static func write_say(channel_id: StringName, text: String) -> PackedByteArray:
 	var w := _w()
 	w.write_string(String(channel_id), CHAT_CHANNEL_BYTES)
@@ -564,18 +487,9 @@ static func read_say(r: DotNetReader) -> Dictionary:
 	return out
 
 
-# --- Sound -----------------------------------------------------------------
+# --- Sound
 
 ## A noise the server decided, by its index in `BfhSounds.WORLD`, and where it was.
-##
-## [b]An index and not the id's string.[/b] A hammer swing is the commonest thing in this
-## game after a snapshot — two a second per runner — and five bits is what it costs to
-## say which sound. The list is append-only for that reason; see `BfhSounds`.
-##
-## [b]Reliable, like every event here, and that is a trade rather than an oversight.[/b] A
-## lost swing is a lost sound, which is harmless, but a lost `runner_down` is a runner who
-## was flattened in silence, and splitting the kinds across two deliveries would be a
-## second message type to keep in step for a handful of bytes a second.
 static func write_sound(index: int, at: Vector3) -> PackedByteArray:
 	var w := _w()
 	w.write_uint(clampi(index, 0, (1 << BfhSounds.WORLD_BITS) - 1), BfhSounds.WORLD_BITS)
@@ -590,9 +504,6 @@ static func read_sound(r: DotNetReader) -> Dictionary:
 
 
 ## What a spectator asked for: `BfhSpectate.ASK_NEXT`, `ASK_PREVIOUS`, `ASK_VIEW` or `ASK_ROAM`.
-##
-## [b]Only the ask.[/b] Not who to watch: the server picks the next target from its own
-## list, under its own rules, so a client cannot name somebody the policy would refuse.
 static func write_watch(ask: int) -> PackedByteArray:
 	var w := _w()
 	w.write_uint(clampi(ask, 0, 3), 2)

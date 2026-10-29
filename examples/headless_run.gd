@@ -21,22 +21,6 @@ const BfhSpectate := preload("../game/bfh_spectate.gd")
 const BfhStats := preload("../game/bfh_stats.gd")
 
 ## Proves the bowl, the crates, the hammer, the barrels and the buses all actually work.
-##
-## [codeblock]
-## godot --headless --path . res://examples/headless_run.tscn
-## [/codeblock]
-##
-## [b]The checks that matter are the ones that cross an addon boundary.[/b] dot-props,
-## dot-combat, dot-match and dot-vehicle are each tested in their own repository and
-## each of them passes there; what has never run before this game is the joins, and the
-## family's own record says that is where everything is found. So the sections here are
-## named after joins rather than after classes — a player standing on a crate, a hammer
-## against a prop's health, a barrel against a person's, a bus against both.
-##
-## [b]It steps the world by hand.[/b] `BfhGame._physics_process` drives itself on a
-## server; a suite that let it would be asserting against a tick count it does not
-## control, so `set_physics_process(false)` goes on first and every section advances
-## the world itself.
 
 const CHECKS := 360
 
@@ -63,12 +47,9 @@ const START_ROOM := 0.6
 ## is within a few percent of it; the ramp reads 96%.
 const RUN_PACE := 0.9
 
-## The same for a route with jumps in it, and it is lower for a reason rather than for
-## slack: the route bot stops pressing forward inside 0.2 m of each waypoint, turns to
-## the next, and lands every jump with a tick of friction, so a crate from a run reads
-## 73% and the scaffold's climbs 65%. A floor under those rather than at them, so it
-## catches a bot that crawls (the failure `[bot-drive-1]` found: a seventh of the speed)
-## without failing on a bot that climbs the way a person does.
+## The same for a route with jumps in it, and it is lower for a reason rather than for slack: the
+## route bot stops pressing forward inside 0.2 m of each waypoint, turns to the next, and lands
+## every jump with a tick of friction, so a crate from a run reads 73% and the scaffold's climbs.
 const CLIMB_PACE := 0.55
 
 var _completed := 0
@@ -121,8 +102,6 @@ func _run() -> void:
 	await _test_reach()
 	await _test_the_scaffold()
 	await _test_the_back_yard()
-	# Beside the stacks' other checks now, which is the order that used to fail: every
-	# world has its own physics space (see `_world`), so none reads another's history.
 	await _test_the_second_lane()
 	await _test_the_colonnade()
 	await _test_the_courtyard_lanes()
@@ -164,12 +143,6 @@ func _run() -> void:
 
 
 ## A bus on its roof rights itself.
-##
-## [b]Found by looking at a delivered client, not by a check.[/b] A screenshot of a real
-## server showed a bus lying on its roof at the foot of the ramp with a round still
-## running — a quarter of this game's whole threat removed, for a reason the runners can
-## neither see nor cause. Nothing in the simulation is wrong when that happens: an
-## inverted rigid body is a legitimate state and every number about it reads correctly.
 func _test_a_rolled_bus() -> void:
 	print("a bus on its roof")
 
@@ -337,16 +310,6 @@ func _done() -> void:
 
 
 ## An administrator's blind and beacon, as a client draws them.
-##
-## [b]What the server decides is `dedicated`'s and who is told is `headless_net`'s; this is
-## the picture.[/b] The world here is authoritative, which is an offline client — the same
-## flags a snapshot would have set, read by the same HUD and the same player. What no
-## assertion can say is whether it LOOKS right: `tools/shot.sh` with `--blind` and
-## `--beacon` is that.
-##
-## [b]The viewport is 64 × 64 here[/b] (docs/testing.md), so the coverage check says the
-## rect is the viewport's, not that the viewport is the window's. It was armed by moving
-## the HUD's root in from the edge with the per-frame sizing taken out.
 func _test_blind_and_beacon_drawn() -> void:
 	print("blind and beacon, as a client draws them")
 
@@ -497,19 +460,13 @@ func _world(configure: Callable = Callable()) -> BfhGame:
 	var game := BfhGame.new()
 	game.config = config
 	game.tick_rate = 60
-	# [b]Off, because this file builds a dozen worlds in one process.[/b] A registry name
-	# is global and the last one to register wins, so worlds that registered would take
-	# the name off each other — the same shape as the two `DotRandomManager`s that laid
-	# out two different bowls from one seed.
+	# [b]Off, because this file builds a dozen worlds in one process.[/b] A registry name is global and
+	# the last one to register wins, so worlds that registered would take the name off each other — the
+	# same shape as the two `DotRandomManager`s that laid out two different bowls from one seed.
 	game.register_service = false
-	# [b]And a physics space of its own, for the same reason.[/b] Every world here used to
-	# be added straight under this node, so all of them shared the root viewport's
-	# World3D and so ONE physics space, which outlives every world freed from it. A bus
-	# wedged against a drum is contact physics sensitive enough to read that history:
-	# the courtyard's east lane was "sent home at 6.22 s" after two earlier drives and
-	# "works free, reaches at 3.73 s" with the stacks' second lane run first, or with
-	# nothing run first at all. A SubViewport that owns its World3D gives each world a
-	# fresh space, freed with it; it never renders, so it costs nothing headless.
+	# A bus wedged against a drum is contact physics sensitive enough to read that history: the
+	# courtyard's east lane was "sent home at 6.22 s" after two earlier drives and "works free, reaches
+	# at 3.73 s" with the stacks' second lane run first, or with nothing run first at all.
 	var room := SubViewport.new()
 	room.name = "World%d" % _worlds_built
 	_worlds_built += 1
@@ -525,12 +482,6 @@ func _world(configure: Callable = Callable()) -> BfhGame:
 
 
 ## Takes a world down NOW rather than at the end of the frame.
-##
-## [b]`queue_free` was what this file used and it is why the run leaked.[/b] A queued free
-## happens on the next idle frame, and the last few sections are followed by `quit()` —
-## so the worlds they built were still alive when the engine tore down, which Godot
-## reports as leaked ObjectDB instances. It reads exactly like a reference cycle in the
-## game and is a test that stopped one line early.
 func _dispose(game: BfhGame) -> void:
 	if game == null or not is_instance_valid(game):
 		return
@@ -551,25 +502,12 @@ func _dispose(game: BfhGame) -> void:
 
 
 ## Whether a bus moved further in one tick than it can drive: the stuck rule's teleport.
-##
-## [b]A jump, not a place.[/b] These checks used to ask whether the bus was within 4 m of
-## its start line, which was a teleport detector only by luck: the start line sat under
-## the ramp, where no chase ever went. Moved out beside the ramp on 2026-09-23, it was
-## 2.8 m from the line a bus takes round the first tank, and a bus that came round the
-## drum perfectly was reported as sent home. At its top speed a bus covers 0.4 m a tick.
 func _sent_home(before: Vector3, after: Vector3) -> bool:
 	return Vector2(after.x - before.x, after.z - before.z).length() > 3.0
 
 
-## Called once a tick by every chase this file drives, with a fresh [param what] (and
-## [param first] true) on its first tick.
-##
-## [b]A bus can lose a chase three ways, and only two of them were ever looked for.[/b] It
-## can be run home by the stuck rule, it can wedge, and it can PARK: stand still with the
-## throttle off, which the stuck rule never answers because it reads intent, so it sits
-## there for the rest of the round with the runner in plain view. `steer_around` did it
-## for a week (a bus handed the point it was already standing on, beside a pillar, which
-## the driver calls arrived), and every table here printed it as "never reached them".
+## Called once a tick by every chase this file drives, with a fresh [param what] (and [param first]
+## true) on its first tick.
 func _watch_parked(bus: DotVehicleInstance, what: String, first: bool = false) -> void:
 	if first:
 		_parked_for = 0.0
@@ -600,7 +538,7 @@ func _step(game: BfhGame, ticks: int) -> void:
 		await get_tree().physics_frame
 
 
-# --- The configuration -----------------------------------------------------
+# --- The configuration
 
 func _test_config() -> void:
 	print("the configuration")
@@ -628,11 +566,8 @@ func _test_config() -> void:
 	config.round_seconds = 0.0
 	_check(not config.validate().ok, "so is a round with no clock")
 
-	# [b]The layout's two choices (2026-10-07), as data.[/b] The courtyard's west lane
-	# ships at the decision (past LANE_THROUGH) with the old 6.6 m selectable, still a
-	# bus's gap. The hook ships as built, because the decided "wide" hook breaks the gap
-	# rule at the scaffold (see `BfhArena.HOOK_LAYOUTS`); "wide" is selectable and its
-	# gaps are the bot's.
+	# The hook ships as built, because the decided "wide" hook breaks the gap rule at the scaffold (see
+	# `BfhArena.HOOK_LAYOUTS`); "wide" is selectable and its gaps are the bot's.
 	var shipped := BfhConfig.new()
 	var hook := BfhArena.hook_gaps(shipped.hook_layout)
 	var wide := BfhArena.hook_gaps("wide")
@@ -662,7 +597,7 @@ func _test_config() -> void:
 	_done()
 
 
-# --- The world -------------------------------------------------------------
+# --- The world
 
 func _test_world_builds() -> void:
 	print("the world")
@@ -672,10 +607,6 @@ func _test_world_builds() -> void:
 
 	_check(game.arena != null, "the bowl is built")
 
-	# [b]The game's gravity, on the world's own physics space.[/b] It used to be a line in
-	# `project.godot`, and a project setting does not travel with a delivered pack: mounted
-	# into the server tool's project this game ran at Godot's 9.8 against numbers chosen
-	# for 20, and the only symptom was that everything floated.
 	var space_gravity := float(PhysicsServer3D.area_get_param(
 		game.get_world_3d().space, PhysicsServer3D.AREA_PARAM_GRAVITY
 	))
@@ -703,10 +634,8 @@ func _test_world_builds() -> void:
 	_done()
 
 
-## Every bowl the players can vote for holds the map-wide rules the shipped one is held to:
-## no gap under a bus's width between any two obstacles, nor between an obstacle and the
-## scaffold. A bowl is a radius, and the features are placed as fractions of it, so a new
-## radius is a new map nobody has measured until this has.
+## Every bowl the players can vote for holds the map-wide rules the shipped one is held to: no gap
+## under a bus's width between any two obstacles, nor between an obstacle and the scaffold.
 func _test_every_bowl() -> void:
 	print("every bowl on the ballot")
 	var config := BfhConfig.new()
@@ -856,12 +785,9 @@ func _test_driving_a_district() -> void:
 	_done()
 
 
-## One bot bus chasing a runner who stands still wherever the scatter put them, and who is moved
-## to a fresh spot each time the bus gets within [constant REACH_M] of them (or after
-## [constant REACH_GIVE_UP] seconds without). Returns `{covered, seconds, resets, reaches,
-## stalls, longest_stall, stall_at}`: how far the bus travelled, how many times the stuck rule
-## put it back on its start line, how many runners it got to, and how long it stood throttling
-## at nothing, and where.
+## One bot bus chasing a runner who stands still wherever the scatter put them, and who is moved to
+## a fresh spot each time the bus gets within [constant REACH_M] of them (or after [constant
+## REACH_GIVE_UP] seconds without).
 func _pace_drive(bowl_id: StringName, seconds: float, extra: Callable = Callable()) -> Dictionary:
 	var game := _world(func(c: BfhConfig) -> void:
 		c.round_seconds = seconds + 60.0
@@ -929,12 +855,9 @@ func _pace_drive(bowl_id: StringName, seconds: float, extra: Callable = Callable
 	return out
 
 
-## What a bot bus is held to over [constant PACE_SECONDS] of chasing runners who stand wherever
-## the scatter puts them. Measured 2026-10-15 before the street route, the unwedge and the
-## ramp-side nudge: 2.65 to 8.1 m/s average (suburb the slowest), two to five sends home and
-## stalls of 5.1 s (the stuck rule's reset) on every map; after, 6.5 to 11.9, none sent home and no
-## stall over a second. The floor is under every "after" with room and over the slowest "before",
-## and the other bars are what separate the rest.
+## What a bot bus is held to over [constant PACE_SECONDS] of chasing runners who stand wherever the
+## scatter puts them. The floor is under every "after" with room and over the slowest "before", and
+## the other bars are what separate the rest.
 const PACE_SECONDS := 45.0
 const PACE_FLOOR := 5.0
 const PACE_SENT_HOME_AT_MOST := 1
@@ -968,10 +891,9 @@ func _test_bot_pace() -> void:
 	_done()
 
 
-## A full table of bot buses, as a server runs: [constant PACK_BUSES] bots driving at
-## [constant PACK_RUNNERS] runners standing wherever the stream puts them. One bus alone
-## never meets another, and a pair wedged nose to flank is a stall no single-bus drive can
-## show. Returns `{buses, covered, resets, longest_stall, stall_at}`, the longest per bus.
+## A full table of bot buses, as a server runs: [constant PACK_BUSES] bots driving at [constant
+## PACK_RUNNERS] runners standing wherever the stream puts them. One bus alone never meets another,
+## and a pair wedged nose to flank is a stall no single-bus drive can show.
 func _pack_drive(bowl_id: StringName, seconds: float) -> Dictionary:
 	var game := _world(func(c: BfhConfig) -> void:
 		c.round_seconds = seconds + 60.0
@@ -1092,14 +1014,9 @@ func _test_bowl_layout() -> void:
 	_check(game.props.world_count() > 12,
 		"with barrels and blocks beside them", "%d props" % game.props.world_count())
 
-	# [b]Seeded, so two servers on the same seed lay the same round out.[/b] Asserted
-	# against the SCATTER rather than against where the crates ended up, and the first
-	# version of this check did the latter: it built a second world, stepped it, and
-	# compared prop positions. Two worlds in one process share one physics space, so
-	# the second world's crates landed on the first world's and settled a few
-	# millimetres elsewhere — and the check failed for a reason that had nothing to do
-	# with the seed. Where the seed puts a crate is the thing being tested; what
-	# gravity and its neighbours then do to it is not.
+	# [b]Seeded, so two servers on the same seed lay the same round out.[/b] Asserted against the
+	# SCATTER rather than against where the crates ended up, and the first version of this check did
+	# the latter: it built a second world, stepped it, and compared prop positions.
 	var left := DotRandomStream.new(4242, &"bowl")
 	var right := DotRandomStream.new(4242, &"bowl")
 	var drifted := DotRandomStream.new(4243, &"bowl")
@@ -1196,12 +1113,6 @@ func _test_bowl_layout() -> void:
 
 
 ## The stacks, which are the only permanent geometry on the floor.
-##
-## [b]This section used to be the only one at the shipped bowl radius.[/b] `_world` built
-## a 30 m bowl, the stacks are left out below 34 m on purpose, and so every other check in
-## this file ran a map the game never ships. Overriding it here fixed the symptom and left
-## the trap; `_world` runs the shipped radius now, and this section no longer has anything
-## to say about it.
 func _test_the_stacks() -> void:
 	print("the stacks")
 
@@ -1255,13 +1166,9 @@ func _test_the_stacks() -> void:
 		"%.1f m of clear floor either side of the centre" % (lane_half - BfhArena.PILLAR_RADIUS)
 	)
 
-	# [b]And the same question of the WHOLE layout, which the check above cannot ask.[/b]
-	# That one filters on `local.x < 14.0` -- it is about the two rows, it was written
-	# when the two rows were all there was, and it goes on passing about them however
-	# many pillars are added past the dog-leg. A pair anywhere on this map closer than
-	# 2 * PILLAR_CLEARANCE is a gap `steer_around` will not take a bus through, and the
-	# floor behind it is somewhere a runner is safe by standing still. Two drivers
-	# against everybody on foot is not a game a runner may win by not moving.
+	# [b]And the same question of the WHOLE layout, which the check above cannot ask.[/b] That one
+	# filters on `local.x < 14.0` -- it is about the two rows, it was written when the two rows were
+	# all there was, and it goes on passing about them however many pillars are added past the dog-leg.
 	var tightest := BfhArena.narrowest_pillar_gap()
 	_check(
 		tightest >= BfhArena.PILLAR_CLEARANCE * 2.0,
@@ -1296,7 +1203,7 @@ func _test_the_stacks() -> void:
 	_check(intruders == 0, "and the round is laid out around them, not into them",
 		"%d overlapping" % intruders)
 
-	# --- The steering ------------------------------------------------------
+	# --- The steering
 	var pillar := pillars[5]
 	var approach := pillar + Vector3(0.0, 0.0, -24.0)
 	var beyond := pillar + Vector3(0.0, 0.0, 12.0)
@@ -1324,24 +1231,15 @@ func _test_the_stacks() -> void:
 
 
 ## The check the rest of this section cannot make: a bot bus actually gets past one.
-##
-## [b]The failure this guards against is not a bus that crashes, it is a bus that
-## vanishes.[/b] `_unstick` reads "throttle held, not moving" as caught on a crate, and
-## after five seconds it puts the bus back on its start line. Nose-on against a pillar
-## is that state exactly, with no crate to blame -- so before [method
-## BfhArena.steer_around] existed, standing behind a pillar deleted the bus chasing you.
 func _test_driving_the_stacks() -> void:
 	var game := _world(func(config: BfhConfig) -> void:
 		# Long enough that the round cannot end underneath the measurement.
 		config.round_seconds = 120.0
 	)
 
-	# [b]`is_bot`, and nothing else in this file sets it.[/b] `add_player` leaves it
-	# false, so every other section's driver is a person who never presses anything --
-	# which is why the bus in them only ever moves when a check drives it by hand, and
-	# why `_autopilot` had no coverage at all until this section. A dedicated server
-	# with bot drivers is the deployment this game is for, and its steering was the one
-	# path in the drive loop nothing had ever executed.
+	# [b]`is_bot`, and nothing else in this file sets it.[/b] `add_player` leaves it false, so every
+	# other section's driver is a person who never presses anything -- which is why the bus in them
+	# only ever moves when a check drives it by hand, and why `_autopilot` had no coverage at all.
 	var driver := game.add_player(&"d", "Driver", BfhGame.TEAM_DRIVERS)
 	driver.is_bot = true
 	game.add_player(&"r", "Runner", BfhGame.TEAM_RUNNERS)
@@ -1384,13 +1282,9 @@ func _test_driving_the_stacks() -> void:
 	body.angular_velocity = Vector3.ZERO
 	body.global_transform = Transform3D(Basis.looking_at(Vector3(0.0, 0.0, 1.0)), start)
 
-	# [b]Put, not moved: `_put` writes the controller's state as well as the node.[/b] This
-	# set `global_position` alone, which the runner's next tick overwrites from its state, so
-	# the quarry was never behind the pillar at all: the bot chased wherever the round had
-	# scattered the runner (the `spawns` stream), and the drive was a different drive on
-	# every seed. That was `bfh-stacks-drive-seed-1` (2026-10-07): it passed on one seed,
-	# "covering 45 m for a 27 m line", and no prop, driver or layout reset changed it,
-	# because the thing that differed was the target.
+	# [b]Put, not moved: `_put` writes the controller's state as well as the node.[/b] This set
+	# `global_position` alone, which the runner's next tick overwrites from its state, so the quarry
+	# was never behind the pillar at all: the bot chased wherever the round had scattered the runner.
 	var quarry := game.runners()[0]
 	_put(quarry, pillar + Vector3(0.0, 1.2, 14.0))
 
@@ -1438,19 +1332,7 @@ func _test_driving_the_stacks() -> void:
 	_check(past, "and it comes round the pillar rather than wedging on it",
 		"%.1f m/s at the end" % bus.speed() if bus.is_alive() else "the bus was lost")
 
-	# --- Through the hook ---------------------------------------------------
-	#
-	# [b]The same drive against the hook, where the bus has to come round TWO pillars
-	# rather than one.[/b] The lane is two tidy rows and every avoidance in it is
-	# sideways into open floor; the hook is an arc, so the waypoint beside its first
-	# pillar has its second one standing near it. That is the case `steer_around` got
-	# wrong until the hook existed to expose it — it chose a side without asking what
-	# else was there, drove the bus at a point it could not occupy, and left it holding
-	# the throttle against a pillar, which `_unstick` reads as a crate and answers by
-	# teleporting the bus to its start line. A steering bug whose symptom is a bus
-	# vanishing.
-	# By name: the hook was the last three of the layout until the second lane's row was
-	# appended after it.
+	# --- Through the hook
 	var hook := arena.pillars()[BfhArena.HOOK_FIRST]
 	await _clear_round(game, hook + Vector3(0.0, 1.4, -26.0), 7.0)
 
@@ -1505,18 +1387,7 @@ func _test_driving_the_stacks() -> void:
 	await _dispose(game)
 
 
-## The tank farm, which is the east half of the bowl and a different question from the
-## stacks.
-##
-## [b]Four drums of four sizes, and the checks over them are about what a bus can do
-## rather than about where they are.[/b] The stacks got away with a fixed-radius rule
-## because every pillar in them is 1.2 m across; the moment one obstacle on this floor is
-## 4.4 m and another 2.6, every measurement written as a centre distance is answering a
-## question about the wrong thing. So this section asks the two questions
-## [BfhArena.narrowest_gap] exists for -- is there a gap here a bus cannot take, and is
-## there anywhere behind these that a bus cannot get to -- and it asks them of the built
-## map rather than of the layout, because the two clusters are both placed as a fraction
-## of the radius and the floor between them is therefore a function of it.
+## The tank farm, which is the east half of the bowl and a different question from the stacks.
 func _test_the_tank_farm() -> void:
 	print("the tank farm")
 
@@ -1556,12 +1427,9 @@ func _test_the_tank_farm() -> void:
 	_check(nearest_to_ramp > 8.0, "and none of them across the ramp's landing",
 		"nearest surface %.1f m" % nearest_to_ramp)
 
-	# [b]The courtyard, and the reason it is the point of the farm.[/b] Four tanks in a
-	# diamond leave open floor in the middle, and open floor surrounded by cover is only
-	# a place worth standing if the thing chasing you can come into it. Every one of the
-	# four lanes between neighbouring tanks is asked directly rather than inferred from
-	# the map-wide minimum, because the map-wide minimum is currently a pair in the
-	# stacks and would go on passing if the courtyard sealed itself shut.
+	# [b]The courtyard, and the reason it is the point of the farm.[/b] Four tanks in a diamond leave
+	# open floor in the middle, and open floor surrounded by cover is only a place worth standing if
+	# the thing chasing you can come into it.
 	var pillar_count := arena.pillars().size()
 	var tightest_lane := INF
 	for lane in arena.yard_lanes(0):
@@ -1584,12 +1452,9 @@ func _test_the_tank_farm() -> void:
 			% [tightest, BfhArena.BUS_GAP]
 	)
 
-	# [b]And the same question at the smallest bowl that has both features, which is the
-	# one nobody would think to ask.[/b] Both clusters are positioned as a fraction of
-	# the radius, so shrinking the bowl walks them towards each other while the width a
-	# bus needs stays 4.8 m of absolute floor. `TANK_MIN_RADIUS` is that limit written
-	# down; an arena built exactly at it has to still be playable, or the constant is a
-	# number somebody guessed.
+	# [b]And the same question at the smallest bowl that has both features, which is the one nobody
+	# would think to ask.[/b] Both clusters are positioned as a fraction of the radius, so shrinking
+	# the bowl walks them towards each other while the width a bus needs stays 4.8 m of absolute floor.
 	var small := BfhArena.new()
 	add_child(small)
 	small.build(BfhArena.TANK_MIN_RADIUS)
@@ -1605,10 +1470,7 @@ func _test_the_tank_farm() -> void:
 			% [squeezed, BfhArena.TANK_MIN_RADIUS, small_tanks]
 	)
 
-	# Nothing is dropped inside a drum. The keep-out used to be a flat
-	# `PILLAR_RADIUS + 2.2`, which is 1.4 m INSIDE the biggest tank -- and a crate
-	# sharing a volume with a static body is resolved by the physics throwing it across
-	# the bowl on the first step.
+	# Nothing is dropped inside a drum.
 	var intruders := 0
 	for prop in game.props.all_props():
 		if prop.body() == null:
@@ -1621,15 +1483,7 @@ func _test_the_tank_farm() -> void:
 	_check(intruders == 0, "and the round is laid out around the tanks, not into them",
 		"%d overlapping" % intruders)
 
-	# --- The steering, at a radius the constant does not cover ---------------
-	#
-	# [b]The failure mode here is not a bus that misses by too little, it is an aim
-	# point inside the drum.[/b] `steer_around` offset its waypoint by
-	# `PILLAR_RADIUS + PILLAR_CLEARANCE` -- 4.8 m, a metre and a half less than the
-	# radius of the biggest tank plus a bus -- so a driver told to come round this one
-	# would have been sent at a point in the middle of it, arrived nowhere, held the
-	# throttle, and been teleported home by the stuck rule. The stacks' own version of
-	# this check cannot see it: every pillar is narrower than the offset.
+	# --- The steering, at a radius the constant does not cover
 	var big := farm[0]
 	var big_radius := arena.obstacle_radius(pillar_count)
 	var steered := arena.steer_around(
@@ -1648,13 +1502,6 @@ func _test_the_tank_farm() -> void:
 
 
 ## The check the rest of that section cannot make: a bot bus gets round a drum.
-##
-## [b]The same drive as the stacks and the hook, at the shape neither of them is.[/b] A
-## pillar is narrower than the bus coming round it and a tank is wider, which changes
-## the one thing the driver is doing -- the waypoint beside a 4.4 m drum is eight metres
-## off its axis, so the bus turns earlier, further and for longer, and it does all of
-## that with the quarry out of sight behind the thing it is going round. Nothing in this
-## repository had ever asked the autopilot to come round something bigger than itself.
 func _test_driving_the_farm() -> void:
 	var game := _world(func(config: BfhConfig) -> void:
 		config.round_seconds = 120.0
@@ -1734,22 +1581,9 @@ func _test_driving_the_farm() -> void:
 	await _dispose(game)
 
 
-# --- What a runner can climb -----------------------------------------------
+# --- What a runner can climb
 
 ## Every way up the bowl, measured against what a runner can actually do, and then done.
-##
-## [b]The family's reach question, asked of this game, and two of its routes were never
-## possible.[/b]
-## The ramp to the ledge was built backwards on the first day — it rose from under the
-## deck to 7.8 m over the middle of the bowl — so the ledge had no way up at all. And the
-## barrel, documented as "the one way onto a crate stack", lifted a runner 7 cm: its
-## upward velocity was added to somebody the motor still had on the ground, and the ground
-## snap ate it. Nothing checked either, because nothing here had ever driven a runner
-## anywhere; every section placed them by hand.
-##
-## The arithmetic is [code]DotFpsTunables[/code]'s, reached through [code]bfh_reach.gd[/code], over the tunables a real runner gets.
-## The routes are declared by the map and measured off the colliders. Then three of them
-## are driven, because arithmetic that agrees with itself is not a runner on a crate.
 func _test_reach() -> void:
 	print("what a runner can climb")
 
@@ -1812,10 +1646,7 @@ func _test_reach() -> void:
 		"%.0f%% of max_speed" % (onto_crate * 100.0))
 	game.props.remove(crate.instance_id)
 
-	# --- Up the ramp, on the stock motor. Until 2026-09-24 dot-player-controller read any
-	# upward speed over 0.1 m/s as airborne, so this printed how far the real motor got
-	# (0.8 to 2 m) and the check ran on a test-only subclass with the one-comparison fix.
-	# The fix is in the addon now and the stand-in is gone.
+	# --- Up the ramp, on the stock motor. The fix is in the addon now and the stand-in is gone.
 	var start := arena.ramp_foot() + Vector3(0.0, -0.45, 6.0)
 	# The middle of the deck, well past the lip, so the route's "jump when the next
 	# surface is higher and close" never fires at the lip itself: a ramp is walked.
@@ -1840,10 +1671,6 @@ func _test_reach() -> void:
 
 
 ## A barrel throws a runner onto two crates, which nothing else does.
-##
-## [b]From the farthest a runner can set one off from[/b] — the hammer's reach to the
-## barrel's face — because that is the weakest throw anybody gets and the one the
-## declared climb is measured at.
 func _test_the_throw() -> void:
 	var game := _world(func(c: BfhConfig) -> void:
 		c.crate_count = 0
@@ -1857,13 +1684,9 @@ func _test_the_throw() -> void:
 	var barrel := game.props.spawn(BfhContent.BARREL, &"world",
 		at + Vector3(0.0, BfhContent.BARREL_HEIGHT * 0.5 + 0.05, 0.0))
 	var stand := game.config.hammer_reach + BfhContent.BARREL_RADIUS
-	# [b]No stack beside them, and that is a finding.[/b] The same blast shoves every
-	# loose prop in its radius: measured, a stack of two 4 m from the barrel came apart
-	# before the runner came down — the bottom crate 2.5 m along, the top one 6.4 m —
-	# while the runner's arc passed over exactly where it had stood. So what is asserted
-	# is the throw: high enough for a stack of two, from the farthest a runner can set a
-	# barrel off, and survivable from there. That a loose stack is still there to land
-	# on is not true, and docs/map.md says so under "What a runner can climb".
+	# [b]No stack beside them, and that is a finding.[/b] The same blast shoves every loose prop in its
+	# radius: measured, a stack of two 4 m from the barrel came apart before the runner came down — the
+	# bottom crate 2.5 m along, the top one 6.4 m — while the runner's arc passed over.
 	await _step(game, 30)
 
 	_put(runner, at + Vector3(stand, 0.05, 0.0))
@@ -1930,12 +1753,8 @@ func _put(player: BfhPlayer, at: Vector3) -> void:
 	player.controller.state.velocity = Vector3.ZERO
 
 
-## Drives a runner through [param waypoints] the way a person would: run at each one and
-## jump when it is higher and close. Returns the highest the feet got.
-##
-## [b]The first thing in this file that moves a runner by pressing keys.[/b] A waypoint is
-## where to stand, with the height of what you stand on in [code]y[/code]; one is done
-## when the runner is standing within half a metre of it at that height.
+## Drives a runner through [param waypoints] the way a person would: run at each one and jump when
+## it is higher and close. Returns the highest the feet got.
 func _run_route(game: BfhGame, player: BfhPlayer, waypoints: Array, ticks: int) -> float:
 	var index := 0
 	var best := player.global_position.y
@@ -1989,14 +1808,9 @@ func _run_route(game: BfhGame, player: BfhPlayer, waypoints: Array, ticks: int) 
 	return best
 
 
-## Prints how the last [method _run_route] went — the ground it covered next to the
-## route's length, the time, and the average speed next to the runner's
-## [code]max_speed[/code] — and returns that average as a fraction of it.
-##
-## [b]Printed whether or not anything is asserted on it.[/b] A detail line shows only on
-## failure, so a speed that is only asserted is a speed nobody reads again once it
-## passes; `[bot-drive-1]` found game-playground's bots crossing its maps at a seventh of
-## their speed behind checks that had passed for as long as they existed.
+## Prints how the last [method _run_route] went — the ground it covered next to the route's length,
+## the time, and the average speed next to the runner's [code]max_speed[/code] — and returns that
+## average as a fraction of it.
 func _route_report(what: String, runner: BfhPlayer) -> float:
 	var top := runner.controller.tunables.max_speed
 	var seconds := float(_route.get("ticks", 0)) * TICK
@@ -2009,7 +1823,7 @@ func _route_report(what: String, runner: BfhPlayer) -> float:
 	return speed / top
 
 
-# --- The scaffold ------------------------------------------------------------
+# --- The scaffold
 
 ## How far the scaffold crate furthest from its cell is from it, in metres.
 func _scaffold_drift(game: BfhGame, cells: Array[AABB]) -> float:
@@ -2023,13 +1837,6 @@ func _scaffold_drift(game: BfhGame, cells: Array[AABB]) -> float:
 
 
 ## The height a runner can climb and a bus can take away, which is the whole level.
-##
-## [b]Two drives, and the second is the point.[/b] A runner bot climbs the three steps to
-## the top in three jumps, and that proves the height is reachable. Then a bot bus is
-## pointed at them — the ordinary autopilot, chasing the nearest runner, with nothing
-## told about the scaffold — and the check is that the runner ends up on the sand. A
-## height a bus could not bring down would be a place to win the round by standing on,
-## and this map has a rule against those.
 func _test_the_scaffold() -> void:
 	print("the scaffold")
 
@@ -2065,10 +1872,8 @@ func _test_the_scaffold() -> void:
 		"it stands clear of every pillar and tank by a bus's gap",
 		"%.1f m" % nearest)
 
-	# [b]And on the smallest bowl that has it,[/b] which nobody had asked until the back
-	# yard put two drums beside it. Its position and both clusters' scale with the radius
-	# and none of their sizes do, so the floor between them closes as the bowl shrinks:
-	# at the 40 m this minimum used to be, 1.2 m from a hook pillar.
+	# [b]And on the smallest bowl that has it,[/b] which nobody had asked until the back yard put two
+	# drums beside it.
 	var small := BfhArena.new()
 	add_child(small)
 	small.build(BfhArena.SCAFFOLD_MIN_RADIUS)
@@ -2111,11 +1916,7 @@ func _test_the_scaffold() -> void:
 	var best_east := await _run_route(game, runner, east, 600)
 	var climb_east := _route_report("the scaffold from the east end", runner)
 	var on_east := game.carry.prop_under(runner.controller.state.ground_id)
-	# [b]With the scaffold where it was[/b], so a way up made by shoving crates is not a
-	# climb. [b]And this check alone does not tell the saddle from the old sheer end:[/b]
-	# held against that 3 m face and jumping, a runner reached 2.98 m with no crate moved,
-	# which is dot-player-controller's airborne creep up a face too steep to stand on
-	# (`[steep-climb-1]` in the nightly list). The peak check above is what does.
+	# [b]With the scaffold where it was[/b], so a way up made by shoving crates is not a climb.
 	var shoved_east := _scaffold_drift(game, cells)
 	_check(
 		runner.global_position.y > top.end.y - 0.1
@@ -2158,21 +1959,17 @@ func _test_the_scaffold() -> void:
 		Vector3(footprint.position.x - 24.0, 1.4, footprint.get_center().z))
 	driver.is_bot = true
 
-	# Against the scaffold as the round laid it out. Once the scatter began keeping the start
-	# lanes clear every prop in the bowl moved, a barrel landed 2.44 m off the scaffold's west
-	# end, and this bus could not bring the runner down (34 of 36 crates standing): the barrel
-	# braced it. This section cleared the scatter round the scaffold until the scatter kept its
-	# own margin there (`scaffold_scatter_margin`, 4 m); now it asks of the real layout, and
-	# the bowl layout section asserts the margin.
+	# Against the scaffold as the round laid it out. Once the scatter began keeping the start lanes
+	# clear every prop in the bowl moved, a barrel landed 2.44 m off the scaffold's west end, and this
+	# bus could not bring the runner down (34 of 36 crates standing): the barrel braced it.
 
 	var standing_before := game.scaffold_standing()
 	var down := false
 	var took := 0
 	for _i in range(600):
-		# Standing still, and told so every tick: a tick with no command REPEATS the last
-		# one, which is what a netcode wants of a lost packet — and the last one was "run
-		# along the top step", so the first version of this watched the runner walk off
-		# the far end 0.7 s before the bus arrived and called it the bus's doing.
+		# Standing still, and told so every tick: a tick with no command REPEATS the last one, which is
+		# what a netcode wants of a lost packet — and the last one was "run along the top step", so the
+		# first version of this watched the runner walk off the far end 0.7 s before the bus arrived and.
 		var still := DotFpsCommand.new()
 		still.yaw = runner.controller.state.yaw
 		runner.controller.apply_command(still)
@@ -2193,11 +1990,9 @@ func _test_the_scaffold() -> void:
 		"feet at %.2f, %s, %d of %d crates standing" % [
 			runner.global_position.y, "alive" if runner.health.alive else "dead",
 			game.scaffold_standing(), game.scaffold_ids.size()])
-	# [b]Out of its cells, not broken.[/b] The first version of this asserted crates
-	# BROKEN and the bus brought the runner down with every crate intact: it hit the low
-	# end at the speed the chase allowed, under the 5 m/s a crate breaks at, and shoved
-	# the steps apart instead. That is the same outcome for the runner and a cheaper one
-	# for the drivers, and it is what the property is about — the height is gone.
+	# [b]Out of its cells, not broken.[/b] The first version of this asserted crates BROKEN and the bus
+	# brought the runner down with every crate intact: it hit the low end at the speed the chase
+	# allowed, under the 5 m/s a crate breaks at, and shoved the steps apart instead.
 	var vacated := 0
 	for i in range(mini(cells.size(), game.scaffold_ids.size())):
 		var prop := game.props.get_prop(game.scaffold_ids[i])
@@ -2214,17 +2009,10 @@ func _test_the_scaffold() -> void:
 	_done()
 
 
-# --- The tank farm's back yard ----------------------------------------------
+# --- The tank farm's back yard
 
-## The farm's second room, between the courtyard and the scaffold, and the two things it
-## is for: a runner goes through it, and a bus comes into it.
-##
-## [b]Driven both ways, because a room is two claims.[/b] That a runner can get from the
-## middle of the farm through the yard to the top of the scaffold -- the covered way the
-## yard exists to make -- and that a bus, the ordinary autopilot told nothing about the
-## yard, can come into it at a speed that kills and run down somebody standing in its
-## middle. A yard a bus could not get into would be a place to win the round by standing
-## in, and the lane widths alone do not say whether the steering can thread them.
+## The farm's second room, between the courtyard and the scaffold, and the two things it is for: a
+## runner goes through it, and a bus comes into it.
 func _test_the_back_yard() -> void:
 	print("the tank farm's back yard")
 
@@ -2366,16 +2154,10 @@ func _test_the_back_yard() -> void:
 	_done()
 
 
-# --- The stacks' second lane (2026-09-29) --------------------------------------
 
-## The third row and the lane it makes, and the three claims a lane is: it is a bus's
-## width and a straight line for the autopilot, a runner can take it to the scaffold,
-## and a runner who stands in it is run down.
-##
-## [b]Driven both ways, like the back yard,[/b] because a lane that leads to the one
-## height in the bowl is a covered way only if a bus can still come down it: one the
-## steering could not follow a runner along would make the height somewhere to win the
-## round by getting to.
+## The third row and the lane it makes, and the three claims a lane is: it is a bus's width and a
+## straight line for the autopilot, a runner can take it to the scaffold, and a runner who stands in
+## it is run down.
 func _test_the_second_lane() -> void:
 	print("the stacks' second lane")
 
@@ -2509,24 +2291,9 @@ func _test_the_second_lane() -> void:
 	_done()
 
 
-# --- The colonnade (2026-10-03) ----------------------------------------------
 
-## The north-west rim: four pillars a walk's width off the wall, from the stacks' west
-## end to the deck's west corner.
-##
-## [b]What it holds.[/b] The walk and every gap in the row are lanes the autopilot drives
-## straight down, on the shipped bowl and on the smallest that has the colonnade, and a
-## smaller one leaves it out; a runner bot goes from the stacks' first lane, out of its
-## west mouth and along the whole walk to the deck's corner at a runner's pace; and the
-## bot bus runs down a runner standing still anywhere in it -- in each gap, on the walk
-## behind each gap, and on the walk from either end -- at a speed that kills. A covered
-## way a bus could not come down would be a place to win by standing still.
-##
-## [b]What it does not hold, and prints.[/b] The bus from where the west bus starts a
-## round, facing the way it starts, at a runner on the walk. Measured on 2026-10-03 with
-## no colonnade at all, that bus missed a runner standing still on the open floor anywhere
-## 26 to 38 m out across this quarter and ended against the wall; it does the same here.
-## The turn out of the start is the autopilot's, not the colonnade's.
+## The north-west rim: four pillars a walk's width off the wall, from the stacks' west end to the
+## deck's west corner.
 func _test_the_colonnade() -> void:
 	print("the colonnade")
 
@@ -2602,10 +2369,9 @@ func _test_the_colonnade() -> void:
 		"%.0f%% of max_speed" % (pace * 100.0))
 	await _dispose(game)
 
-	# --- And a bus comes down it. Each drive in its own world, because a runner run down
-	# is the end of that round: the autopilot facing the runner from 16 m out on the floor,
-	# at somebody standing in a gap and on the walk behind it; and from either end of the
-	# walk along it.
+	# --- And a bus comes down it. Each drive in its own world, because a runner run down is the end of
+	# that round: the autopilot facing the runner from 16 m out on the floor, at somebody standing in a
+	# gap and on the walk behind it; and from either end of the walk along it.
 	var probe := BfhArena.new()
 	add_child(probe)
 	probe.build(46.0)
@@ -2714,26 +2480,10 @@ func _colonnade_chase(what: String, hide: Vector3, start: Vector3, as_spawned: b
 	return {"killed": killed, "fastest": fastest}
 
 
-# --- The courtyard's four lanes, driven (`[steer-3]`) ------------------------
+# --- The courtyard's four lanes, driven (`[steer-3]`)
 
-## Which lanes into the courtyard the bot bus can come through, driven rather than
-## computed, and the answer held as a property of the map.
-##
-## [b]`steer_around` is a nudge, and this is its ceiling written down.[/b] It keeps each
-## drum's radius plus PILLAR_CLEARANCE off the line, so only a lane of
-## [constant BfhArena.LANE_THROUGH] (7.2 m) or more lets it drive straight through; the
-## back yard was laid out to that on 2026-09-27 from a failed drive, and the courtyard's
-## own 5.4 and 6.6 m lanes were computed, not driven, to admit no bot bus. Here each lane
-## is driven twice from 8 m outside it -- once at a runner standing in the courtyard's
-## middle, once at one standing in the lane itself -- and the table is printed.
-##
-## 8 m rather than the back yard's 14 because the east lane's mouth is 31 m from the
-## bowl's centre and a runner's floor ends at 40: 14 m out is inside the wall.
-##
-## What it holds: through the middle, the drive agrees with the rule in every lane (the
-## wide ones at a speed that kills); nobody standing IN any lane is safe, so a narrow
-## lane is a door that shuts behind a runner and not a place to win by standing still;
-## every room keeps a lane the bus can come in by; and the courtyard has two of each.
+## Which lanes into the courtyard the bot bus can come through, driven rather than computed, and the
+## answer held as a property of the map.
 func _test_the_courtyard_lanes() -> void:
 	print("the courtyard's four lanes, driven")
 
@@ -2787,19 +2537,9 @@ func _test_the_courtyard_lanes() -> void:
 				"(wedged %.1f)" % a.wedged if a.wedged >= 0.0 else "",
 				b.outcome, b.peak, b.seconds])
 
-	# [b]Held to the steering's own test, and since 2026-10-07 not to the lane's width
-	# alone.[/b] A lane of LANE_THROUGH is necessary for a straight line to the middle and
-	# it is not sufficient: the bot aims 8 m PAST its quarry, so the line has to be clear
-	# beyond the middle too. With the west lane widened to 7.6 m the line through it
-	# crosses the east drum's ring 8 m past the middle (5.2 m off its axis against 6.6),
-	# and the bus wedges in the lane from 7 to 12 m out: a runner in the middle is reached
-	# by the other three lanes, not that one. So a lane whose straight line `steer_around`
-	# leaves alone is held to "comes straight through", and the rest are printed: past a
-	# blocked line what happens is contact physics on a knife edge (the east lane's bus
-	# reaches from 7, 8 and 12 m out and wedges from 10; on 2026-09-30, before the west
-	# lane moved the courtyard's middle by 0.24 m, it was sent home from 8.1), and it was
-	# that edge, read through a physics space every world in this file used to share,
-	# that made this section depend on which ran first (see `_world`).
+	# With the west lane widened to 7.6 m the line through it crosses the east drum's ring 8 m past the
+	# middle (5.2 m off its axis against 6.6), and the bus wedges in the lane from 7 to 12 m out: a
+	# runner in the middle is reached by the other three lanes, not that one.
 	var clear_lanes := 0
 	for i in range(lanes.size()):
 		var a: Dictionary = through[i]
@@ -2827,10 +2567,7 @@ func _test_the_courtyard_lanes() -> void:
 	_check(slow_through == 0, "and through a wide lane it arrives at a speed that kills",
 		"%d below %.1f m/s" % [slow_through, cfg.bus_lethal_speed])
 
-	# [b]Nobody, in any lane, and since 2026-10-07 without an exception.[/b] At 6.60 m the
-	# west lane (3) was one: a runner standing in its mouth was sent home from every start
-	# 7-12 m out, run down only from 6 (`courtyard-west-lane-1`). It is 7.6 m now, past
-	# LANE_THROUGH, so this asks every lane with no list of known refuges in it.
+	# It is 7.6 m now, past LANE_THROUGH, so this asks every lane with no list of known refuges in it.
 	var safe_detail := PackedStringArray()
 	for i in range(lanes.size()):
 		var b: Dictionary = standing[i]
@@ -2854,9 +2591,7 @@ func _test_the_courtyard_lanes() -> void:
 		"the west lane is a way in, and a runner standing in it is run down from 7, 9.5 and 12 m out",
 		"%.2f m wide; safe from %s" % [lanes[west], ", ".join(west_safe)])
 
-	# The east lane (1, 5.38 m) is the one narrow lane left, and the runner standing in it
-	# is on a knife edge: on 2026-09-30 the bus reached from 8.0 m out and was sent home
-	# from 8.1. Printed, not asserted; see docs/map.md, "The tank farm".
+	# Printed, not asserted; see docs/map.md, "The tank farm".
 	for out_by: float in [8.1, 10.0]:
 		var r := await _drive_a_lane(1, out_by, true)
 		print("  ..    east lane, runner in it, %4.1f m out: %-9s %4.1f m/s peak %5.2f s nearest %4.1f"
@@ -2872,14 +2607,8 @@ func _test_the_courtyard_lanes() -> void:
 	_done()
 
 
-## One drive of the autopilot into the courtyard through its [param lane]th lane, at a
-## runner standing in the courtyard's middle, from [param out_by] metres outside the lane.
-## Returns what happened: [code]outcome[/code] ("reaches", "wedges" or "sent home"),
-## [code]wedged[/code], the first second it stood still after moving off (-1 if never),
-## [code]peak[/code] m/s, [code]seconds[/code] to the outcome, and [code]nearest[/code],
-## the closest the bus got to the runner in metres.
-##
-## A fresh world each time, so one lane's bus cannot be the next lane's obstacle.
+## One drive of the autopilot into the courtyard through its [param lane]th lane, at a runner
+## standing in the courtyard's middle, from [param out_by] metres outside the lane.
 func _drive_a_lane(lane: int, out_by: float, in_the_lane: bool = false) -> Dictionary:
 	return await _drive_into(func(arena: BfhArena) -> Array:
 		var middle := arena.yard_middle(0)
@@ -2889,10 +2618,9 @@ func _drive_a_lane(lane: int, out_by: float, in_the_lane: bool = false) -> Dicti
 		return [mouth, middle, out.normalized()], out_by, in_the_lane)
 
 
-## The drive [method _drive_a_lane] makes, into any gap: [param where] is given the
-## built arena and returns [code][mouth, middle, out][/code] — the gap's middle, where
-## the runner stands when not in it, and the unit direction out of the gap. The bus
-## starts [param out_by] metres along [code]out[/code] from the mouth, facing in.
+## The drive [method _drive_a_lane] makes, into any gap: [param where] is given the built arena and
+## returns [code][mouth, middle, out][/code] — the gap's middle, where the runner stands when not in
+## it, and the unit direction out of the gap.
 func _drive_into(where: Callable, out_by: float, in_the_lane: bool = false) -> Dictionary:
 	var game := _world(func(c: BfhConfig) -> void:
 		c.crate_count = 0
@@ -2964,20 +2692,9 @@ func _drive_into(where: Callable, out_by: float, in_the_lane: bool = false) -> D
 	}
 
 
-## The direction to put a drive's bus out along: [param out] itself if a bus started
-## [param out_by] metres along it from [param mouth] stands on clear floor with a clear
-## line to the gap, otherwise the nearest direction either side of it, in 2.5 degree
-## steps up to 45, that does. [param out] unchanged if none does, which
-## [method _line_room] then reports.
-##
-## [b]A start is not a place until it is asked whether it is floor.[/b] The hook's
-## middle-north gap faces the back yard's west drum (2.6 m), whose axis stands 13.1 m
-## out on the line square to the gap: the 14 m start put the bus's middle 1.07 m from
-## that axis, inside the drum, and the physics threw it out at 121 m/s on the first
-## step (a bus tops out at 22). The 8 m start was inside it too, by 0.2 m at the tail.
-## Both rows were reported as drives at the gap; they were ejections and a drive round
-## a drum. The line is turned rather than shortened so the run-up stays what the row
-## says it is.
+## The direction to put a drive's bus out along: [param out] itself if a bus started [param out_by]
+## metres along it from [param mouth] stands on clear floor with a clear line to the gap, otherwise
+## the nearest direction either side of it, in 2.5 degree steps up to 45, that does.
 func _clear_line(arena: BfhArena, mouth: Vector3, out: Vector3, out_by: float) -> Vector3:
 	for step in range(19):
 		for side: float in ([1.0] if step == 0 else [1.0, -1.0]):
@@ -2987,12 +2704,9 @@ func _clear_line(arena: BfhArena, mouth: Vector3, out: Vector3, out_by: float) -
 	return out
 
 
-## How far the bus is from touching anything on a drive started [param out_by] metres
-## along [param out] from [param mouth]: the least, over every pillar and drum, of the
-## distance from its surface to the strip a bus sweeps from the mouth to the tail of a
-## bus parked at the start, less half a bus's width. Negative is inside something.
-## Every pillar and drum, and the wall; the scaffold's crates are in none of the gaps'
-## lines and the ramp and ledge are across the bowl.
+## How far the bus is from touching anything on a drive started [param out_by] metres along [param
+## out] from [param mouth]: the least, over every pillar and drum, of the distance from its surface
+## to the strip a bus sweeps from the mouth to the tail of a bus parked at the start, less half a.
 func _line_room(arena: BfhArena, mouth: Vector3, out: Vector3, out_by: float) -> float:
 	var a := Vector2(mouth.x, mouth.z)
 	var b := a + Vector2(out.x, out.z) * (out_by + BUS_HALF_LENGTH)
@@ -3005,22 +2719,8 @@ func _line_room(arena: BfhArena, mouth: Vector3, out: Vector3, out_by: float) ->
 	return minf(room, arena.radius - b.length() - BfhArena.BUS_HALF_WIDTH)
 
 
-## [b]The hook's two narrow gaps, driven.[/b] `[steer-3]` measured these on 2026-09-29
-## with a drive that was never kept, through the physics space every world here used to
-## share; the courtyard's west lane read differently once each world had its own. This
-## is that measurement, kept.
-## [b]A bot bus chases a runner up the ramp onto the deck.[/b] Until 2026-10-01 none
-## could: from every start here the bus wedged against the slab or circled the foot, and
-## a runner on the deck was safe from bots for as long as they stood there. Eight starts,
-## a runner standing still on the deck's middle, twenty seconds each; a start counts when
-## the bus kills them.
-##
-## [b]All eight are asserted since 2026-10-08.[/b] `spawn` and `spawn_west` are where the
-## buses actually begin (beside the slab, either side of it, facing the bowl), and with
-## `sw` they were printed and not asserted for a week: the bus has to turn round in front
-## of the foot, which the timed turn could not do, and `sw` came at the foot across the
-## line and wedged on the ramp's edge. `BfhGame._turn_round_for_the_ramp` is the answer;
-## see docs/bots.md, "Up the ramp".
+## This is that measurement, kept. Eight starts, a runner standing still on the deck's middle,
+## twenty seconds each; a start counts when the bus kills them.
 func _test_up_onto_the_deck() -> void:
 	print("up the ramp onto the deck, driven by a bot")
 	var asserted := ["spawn", "spawn_west", "foot8", "south20", "east", "ne", "sw", "west"]
@@ -3110,15 +2810,8 @@ func _test_up_onto_the_deck() -> void:
 
 func _test_the_hook_gaps() -> void:
 	print("the hook's gaps, driven")
-	# [b]Pinned, not fixed (`runner-standing-1`, 2026-10-07).[/b] Both gaps are a bus's
-	# (BUS_GAP) and not the bot's (LANE_THROUGH), and a runner standing still in either is
-	# never reached by a bot bus: sent home from 8, 11 and 14 m out, each start turned by
-	# `_clear_line` onto open floor if the square line is not (the 14 m middle-north start
-	# once began inside the back yard's west drum, and the physics threw the bus out at
-	# 121 m/s). The decided fix, the middle pillar at x = 30.3, is `hook_layout = "wide"`:
-	# it breaks the gap rule at the scaffold, so it is selectable and not shipped (see
-	# `BfhArena.HOOK_LAYOUTS`). Pinned so that a hook which does fix it fails these and gets
-	# them turned round, as the courtyard's west lane was.
+	# The decided fix, the middle pillar at x = 30.3, is `hook_layout = "wide"`: it breaks the gap rule
+	# at the scaffold, so it is selectable and not shipped (see `BfhArena.HOOK_LAYOUTS`).
 	var probe := _world()
 	probe.start()
 	await _step(probe, 2)
@@ -3168,10 +2861,9 @@ func _test_the_hook_gaps() -> void:
 	_done()
 
 
-## [code][mouth, middle, out][/code] for [method _drive_into]: the gap between hook
-## pillars [param a] and [param b] (offsets from [constant BfhArena.HOOK_FIRST]), its
-## middle on clear floor, the hook's centroid, and the direction out of the gap away
-## from that centroid, square to the gap.
+## [code][mouth, middle, out][/code] for [method _drive_into]: the gap between hook pillars [param
+## a] and [param b] (offsets from [constant BfhArena.HOOK_FIRST]), its middle on clear floor, the
+## hook's centroid, and the direction out of the gap away from that centroid, square to the gap.
 func _hook_gap(arena: BfhArena, a: int, b: int) -> Array:
 	var p := arena.pillars()
 	var h := BfhArena.HOOK_FIRST
@@ -3215,13 +2907,9 @@ func _test_sides() -> void:
 	_check(not game.match_node.teams.force_balance,
 		"and nothing tries to even them up")
 
-	# [b]And nothing REFUSES them either, which `force_balance` alone does not say.[/b]
-	# dot-match's team manager has a second rule, `max_difference`, that refuses a join
-	# putting one side more than one ahead — so the fifth person here was left on no team
-	# in dot-match while `sides` called them a runner. The elimination rule counts
-	# survivors off dot-match's teams, so a round ended as soon as the runners it KNEW
-	# about were down, with the rest still on their feet. Two against four is the smallest
-	# server that shows it.
+	# [b]And nothing REFUSES them either, which `force_balance` alone does not say.[/b] dot-match's
+	# team manager has a second rule, `max_difference`, that refuses a join putting one side more than
+	# one ahead — so the fifth person here was left on no team in dot-match while `sides`.
 	game.add_player(&"e", "E")
 	game.add_player(&"f", "F")
 	var unknown := PackedStringArray()
@@ -3247,7 +2935,7 @@ func _test_sides() -> void:
 	_done()
 
 
-# --- The join this game exists for -----------------------------------------
+# --- The join this game exists for
 
 func _test_standing_on_a_crate() -> void:
 	print("standing on a crate")
@@ -3264,12 +2952,9 @@ func _test_standing_on_a_crate() -> void:
 	var crate := game.props.spawn(BfhContent.CRATE, &"world", Vector3(0.0, 0.5, 0.0))
 	var body := crate.body()
 	body.freeze = false
-	# Gravity LEFT ON, and the first version of this check turned it off. A crate with
-	# no gravity still takes the player's weight — that is the whole point of
-	# `DotPropCarry.stand` — so it accelerates downward out from under them and they
-	# are carried for about four ticks. The floor is what holds a crate up; removing
-	# gravity removes the floor's half of that and measures the bug it was written to
-	# catch.
+	# Gravity LEFT ON, and the first version of this check turned it off. A crate with no gravity still
+	# takes the player's weight — that is the whole point of `DotPropCarry.stand` — so it accelerates
+	# downward out from under them and they are carried for about four ticks.
 	body.angular_velocity = Vector3.ZERO
 	body.linear_velocity = Vector3.ZERO
 
@@ -3303,10 +2988,9 @@ func _test_standing_on_a_crate() -> void:
 	_check(player.carried_metres > 0.5, "which the player counts",
 		"%.2f m" % player.carried_metres)
 
-	# Written back into the state as well as onto the node: the controller starts the
-	# next tick from `state.position`, so a displacement applied only to the node is
-	# undone by the very next move and the player rides for one frame per tick and
-	# stands still overall.
+	# Written back into the state as well as onto the node: the controller starts the next tick from
+	# `state.position`, so a displacement applied only to the node is undone by the very next move and
+	# the player rides for one frame per tick and stands still overall.
 	_check(
 		player.controller.state.position.distance_to(player.global_position) < 0.01,
 		"with the motor's own state moved with them",
@@ -3701,12 +3385,9 @@ func _test_round_ends() -> void:
 	_check((game.players[&"d"] as BfhPlayer).hammer != null,
 		"the new runner is handed a hammer")
 
-	# [b]And the round AFTER the swap is decided by the sides as they are now.[/b] The
-	# elimination rule reads teams off dot-match's scoreboard, not off `sides`, so a swap
-	# that only flipped `sides` left the rule scoring the old ones: the drivers ran the new
-	# runner down and the round was announced as the RUNNERS' win, because the team that
-	# had nobody left alive was the one the scoreboard still called the drivers. Every
-	# round after the first swap of a server's life had its winner backwards.
+	# [b]And the round AFTER the swap is decided by the sides as they are now.[/b] The elimination rule
+	# reads teams off dot-match's scoreboard, not off `sides`, so a swap that only flipped `sides` left
+	# the rule scoring the old ones: the drivers ran the new runner down and the round.
 	_check(game.match_node.teams.team_of("d") == BfhGame.TEAM_RUNNERS,
 		"dot-match is told about the swap too",
 		"it has d on %d" % game.match_node.teams.team_of("d"))
@@ -3752,16 +3433,9 @@ func _test_round_ends() -> void:
 	_done()
 
 
-# --- Driving ---------------------------------------------------------------
+# --- Driving
 
 ## A driver who arrives mid-round gets the bus that is standing empty.
-##
-## [b]The bot rule is what makes this the common case rather than a corner.[/b] When a
-## person driving disconnects, their bus stays where it is with nobody in it, and the
-## module puts a bot in the seat within two seconds -- in `sides`. Seating only ever
-## happened at the top of a round, so that bot stood on the sand as an untouchable
-## pedestrian and the bus sat still for the rest of the round: half the drivers' threat
-## gone for up to three minutes, from one dropped connection.
 func _test_a_driver_arrives_mid_round() -> void:
 	print("a driver arriving mid-round")
 
@@ -3797,18 +3471,9 @@ func _test_a_driver_arrives_mid_round() -> void:
 func _test_bus_propulsion() -> void:
 	print("driving the bus")
 
-	# [b]Three checks, and the middle one is the regression guard for the bug that
-	# took longest to find.[/b] A bus spawned, seated a driver, collided, ran people
-	# over and broke crates — and did not move under its own throttle. Four wheels
-	# reported contact, 26 kN of engine force sat on a 2 tonne body, and the
-	# speedometer read 0.00 m/s. The cause was not in the drive path at all: this
-	# project runs at 20 m/s² because that is what the character movement wants, so
-	# each wheel carries 10 kN, and `VehicleWheel3D.suspension_max_force` defaults to
-	# 6000 N. The suspension could not lift the bus. It sank until its own hull rested
-	# on the ground and the hull's friction held it there.
-	#
-	# So the check that matters is not "does it drive" but "is it standing on its
-	# wheels": every symptom of that bug is downstream of the body being on the floor.
+	# [b]Three checks, and the middle one is the regression guard for the bug that took longest to
+	# find.[/b] A bus spawned, seated a driver, collided, ran people over and broke crates — and did
+	# not move under its own throttle.
 	var game := _world(func(c: BfhConfig) -> void:
 		c.crate_count = 0
 		c.barrel_count = 0
@@ -3853,14 +3518,9 @@ func _test_bus_propulsion() -> void:
 	body.angular_velocity = Vector3.ZERO
 	await _step(game, 4)
 
-	# [b]Through the driver's own command, the way a person presses W.[/b] This used to
-	# drive the chassis directly and then call `simulate`, which drives it AGAIN from the
-	# seated driver's pending command — nobody's, so throttle 0. The check passed
-	# anyway, for nine days, because the bus's start line was under the ramp, which was
-	# built backwards and low at that end: the bus rested on it at y = 3.45 and ROLLED
-	# north, the wrong way, at 6 m/s. On flat floor the same check read 0.05 m/s. So it
-	# was never a check of the throttle, and the path a human driver's keys take into a
-	# bus had no check at all.
+	# The check passed anyway, for nine days, because the bus's start line was under the ramp, which
+	# was built backwards and low at that end: the bus rested on it at y = 3.45 and ROLLED north, the
+	# wrong way, at 6 m/s. On flat floor the same check read 0.05 m/s.
 	var driver: BfhPlayer = game.players[&"d"]
 	var start := bus.position()
 	var fastest := 0.0
@@ -3875,13 +3535,9 @@ func _test_bus_propulsion() -> void:
 
 	var forward := -body.global_transform.basis.z
 	var along := (bus.position() - start).dot(Vector3(forward.x, 0.0, forward.z).normalized())
-	# [b]Printed, because it is not the number it looks like.[/b] This start lane has one
-	# of the round's concrete blocks 13 m in front of it (the scatter keeps blocks out of
-	# the pillars, the tanks and the scaffold, and not out of a bus's lane), so the bus
-	# peaks at 10.6 m/s and ends the second and a half against it at about 5.5. "Faster
-	# than 1 m/s and more than a metre along" passed on that, and would pass on a throttle
-	# delivering a tenth of its force. What the throttle reaches on open floor is
-	# measured in "what a bot actually travels at".
+	# [b]Printed, because it is not the number it looks like.[/b] This start lane has one of the
+	# round's concrete blocks 13 m in front of it (the scatter keeps blocks out of the pillars, the
+	# tanks and the scaffold, and not out of a bus's lane), so the bus peaks at 10.6 m/s and ends the.
 	print("  ..    1.5 s of throttle from a standstill: %.2f m/s at the end, %.2f fastest, of a bus_top_speed of %.1f; %.2f m along its nose"
 		% [bus.speed(), fastest, game.config.bus_top_speed, along])
 	_check(
@@ -3895,18 +3551,10 @@ func _test_bus_propulsion() -> void:
 	_done()
 
 
-# --- What a bot actually travels at -----------------------------------------
+# --- What a bot actually travels at
 
-## How far a bus takes to stop, three ways, from 15 m/s on the south straight, and that S
-## then reverses.
-##
-## [b]Distances, because "it stopped" passed for the bug.[/b] dot-vehicle handed Godot's
-## wheels the brake in newtons where Godot reads an impulse per step, so the handbrake (Ctrl)
-## stopped a 2 t bus from 15 m/s in about a metre and the bot's foot brake almost as hard: a
-## bus that can stop dead is a bus a runner cannot read. Since dot-vehicle 4f4afaf they are
-## forces. A person's S was reverse thrust until 2026-10-12 and took 21 m; it is the foot
-## brake now until the bus has stopped (`DotVehicleCommand.brake_then_reverse`), so it is
-## measured as the foot brake and then as reverse.
+## How far a bus takes to stop, three ways, from 15 m/s on the south straight, and that S then
+## reverses.
 func _test_bus_brakes() -> void:
 	print("a bus's brakes")
 
@@ -3960,10 +3608,8 @@ func _test_bus_brakes() -> void:
 
 
 ## How far the bus takes from 15 m/s to a standstill on the south straight, by [param how]:
-## "handbrake" (Ctrl held), "brake" (the foot brake, as the bot's autopilot uses it) or
-## "back" (S held, which then goes on holding it two seconds more). `stop` is metres to the
-## standstill; for "back", `back` is metres behind that point after the two seconds and
-## `speed` the forward speed then.
+## "handbrake" (Ctrl held), "brake" (the foot brake, as the bot's autopilot uses it) or "back" (S
+## held, which then goes on holding it two seconds more).
 func _bus_stop(game: BfhGame, driver: BfhPlayer, how: String) -> Dictionary:
 	var bus := game.vehicles.get_vehicle(game._bus_ids[0])
 	var body := bus.body()
@@ -4019,11 +3665,9 @@ func _bus_stop(game: BfhGame, driver: BfhPlayer, how: String) -> Dictionary:
 	}
 
 
-## A handbrake turn: the back end steps out. Godot's raycast vehicle never locks a wheel, so
-## before `handbrake_grip_fraction` a bus turning with Ctrl held turned LESS than without it
-## (dot-vehicle's driving.md measured the same on a car). Measured as the heading turned and
-## the slip angle (between where the nose points and where the bus is going) over the same
-## second of full lock from 12 m/s, with and without the handbrake, through a person's keys.
+## A handbrake turn: the back end steps out. Godot's raycast vehicle never locks a wheel, so before
+## `handbrake_grip_fraction` a bus turning with Ctrl held turned LESS than without it (dot-vehicle's
+## driving.md measured the same on a car).
 func _test_handbrake_turn() -> void:
 	print("a handbrake turn")
 
@@ -4070,11 +3714,9 @@ func _rear_wheel(game: BfhGame) -> VehicleWheel3D:
 	return null
 
 
-## One second of D held at full lock from 12 m/s, heading +X on the south straight (D turns
-## it towards the middle of the bowl), with or without Ctrl; then a second with neither key so
-## the grip comes back. `yaw` is the degrees the bus turned in that second, `slip` the most
-## its nose pointed INSIDE its direction of travel (the back end out; a gripping turn's nose
-## points a few degrees outside it, which reads negative), `speed` what was left.
+## One second of D held at full lock from 12 m/s, heading +X on the south straight (D turns it
+## towards the middle of the bowl), with or without Ctrl; then a second with neither key so the grip
+## comes back.
 func _bus_turn(game: BfhGame, driver: BfhPlayer, handbrake: bool) -> Dictionary:
 	var bus := game.vehicles.get_vehicle(game._bus_ids[0])
 	var body := bus.body()
@@ -4120,11 +3762,9 @@ func _bus_turn(game: BfhGame, driver: BfhPlayer, handbrake: bool) -> Dictionary:
 	return {"yaw": rad_to_deg(absf(yaw)), "slip": rad_to_deg(slip), "speed": speed}
 
 
-## A runner holding one key across open sand, [param ticks] long, facing +Z.
-## [param jump] is 0 for no jump, 1 for jump held the whole way, 2 for jump pressed
-## afresh on every tick the runner is on the ground, which is what a person mashing the
-## key does. Returns the ground covered in the last second, the speed at the end, the
-## time on the ground, and how many jumps were taken.
+## A runner holding one key across open sand, [param ticks] long, facing +Z. [param jump] is 0 for
+## no jump, 1 for jump held the whole way, 2 for jump pressed afresh on every tick the runner is on
+## the ground, which is what a person mashing the key does.
 func _run_straight(game: BfhGame, runner: BfhPlayer, jump: int, ticks: int) -> Dictionary:
 	_put(runner, Vector3(0.0, 0.05, -8.0))
 	await _step(game, 5)
@@ -4168,10 +3808,8 @@ func _run_straight(game: BfhGame, runner: BfhPlayer, jump: int, ticks: int) -> D
 	}
 
 
-## The straight [method _drive_straight] measures: west to east along z = 32, south of
-## the stacks and the scaffold and nowhere near the farm. [b]Not the centreline[/b], which
-## looks open and is not: the hook's pillars stand on it at z = 15 and 22, and the first
-## version of this wedged a bus on one at 11.5 m and read it as a speed.
+## The straight [method _drive_straight] measures: west to east along z = 32, south of the stacks
+## and the scaffold and nowhere near the farm.
 const BUS_STRAIGHT := 40.0
 
 
@@ -4224,19 +3862,8 @@ func _drive_straight(game: BfhGame, driver: BfhPlayer, runner: BfhPlayer, bot: b
 	return r
 
 
-## What a bot on foot and a bot in a bus actually travel at, beside the numbers the
-## configuration says they should.
-##
-## [b]The family's `[bot-drive-1]`, asked of this game.[/b] Every bot in the family was
-## driven with forward and jump held, and in the games with auto-hop that is a player who
-## leaves the ground on the tick they land, never gets a ground tick to accelerate in, and
-## bleeds to the air cap: 1 m/s of a 7 in one of them, behind checks that passed for as
-## long as they existed. This game has auto-hop OFF (docs/design.md, "No bunny hopping"), so the
-## question is different and the answer has to be measured rather than assumed: a held
-## jump here is ONE jump, and the route bot only presses it at a face. What is asserted is
-## what the design says — a runner holding a key runs at `runner_speed`, and jumping does
-## not make them faster — and every number is printed, because a detail line shows only on
-## failure and a number only asserted is a number nobody reads once it passes.
+## What a bot on foot and a bot in a bus actually travel at, beside the numbers the configuration
+## says they should.
 func _test_what_a_bot_travels_at() -> void:
 	print("what a bot actually travels at")
 
@@ -4269,10 +3896,9 @@ func _test_what_a_bot_travels_at() -> void:
 		"a runner bot holding forward travels at runner_speed",
 		"%.2f m/s, %.2f m in a second, of %.2f" % [run.speed, run.last_second, top]
 	)
-	# [b]A held jump is one jump here.[/b] Auto-hop is off, so the key has to come up
-	# before it jumps again, and a bot that held it would run the rest of the way at speed
-	# — which is what makes `_run_route`'s "hold it near a face" safe in this game when it
-	# is not in the auto-hop ones.
+	# [b]A held jump is one jump here.[/b] Auto-hop is off, so the key has to come up before it jumps
+	# again, and a bot that held it would run the rest of the way at speed — which is what makes
+	# `_run_route`'s "hold it near a face" safe in this game when it is not in the auto-hop ones.
 	_check(
 		held.jumps == 1 and held.last_second > top * 0.98,
 		"holding jump as well jumps once and then runs at it",
@@ -4287,13 +3913,7 @@ func _test_what_a_bot_travels_at() -> void:
 		"%d jumps, %.2f m in the last second, of %.2f" % [mashed.jumps, mashed.last_second, top]
 	)
 
-	# --- A bus, across the bowl, by the bot and by a person --------------------
-	#
-	# The same straight both times, along the south of the bowl: a person
-	# holding the throttle, then the autopilot chasing a runner held at the far end. The
-	# autopilot's `target_speed` is `bus_top_speed` and it aims eight metres past the
-	# runner so that it never eases off for arriving — so the two runs should be the
-	# same run, and if the bot's is slower the bot is holding back.
+	# --- A bus, across the bowl, by the bot and by a person
 	var bus_top := game.config.bus_top_speed
 	var by_hand := await _drive_straight(game, driver, runner, false)
 	var by_bot := await _drive_straight(game, driver, runner, true)
@@ -4321,16 +3941,9 @@ func _test_what_a_bot_travels_at() -> void:
 	_done()
 
 
-# --- A runner who is out -----------------------------------------------------
+# --- A runner who is out
 
 ## Where a runner who has been run down looks, decided by the authority.
-##
-## [b]Until 2026-09-25 they looked at the sand they were run over on, for the rest of the
-## round.[/b] Out is out here, so that is not the two seconds before a respawn; it is most
-## of a round. What is asserted is the policy as much as the camera: the living do not
-## watch, the bus is watchable and is watched FROM ITS CAB rather than from where its driver
-## sat down, nobody watches themselves or the dead, a leaver hands the camera on, and a new
-## round ends it.
 func _test_spectating() -> void:
 	print("a runner who is out, and where they look")
 
@@ -4367,10 +3980,8 @@ func _test_spectating() -> void:
 	var bus := driver.ridden
 	game._bus_hit(out, &"d", 30.0, Vector3(0.0, 0.0, 1.0))
 	var eye := spectate.camera_for(&"r1")
-	# [b]At the bus's CAB, which is what the death camera looks at[/b] (`pose_of` the killer,
-	# 3.8 m up), not at the body's origin under it. Measured against the origin this read
-	# 0.87 on two seeds out of six: the runner is wherever the round scattered them, and a
-	# runner who fell a few metres from the bus looks up at a cab the origin is well below.
+	# [b]At the bus's CAB, which is what the death camera looks at[/b] (`pose_of` the killer, 3.8 m
+	# up), not at the body's origin under it.
 	var to_bus := (spectate.pose_of("d").origin - eye.origin).normalized()
 	_check(
 		not out.health.alive
@@ -4531,16 +4142,9 @@ func _test_spectating() -> void:
 	_done()
 
 
-# --- What the bowl sounds like -------------------------------------------------
+# --- What the bowl sounds like
 
 ## The catalogue, the stand-ins, and every noise reaching a client's ears.
-##
-## [b]The two directions that fail silently, first.[/b] An id with no recipe is a sound
-## that stays silent for ever on a deployment with no audio files — every deployment, today
-## — and a recipe for an id the catalogue lacks is a decision that reaches nothing. Then the
-## world: every noise it is supposed to make, made, and heard by `BfhAudio` through the null
-## sink a headless run gets (dot-audio's own honest device check). What no assertion here can
-## reach is whether a speaker moves; see docs/client.md.
 func _test_the_sounds() -> void:
 	print("what the bowl sounds like")
 
@@ -4703,12 +4307,8 @@ func _test_the_sounds() -> void:
 		"missing %s of %s" % [str(missing), str(played)]
 	)
 
-	# The engine, from the bus as drawn. Still, it idles; moved at 18 m/s it pulses faster
-	# and the client hears the speed it is being drawn at.
-	#
-	# Every pulse is finished as soon as it starts: the null sink never ends a sound on its
-	# own, and a pulse is 75 ms, so without this the engine's concurrency cap would be what
-	# this counted.
+	# The engine, from the bus as drawn. Still, it idles; moved at 18 m/s it pulses faster and the
+	# client hears the speed it is being drawn at.
 	var bus := driver.ridden
 	sink.stop_all()
 	sink.forget()
@@ -4749,14 +4349,9 @@ func _test_the_sounds() -> void:
 	_done()
 
 
-# --- A player's numbers ---------------------------------------------------------
+# --- A player's numbers
 
 ## The five numbers, counted from what happened, and what they earn.
-##
-## [b]Every reading is a world signal[/b], so this section drives the real paths — a hammer,
-## a bus's impact rule, the round clock — and reads the tracker. The two documents are
-## checked against each other in both directions first: an achievement over a stat nothing
-## records never unlocks, and a stat no achievement reads is counted for nobody.
 func _test_progress() -> void:
 	print("what a player's numbers are, and what they earn")
 
@@ -4925,15 +4520,9 @@ func _test_progress() -> void:
 	_done()
 
 
-# --- A player's settings -----------------------------------------------------------
+# --- A player's settings
 
 ## The document, what reads it, and the screen that changes it.
-##
-## [b]A value loaded from disk has not CHANGED, and that is the family's repeated bug.[/b]
-## So the check that matters saves a document with one launch and reads it back with the
-## next, and asserts that the loaded values reached the sampler, the camera and the mixer
-## with nobody touching anything. It uses a memory store, because a suite that wrote to
-## `user://` would pass differently the second time it ran (docs/testing.md).
 func _test_settings() -> void:
 	print("a player's settings")
 
@@ -5048,14 +4637,8 @@ func _test_pack_paths() -> void:
 	_done()
 
 
-## Every bare `"res://…"` string in a SHIPPED script that names one of this game's own
-## directories, as `file:line`. See the form-three check that calls it.
-##
-## The same rule `dot-server-deploy/tools/check.sh` counts, asked here because that tool is
-## not what somebody adding a file runs: comments are prose and skipped, a literal already
-## inside `<Game>Paths.rebase("…")` is the fixed form and skipped, and a path whose first
-## segment this game does not ship — `res://addons/…`, `res://audio/…` in a game with no
-## audio — names the HOST's file and is right as it stands.
+## Every bare `"res://…"` string in a SHIPPED script that names one of this game's own directories,
+## as `file:line`. See the form-three check that calls it.
 func _bare_own_paths() -> PackedStringArray:
 	var skip := ["addons", "examples", "tools", "screenshots"]
 	var owned := PackedStringArray()

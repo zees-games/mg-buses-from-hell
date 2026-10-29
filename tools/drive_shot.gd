@@ -4,19 +4,9 @@ const BfhConfig := preload("../game/bfh_config.gd")
 const BfhGame := preload("../game/bfh_game.gd")
 const BfhPlayer := preload("../game/bfh_player.gd")
 
-## Renders a person driving a bus, from straight above, as a contact sheet of frames a
-## quarter of a second apart. What headless_run's "a bus's brakes" and "a handbrake turn"
-## measure, drawn, because a number cannot say whether a slide looks like one.
-##
-## [codeblock]
-## tools/drive_shot.sh stop        # S from 15 m/s: the brake, a standstill, then reverse
-## tools/drive_shot.sh handbrake   # D and Ctrl from 12 m/s: the back end steps out
-## tools/drive_shot.sh turn        # D alone from 12 m/s, to compare
-## [/codeblock]
-##
-## The world is stepped by hand, as the suites step it, so the frames fall on the same ticks
-## every run. Frames read left to right, top to bottom; the first is the moment the keys go
-## down.
+## Renders a person driving a bus, from straight above, as a contact sheet of frames a quarter of a
+## second apart. What headless_run's "a bus's brakes" and "a handbrake turn" measure, drawn, because
+## a number cannot say whether a slide looks like one.
 
 const TICK := 1.0 / 60.0
 const FRAMES := 8

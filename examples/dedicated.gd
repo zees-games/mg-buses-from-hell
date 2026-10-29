@@ -12,32 +12,12 @@ const BfhBowls := preload("../game/bfh_bowls.gd")
 const BfhDistricts := preload("../game/bfh_districts.gd")
 const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 
-## Boots a real [DotServer], loads this game into it as a module, and runs the commands
-## an operator would actually type.
-##
-## [codeblock]
-## godot --headless --path . res://examples/dedicated.tscn
-## [/codeblock]
-##
-## [b]This is the seam the family's own notes say is never run.[/b] `headless_run` tests
-## the joins between the gameplay addons and `headless_net` tests the wire; this tests the
-## join between the game and the SERVER — the module lifecycle, the console, the cvars,
-## and `sv_tickrate` travelling from a line in a config file all the way into the
-## netcode's own configuration.
-##
-## Nothing here opens a socket to a client. A dedicated server that never accepts one is
-## still a dedicated server as far as its console, its cvars and its modules are
-## concerned, and those are what this is about.
+## Boots a real [DotServer], loads this game into it as a module, and runs the commands an operator
+## would actually type.
 
 const CHECKS := 173
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
-##
-## [b]A suite that writes to `user://` is a suite whose result depends on the last run.[/b]
-## This one used to write the real punishment store, the server's ban and admin files and
-## its audit log, all at their defaults — so every run appended to all four, and the live
-## tools' warnings alone had reached 134 records in a store a real server enforces.
-## `headless_net` had already failed on its second run for the same reason, over a gag.
 const SERVER_DIR := "user://bfh_dedicated"
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
@@ -132,12 +112,6 @@ func _run() -> void:
 
 
 ## Takes the server down before quitting, and this run does not end without it.
-##
-## [b]`get_tree().quit()` on a booted [DotServer] does not end the process.[/b] The
-## listener is open, stdin console input is on and the transport is holding the main loop,
-## so the run prints its results, reports success, and hangs — which in a CI job is a
-## timeout on a suite that passed, and on a developer's machine is a terminal that has to
-## be interrupted. Measured here: 33 passed, 0 failed, killed at 110 seconds.
 func _shut_down() -> void:
 	if server == null:
 		return
@@ -168,14 +142,8 @@ func _shut_down() -> void:
 	await get_tree().process_frame
 
 
-## Profiles, names and faces on a real server: dot-platform's identity layer, its module, the
-## three events this game redraws a player on, and the key what they keep is filed under.
-##
-## [b]Both orders a real join has.[/b] Admission runs off dot-server's state changes and is
-## not awaited, so a player is admitted before they are seated when the profile store is
-## quicker than the content download — the usual case — and after when it is slower. Late,
-## the world has to be TOLD; early, it has to ask. Each order is driven here the way
-## dot-server drives it.
+## Profiles, names and faces on a real server: dot-platform's identity layer, its module, the three
+## events this game redraws a player on, and the key what they keep is filed under.
 func _test_who_they_are() -> void:
 	print("who somebody is")
 
@@ -295,21 +263,11 @@ func _done() -> void:
 
 
 ## The loaded module, looked up rather than kept.
-##
-## [b]Looked up every time, because the last section unloads it.[/b] A field would be a
-## dangling reference the moment it did. Typed [DotModule] rather than as its own class,
-## because `bfh_module.gd` has NO `class_name` — it is loaded by path, which is the shape
-## a module delivered in a dot-cloud pack must have.
 func _module() -> DotModule:
 	return server.modules.get_module("buses") if server != null else null
 
 
 ## Runs a line the way the console does and captures what came back.
-##
-## [b]Through `reply_sink`, not by reading `output` off a context built by hand.[/b] A
-## command's reply goes wherever its context sends it — a socket, RCON, stdout — and the
-## sink is that seam. A context constructed with `new()` and poked at is not the object a
-## real command is handed.
 func _run_command(line: String) -> PackedStringArray:
 	var captured: Array[String] = []
 
@@ -329,18 +287,6 @@ func _said(lines: PackedStringArray, text: String) -> bool:
 
 
 ## [b]The one line that made this suite leak its whole script graph at exit.[/b]
-##
-## A script that `extends DotNetMessage` and preloads ITSELF, first loaded from a module a
-## running [DotServer] loads — which is how every deployed server loads this game — left
-## 111 scripts, the grid textures in `bfh_textures.gd`'s static cache and eight texture
-## RIDs alive at exit, on 4.7.2. `bfh_event.gd` and `bfh_request.gd` both did it, for a
-## typed `of()` factory. `headless_run` and `headless_net` preload the same files at scene
-## load and never saw it.
-##
-## [b]Asserted on the source, because the symptom is where no check can reach.[/b] The
-## leak is reported after `quit()`, by the engine, as warnings a CI filter already
-## treats as noise; an assertion here runs before any of it exists. So this checks the
-## cause instead: every message script in `game/`, read as text.
 func _test_no_message_preloads_itself() -> void:
 	print("exiting clean")
 
@@ -389,18 +335,13 @@ func _extends_message(source: String) -> bool:
 	return false
 
 
-# --- Booting ---------------------------------------------------------------
+# --- Booting
 
 func _boot() -> void:
 	print("booting")
 
-	# The tick rate is set the way an operator actually sets it: a line in a config file
-	# the server execs at boot.
-	#
-	# [b]`startup_config`, not `autoexec_config`.[/b] `sv_tickrate` is FLAG_STARTUP_ONLY —
-	# a live server cannot re-negotiate its tick rate — and dot-server execs `server.cfg`
-	# BEFORE the listener for exactly that reason, while `autoexec.cfg` runs after and
-	# would have it refused.
+	# The tick rate is set the way an operator actually sets it: a line in a config file the server
+	# execs at boot.
 	var cfg_path := "%s/server.cfg" % SERVER_DIR
 	var cfg := FileAccess.open(cfg_path, FileAccess.WRITE)
 
@@ -427,13 +368,9 @@ func _boot() -> void:
 	config.admins_path = "%s/admins.json" % SERVER_DIR
 	config.bans_path = "%s/bans.json" % SERVER_DIR
 	config.audit_log_path = "%s/audit.jsonl" % SERVER_DIR
-	# [b]Off, or this run never ends.[/b] The stdin console reads on its own thread, and a
-	# thread blocked in a read is a thread Godot will not exit without — so the suite
-	# prints its results, calls `quit()`, and hangs. It is the right default for a real
-	# dedicated server, where an operator types into the terminal; a test has nobody at the
-	# keyboard.
-	# Kept after dot-server 5f46687, which no longer reads a pipe unless `stdin_console_pipes`
-	# is on: a terminal is still read, and a suite takes no commands from either.
+	# [b]Off, or this run never ends.[/b] The stdin console reads on its own thread, and a thread
+	# blocked in a read is a thread Godot will not exit without — so the suite prints its results,
+	# calls `quit()`, and hangs.
 	config.stdin_console_enabled = false
 
 	server = DotServer.new()
@@ -463,16 +400,14 @@ func _boot() -> void:
 	)
 
 
-# --- The module ------------------------------------------------------------
+# --- The module
 
 func _test_the_module_loads() -> void:
 	print("the module")
 
-	# [b]The world is built AFTER the server and BEFORE the module, and both halves of
-	# that order matter.[/b] After the server, because the server is what set the engine's
-	# tick rate and the world reads it — which is the ordering a real deployment has.
-	# Before the module, because a module refuses to load without a world to run: it
-	# cannot build one, since the world outlives it across a `module reload`.
+	# [b]The world is built AFTER the server and BEFORE the module, and both halves of that order
+	# matter.[/b] After the server, because the server is what set the engine's tick rate and the world
+	# reads it — which is the ordering a real deployment has.
 	var config := BfhConfig.new()
 	config.crate_count = 10
 	config.barrel_count = 2
@@ -495,11 +430,6 @@ func _test_the_module_loads() -> void:
 	)
 
 	# Into this run's own directory. See [constant SERVER_DIR].
-	#
-	# Through the script, loaded here, rather than a `preload` at the top of this file:
-	# a preload would load the module when this scene loads, long before the host does,
-	# and the order scripts load in is what decides whether Godot 4.7.2 leaks them at
-	# exit. See [method _run_exit_probe]. This is the order a deployed server has.
 	(load("res://game/bfh_module.gd") as GDScript).set(
 		"punishments_file", "%s/punishments.json" % SERVER_DIR
 	)
@@ -539,10 +469,9 @@ func _test_the_module_loads() -> void:
 	)
 	_check(not net.auto_tick, "the manager does not tick itself: the module drives it")
 
-	# [b]The store, and that it is empty.[/b] The second is what says the first worked on
-	# THIS run: a path that is right and a directory that was not wiped is a suite carrying
-	# the last run's punishments into this one, which is how `headless_net` failed on its
-	# second run.
+	# [b]The store, and that it is empty.[/b] The second is what says the first worked on THIS run: a
+	# path that is right and a directory that was not wiped is a suite carrying the last run's
+	# punishments into this one, which is how `headless_net` failed on its second run.
 	var services: Object = module.get("services")
 	var moderation: Object = services.get("moderation") if services != null else null
 	var store: Object = moderation.get("store") if moderation != null else null
@@ -590,17 +519,9 @@ func _noblock_and_config(module: DotModule) -> void:
 	game.remove_player(&"u92")
 
 
-## The players' vote decides the next bowl, end to end through what a player types: a
-## nomination, the ballot opening on its own clock with the nomination on it, a vote by
-## number, the round's end handing the winner to the world, and the next round REBUILDING
-## the bowl to it; then rock-the-vote opening a ballot early. Commands run at the console,
-## which is where a `!vote` typed in chat lands (`_on_chat_command` runs it as the player);
-## the console's voter is "console", so the voter list is that one name. Bots are not
-## voters, and a server of bots never opens a ballot by itself.
-##
-## Synchronous from the round's end to the round begun: the bots' rounds are running, and
-## one that started in a frame between would build the voted bowl itself and leave the
-## check reading nothing. Last before unloading, because it leaves the bowl a different size.
+## The players' vote decides the next bowl, end to end through what a player types: a nomination,
+## the ballot opening on its own clock with the nomination on it, a vote by number, the round's end
+## handing the winner to the world, and the next round REBUILDING the bowl to it; then rock.
 func _test_the_bowl_vote() -> void:
 	print("the bowl vote")
 	var module := _module()
@@ -720,10 +641,8 @@ func _test_the_bowl_vote() -> void:
 	director.rules.rtv_min_players = 1
 	director.rules.allow_single_voter_auto = true
 	director.advance(director.rules.vote_cooldown_sec + 0.1)
-	# Rocked in the warmup, which is what an empty current id means, so the same ballot also
-	# shows it is drawn there. The feed was polled after the warmup return, so a ballot opened
-	# in the warmup (rocked, or one the server's game vote made wait) was open and counted and
-	# no client ever drew it.
+	# Rocked in the warmup, which is what an empty current id means, so the same ballot also shows it
+	# is drawn there.
 	director.set("_current_id", &"")
 	captured.clear()
 	var ballots: Array = []
@@ -750,10 +669,7 @@ class CommandHost extends Node:
 		return null
 
 
-## `cfg/maps.yml`: which bowls rotate. The format is dot-map's selftest's; this is what the GAME
-## does with it: a bowl left out is installed and loadable and is never drawn, never on a
-## ballot, never nominated, marked in the map list; a switch of rotation takes effect; a renamed
-## command is registered; no file means every bowl.
+## `cfg/maps.yml`: which bowls rotate.
 func _test_rotation_file() -> void:
 	print("rotation file")
 	var module := _module()
@@ -865,11 +781,9 @@ func _test_rotation_file() -> void:
 	_done()
 
 
-## [b]`time_up: finish_round` waits for a round being played, never for warmup.[/b] The game
-## hands dot-vote its match's answer (`round_in_progress_fn`); without it a limit that ran out
-## in warmup held the change for `finish_round_max_sec` over a round that had not started.
-## Run on a director of its own carrying the game's own hook, so the real vote's clock is
-## untouched; the match's state is set by hand and put back.
+## [b]`time_up: finish_round` waits for a round being played, never for warmup.[/b] The game hands
+## dot-vote its match's answer (`round_in_progress_fn`); without it a limit that ran out in warmup
+## held the change for `finish_round_max_sec` over a round that had not started.
 func _test_finish_round_waits_for_a_live_round() -> void:
 	print("finish_round waits for a live round, not warmup")
 	var module := _module()
@@ -1011,7 +925,7 @@ func _test_the_tunables() -> void:
 	_done()
 
 
-# --- It actually plays -----------------------------------------------------
+# --- It actually plays
 
 func _test_the_round_runs() -> void:
 	print("a round with nobody on it")
@@ -1056,11 +970,6 @@ func _test_the_round_runs() -> void:
 
 
 ## The seats fill themselves, because this game has nothing for one side alone.
-##
-## [b]Asymmetric games are the reason this is here.[/b] A deathmatch with nobody on it is
-## a map somebody can walk around; this is a bowl with nothing in it to run away from, and
-## `sides_are_playable` correctly refuses to start a round — so the first visitor to an
-## empty server would watch a clock that never moves and leave.
 func _test_the_bots() -> void:
 	print("an empty server fills its buses")
 
@@ -1098,12 +1007,8 @@ func _test_the_bots() -> void:
 		"each of them replicated exactly like a person"
 	)
 
-	# [b]A person who takes a seat takes it from a bot, and leaving gives it back[/b]:
-	# DotBotQuota's fill mode, counted in driving seats. One bot in two seats leaves one
-	# free, so a person added through the bridge (peer zero, the way a test's player is)
-	# joins into it as a driver, once somebody is already on foot: the first person on a
-	# server runs, because a bot cannot. The roster check is called rather than waited for,
-	# so nothing else moves under the count.
+	# [b]A person who takes a seat takes it from a bot, and leaving gives it back[/b]: DotBotQuota's
+	# fill mode, counted in driving seats.
 	_check(server.console.find_cvar("bot_quota") != null and server.console.find_cvar("bot_quota_mode") != null,
 		"the shared bot_quota cvars are registered")
 
@@ -1189,13 +1094,6 @@ func _bot_drivers() -> int:
 
 
 ## Chat, voice and moderation, as a module actually builds them.
-##
-## [b]The netcode suite drives the routers directly; this is the other half.[/b] What is
-## being checked here is that [DotGameModule] found the layer, that [DotGameServices]
-## built all three in the right order, and that the operator's own surface — `bfh_say`, an
-## admission check, a describe line — is there. The ordering is the part with a bug behind
-## it: moderation publishes the mute source both routers look up when they START, and a
-## chat router built first enforces no gag for the life of the server.
 func _test_the_services() -> void:
 	print("chat, voice and moderation")
 
@@ -1248,14 +1146,8 @@ func _test_the_services() -> void:
 	_done()
 
 
-## dot-moderation's live tools, built by dot-game's services layer BY PATH, with this
-## game's verbs in them — the first game to get them from the shared layer rather than
-## writing its own.
-##
-## A runner joins through the roster the way a real client does (an adopted session and
-## the `client_spawn` dot-server fires), and the commands go through the console. What is
-## asserted is the body: noclipped, then dead. And the refusals, which are this game's to
-## explain: a runner who is out stays out, and there is nothing to give.
+## dot-moderation's live tools, built by dot-game's services layer BY PATH, with this game's verbs
+## in them — the first game to get them from the shared layer rather than writing its own.
 func _test_the_live_tools() -> void:
 	print("the moderator's live tools")
 
@@ -1307,11 +1199,9 @@ func _test_the_live_tools() -> void:
 	var controller: DotFpsController = runner.get("controller")
 	var health: DotHealth = runner.get("health")
 
-	# Each body is looked at the moment the command returns, not after a frame. A lone
-	# runner makes the sides playable, so a round can start under this section — and a
-	# round start is a new body here, which is exactly when the tools switch a noclip off
-	# and the game stands a slain runner back up. The first run of this section asserted a
-	# frame late and failed all three for that reason, with every command having worked.
+	# Each body is looked at the moment the command returns, not after a frame. A lone runner makes the
+	# sides playable, so a round can start under this section — and a round start is a new body here,
+	# which is exactly when the tools switch a noclip off and the game stands a slain runner back up.
 	var noclipped := await _run_and_look("noclip Runner",
 		func() -> bool: return DotFpsAdminModifiers.is_noclipped(controller))
 	_check(bool(noclipped[1]), "`noclip Runner` puts them in noclip", " | ".join(noclipped[0]))
@@ -1473,13 +1363,8 @@ func _test_it_unloads_cleanly() -> void:
 	_done()
 
 
-## A module reload must leave ONE link under the server, still named for the client's route,
-## and a real client must still be sent to over it.
-##
-## [b]Over a real socket, because the loopback cannot see it.[/b] Before the bridge opened its
-## link through [DotGameLink], every load added another under the server, Godot renamed the
-## live one `@Node@n`, and an RPC to a real client found no node at that path and vanished
-## without an error. Reloaded twice here, before the client joins.
+## A module reload must leave ONE link under the server, still named for the client's route, and a
+## real client must still be sent to over it.
 func _test_a_reload_leaves_one_live_link() -> void:
 	print("")
 	print("a module reload leaves one live link")
@@ -1631,7 +1516,7 @@ func _until(condition: Callable, seconds: float) -> bool:
 	return bool(condition.call())
 
 
-# --- Exiting clean ----------------------------------------------------------------
+# --- Exiting clean
 
 ## The flag this suite hands the copy of itself it runs. See [method _run_exit_probe].
 const EXIT_PROBE_FLAG := "--exit-probe"
@@ -1640,11 +1525,9 @@ const EXIT_PROBE_FLAG := "--exit-probe"
 const EXIT_PROBE_CHECKS := 3
 
 
-## How long the copy may run before it is killed and this probe fails. A copy that is still
-## running this long after it started is hung, and the likeliest reason is the one that says
-## nothing at all: a scene whose script failed to parse never reaches `quit()` and prints
-## nothing. `-- --exit-probe-seconds N` lowers it, which is how the deadline itself is armed —
-## any N shorter than the suite takes is a copy that is still running when it expires.
+## How long the copy may run before it is killed and this probe fails. A copy that is still running
+## this long after it started is hung, and the likeliest reason is the one that says nothing at all:
+## a scene whose script failed to parse never reaches `quit()` and prints nothing.
 const EXIT_PROBE_SECONDS := 300
 
 
@@ -1660,37 +1543,8 @@ func _exit_probe_seconds() -> int:
 	return EXIT_PROBE_SECONDS
 
 
-## Runs this same suite in a fresh process: `[exit code, its stdout, its stderr, whether it
-## had to be killed, the seconds it was allowed]`.
-##
-## [b]A leak is reported after `quit()`, by the engine, where nothing in the process that
-## leaked can read it.[/b] "N ObjectDB instances were leaked at exit" is printed once the
-## scene tree is gone, so the only process that can check a run's exit is another one. On
-## Godot 4.7.2 a script that names itself, loaded after its base, cuts the engine's exit
-## teardown short and every script loaded before it is reported leaked — hundreds of lines
-## a passing run printed for weeks, which is why this is a check now and not a warning.
-##
-## [b]First, before this run opens a port[/b], so the two never contend for a socket — and
-## so this run is always the second one against the same `user://`, which is the other
-## thing no single run can see.
-##
-## [b]Not `OS.execute`.[/b] That blocks until the copy exits, so a copy that hangs held this
-## run for ever; and when the outer `timeout` then killed this run, the copy was left behind
-## holding the suite's directory and port. So the copy is started, polled against a deadline
-## and killed at it. Two deadlines, because Godot dies on SIGTERM without running a line of
-## script — nothing in this process can clean up after it is killed:
-##
-## - coreutils `timeout` wraps the copy where it exists. It is an exec wrapper, not a shell,
-##   and it outlives this process, so a copy orphaned by the outer `timeout` still dies on
-##   time. Its exit status 124 is how its expiry is recognised.
-## - this loop's own deadline, a little later, for a platform without it.
-##
-## `execute_with_pipe` rather than `create_process`, because the latter captures nothing and
-## the whole point is reading what the copy printed. Non-blocking, and drained on every pass
-## rather than once at the end: a pipe holds 64 KiB, and a copy that fills it blocks on its
-## next print — a hang this probe would then report as the suite's own. The copy's stdin is
-## the other end of a pipe this process holds open, which is why every suite turns the
-## server's stdin console off: a reader blocked on it never lets the copy exit.
+## Runs this same suite in a fresh process: `[exit code, its stdout, its stderr, whether it had to
+## be killed, the seconds it was allowed]`.
 func _run_exit_probe() -> Array:
 	var seconds := _exit_probe_seconds()
 	print("(running this suite once more in a fresh process, to read what it leaves at exit — %d s allowed)" % seconds)
@@ -1753,10 +1607,8 @@ func _test_exits_clean(probe: Array) -> void:
 	var stderr: String = probe[2]
 	var hung: bool = probe[3]
 	var seconds: int = probe[4]
-	# Every leak line is the engine's, and the engine writes them to stderr; both are
-	# searched so that stays a fact about the engine rather than an assumption here. Shown
-	# apart, because a pipe each is two streams whose interleaving is lost, and where a hung
-	# copy had got to is the end of its stdout.
+	# Every leak line is the engine's, and the engine writes them to stderr; both are searched so that
+	# stays a fact about the engine rather than an assumption here.
 	var text := stdout + "\n" + stderr
 	var tail := "its last lines:\n%s\nand the last on stderr:\n%s" % [
 		_last_lines(stdout, 15), _last_lines(stderr, 10)
@@ -1792,10 +1644,8 @@ func _last_lines(text: String, count: int) -> String:
 
 
 ## [b]A runner behind its loading cover is not run over, and is once the cover lifts.[/b] A real
-## [DotClientLink] joins over the server's ENet socket and says nothing, as a client still
-## loading its level does. A bus hit and a barrel's blast must do nothing to it; an operator's
-## damage (a slay or slap goes straight to dot-combat) still lands. The client then sends
-## `game.cover` on the real wire and the same hits land.
+## [DotClientLink] joins over the server's ENet socket and says nothing, as a client still loading
+## its level does.
 func _test_loading_cover() -> void:
 	print("")
 	print("a client behind its loading cover is not harmed")

@@ -3,9 +3,8 @@ extends Node
 const BfhPlayer := preload("bfh_player.gd")
 
 ## The killcam at a round's end. Client side: every frame drawn goes into dot-replay's
-## [DotKillcamBuffer], every decisive moment (a runner going under a bus) is noted, and when
-## the round ends [DotKillcam] replays the last one from the eyes of whoever caused it.
-## The length is `mp_killcam_time`; 0 skips straight to [signal over].
+## [DotKillcamBuffer], every decisive moment (a runner going under a bus) is noted, and when the
+## round ends [DotKillcam] replays the last one from the eyes of whoever caused it.
 
 const CHANNEL := "bfh.killcam"
 

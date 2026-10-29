@@ -2,25 +2,8 @@ extends Node3D
 
 const BfhPaths := preload("bfh_paths.gd")
 
-## What somebody ELSE looks like: a Kenney blocky character, scaled to the runner's hull
-## and turned to face where they are looking. Client side only; a server never builds one.
-##
-## [b]This game drew no person at all until 2026-09-24.[/b] Every runner's own view is first
-## person and every driver is inside a bus, so nobody had ever needed a body on screen —
-## until a networked client, whose other runners were drawn as nothing. Their node moved,
-## their beacon marked them, and the bowl had crates walking round it being shoved by
-## nobody. See `BfhPlayer.present_body` for when one is shown.
-##
-## [b]A child of the player's node, and so placed by whatever places that node.[/b] On a
-## remote player that is the interpolator once a frame (`BfhPlayerNet._net_interpolated`,
-## reached from `BfhClient.present_frame`), which is the whole reason a figure moves
-## smoothly rather than at the snapshot rate. Nothing here computes a position.
-##
-## [b]One of the family's animated people[/b] (dot-player-char's `DotHumanoidFigure`, the style
-## every game's players, bots and NPCs share): which one a runner is still comes from the
-## blocky kit's atlas their avatar names (`DotHumanoidLook.from_letter`), and a driver on foot
-## wears the uniform's colours. It animates from how far its node moved each frame
-## (`auto_animate`), because the interpolator moves the node and nothing here knows a speed.
+## What somebody ELSE looks like: a Kenney blocky character, scaled to the runner's hull and turned
+## to face where they are looking. Client side only; a server never builds one.
 
 const CHANNEL := "bfh.figure"
 

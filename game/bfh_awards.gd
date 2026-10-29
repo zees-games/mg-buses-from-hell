@@ -3,19 +3,6 @@ extends RefCounted
 const BfhStats := preload("bfh_stats.gd")
 
 ## What a player can earn here, as a document rather than as code.
-##
-## Every rule reads an id from `BfhStats` and nothing else. That is the whole integration:
-## dot-achievements never hears about a bus or a crate — it hears that a number moved.
-##
-## [b]Both sides have something to earn, and that took a decision.[/b] The obvious list is
-## the driver's (people flattened) and it would make the runners' side the one with nothing
-## on it — in a game where the runners are most of the server. So three of the five
-## series are the runners': staying up, staying up for long, and the one thing a runner can
-## do TO a bus, which is put a crate in front of it.
-##
-## Every stat is read with `SUM`, because every stat in `BfhStats` is a counter; the
-## catalogue's own validation refuses one stat read two ways, and the helper below is the
-## only way a rule is built here, so it cannot be.
 
 # No `CHANNEL`: a static document, validated by dot-achievements, which is where a
 # refusal is reported.

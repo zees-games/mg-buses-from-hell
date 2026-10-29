@@ -1,26 +1,6 @@
 extends RefCounted
 
 ## The districts: bowls whose floor is a town, laid out by hand to the shape of a kind of place.
-##
-## [b]Drawn by hand, from the kind of place and never from a survey.[/b] A district is a street
-## pattern anybody would recognise (a grid downtown, a road that switches back up a hill, a
-## suburb of roundabouts) written out as the few numbers that make it: where the roads run
-## and how the buildings stand along them. No map data of any real town went in, which is
-## deliberate: the open-map databases are share-alike, and nothing in this family is.
-##
-## [b]A building is a cylinder, because the map has one obstacle description.[/b] Steering,
-## the scatter, the toys and the gap rule all read [code]BfhArena._obstacles[/code], which is
-## circles; a district adds to that list through `_add_obstacle` like every other feature and
-## adds nothing of its own. A block is a round tower, a house a round hut, a roundabout's
-## island a drum. The streets are the floor between them, painted flat, with no collider.
-##
-## [b]Every gap is held to the gap rule at build time, by construction.[/b] [method plan] places
-## each building only where it leaves [constant STREET] of clear floor to every other, so a
-## street is never narrower than the 7.2 m a bot bus drives straight through, and a building is
-## refused where it would crowd the wall, the scaffold or the buses' start lanes. Refused, not
-## moved: a district with a hole where a house would have been is a plaza, and that is honest.
-##
-## No `class_name`: this game is delivered as a pack (see docs/delivery.md).
 
 ## Clear floor kept between any two buildings (surface to surface), in metres. Past
 ## `BfhArena.LANE_THROUGH` (7.2), which is what the autopilot needs to take a street straight.
@@ -70,11 +50,9 @@ static func entry(id: String) -> Dictionary:
 	return {}
 
 
-## What a district puts on the floor: `buildings`, each `{at: Vector3, radius, height, kind}`,
-## and `roads`, each `{from: Vector3, to: Vector3, width, colour_id}` for a strip or
-## `{at: Vector3, radius, colour_id}` for a disc (a roundabout's ring). [param keep_out] is the
-## rectangles that stay clear of every building: the buses' start lanes. [param scaffold] is
-## the scaffold's footprint on the floor (size zero when there is none).
+## What a district puts on the floor: `buildings`, each `{at: Vector3, radius, height, kind}`, and
+## `roads`, each `{from: Vector3, to: Vector3, width, colour_id}` for a strip or `{at: Vector3,
+## radius, colour_id}` for a disc (a roundabout's ring).
 static func plan(id: String, radius: float, scaffold: Rect2, keep_out: Array[Rect2]) -> Dictionary:
 	var out := {"buildings": [] as Array[Dictionary], "roads": [] as Array[Dictionary]}
 	var ctx := {"radius": radius, "scaffold": scaffold, "keep_out": keep_out}
@@ -90,13 +68,11 @@ static func plan(id: String, radius: float, scaffold: Rect2, keep_out: Array[Rec
 	return out
 
 
-# --- Downtown --------------------------------------------------------------------
+# --- Downtown
 
-## A grid: square-ish blocks on a 21 m pitch with an 8 m street between them, an avenue
-## running down from the buses' ramp, and a ring street round the middle four blocks, marked
-## in a lighter paint because it is the one-way loop a driver circles to come back at a
-## runner. The grid's last column does not fit the bowl and is left out; the scaffold's corner
-## is a plaza.
+## A grid: square-ish blocks on a 21 m pitch with an 8 m street between them, an avenue running down
+## from the buses' ramp, and a ring street round the middle four blocks, marked in a lighter paint
+## because it is the one-way loop a driver circles to come back at a runner.
 static func _downtown(out: Dictionary, ctx: Dictionary) -> void:
 	var pitch := 19.0
 	var block := 5.6
@@ -136,7 +112,7 @@ static func _downtown(out: Dictionary, ctx: Dictionary) -> void:
 			_building(out, ctx, at, block, height, TOWER)
 
 
-# --- Hill town -------------------------------------------------------------------
+# --- Hill town
 
 ## A road that winds: one long S-bend across the bowl and a switchback arc that doubles back
 ## beneath it, with small houses stepping along both sides, alternately, so the way is never a
@@ -166,7 +142,7 @@ static func _hill_town(out: Dictionary, ctx: Dictionary) -> void:
 	_fill(out, ctx, 13.0, 2.8)
 
 
-# --- The suburbs -----------------------------------------------------------------
+# --- The suburbs
 
 ## A ring road with a roundabout where the cross street meets it at each end and one in the
 ## middle, houses in pairs along every street, and a cul-de-sac off the middle one to the
@@ -198,7 +174,7 @@ static func _suburb(out: Dictionary, ctx: Dictionary) -> void:
 	_along(out, ctx, [hubs[1], cul_de_sac] as Array[Vector3], 14.5, 15.0, true, 2.8)
 
 
-# --- Placing ---------------------------------------------------------------------
+# --- Placing
 
 ## Buildings along a polyline, every [param spacing] metres of its length starting
 ## [param skip] metres in, on both sides when [param both], otherwise alternating. Whatever

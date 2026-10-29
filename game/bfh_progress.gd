@@ -5,51 +5,14 @@ const BfhContent := preload("bfh_content.gd")
 const BfhPlayer := preload("bfh_player.gd")
 const BfhStats := preload("bfh_stats.gd")
 
-## What a player's round was worth: dot-stats counts it, dot-achievements decides what the
-## counting earns.
-##
-## [codeblock]
-## var progress := BfhProgress.new()
-## world.add_child(progress)
-## progress.attach(world)       # listens to the world; nothing calls in
-## progress.session_values(&"u7").get_value(BfhStats.CRATES_BROKEN)
-## [/codeblock]
-##
-## [b]A child of the authoritative world, and only of that.[/b] The server decides every
-## number here — a client counting its own crates is a client that awards itself
-## achievements — and an offline client IS an authoritative world, so the same node counts
-## a game played alone. A connected client's world never builds one.
-##
-## [b]It listens and nothing calls it.[/b] Every reading is a world signal: `run_over`,
-## `swung`, `bus_struck`, dot-props' `broken`, the round's own two. A counter fed from
-## call sites inside the simulation is a counter that misses the one call site somebody
-## added later.
-##
-## [b]The link between the two trackers is [DotAchievementStatsLink], not a
-## `connect`.[/b] dot-stats' `recorded` carries a SESSION total and an achievement is about
-## a lifetime; wiring one straight into the other adds the running total to itself on every
-## reading. The link differences them, and that is its whole job.
-##
-## [b]A signed-in player is filed under their scoped profile key[/b] (2026-10-03), which
-## [member durable_key_fn] supplies from dot-platform and which can never carry a site
-## account id. Everybody else — a guest, or anybody on a server with no platform — is still
-## `bfh-u<session>`, and THAT is why this stays in memory and unreported: a session id is
-## handed out again by the next boot, so a file store would give one guest's lifetime to
-## whoever next got their number, and a report would file it under a name that means
-## nobody. Turning either on is one line each the day guests are not counted at all.
-##
-## [b]A key is fixed the first time it is asked for, for the rest of the session.[/b]
-## Counting begins as a player is added, which is after admission whenever the profile store
-## is quicker than the join; one seated first keeps the session key until they reconnect,
-## because moving half a session's numbers mid-flight would file the second half against a
-## total the first half never reached.
+## What a player's round was worth: dot-stats counts it, dot-achievements decides what the counting
+## earns.
 
 const CHANNEL := "bfh.progress"
 
-## Seconds after a hammer shove within which a bus driving into that crate credits the
-## runner who moved it. Long enough for a bus that was ten metres off to arrive at cruising
-## speed; short enough that a crate shoved in the first minute and hit in the third was
-## not put there for the bus.
+## Seconds after a hammer shove within which a bus driving into that crate credits the runner who
+## moved it. Long enough for a bus that was ten metres off to arrive at cruising speed; short enough
+## that a crate shoved in the first minute and hit in the third was not put there for the bus.
 const SHOVE_CREDIT_SEC := 3.0
 
 ## Somebody earned something. What the bridge tells them, and what an offline HUD shows.
@@ -147,13 +110,9 @@ func attach(world: Node3D) -> DotResult:
 	return DotResult.success(self)
 
 
-# --- Keys --------------------------------------------------------------------
+# --- Keys
 
 ## The key a player's numbers are kept under, or empty for somebody who is not counted.
-##
-## [b]A bot is not counted.[/b] Bots are what keep the buses full on an empty server, so on
-## a dedicated server they do most of the flattening; a bot earning "Rush Hour" is a board
-## of who the server was, and a runner flattened by a bot credits nobody.
 func key_of(player_id: StringName) -> String:
 	if _fixed.has(player_id):
 		return _fixed[player_id]
@@ -197,7 +156,7 @@ func _record(player_id: StringName, stat: StringName, value: float = 1.0) -> voi
 		})
 
 
-# --- Players -----------------------------------------------------------------
+# --- Players
 
 func _on_player_added(player_id: StringName) -> void:
 	var key := key_of(player_id)
@@ -211,10 +170,7 @@ func _on_player_added(player_id: StringName) -> void:
 	var player := _player(player_id)
 	stats.begin(StringName(key), player.display_name if player != null else "")
 
-	# Not awaited: a join does not wait on a store. Readings that arrive during a slow
-	# load are still counted — dot-stats records them regardless, and the link neither
-	# files them nor moves its baseline while the tracker has no such player, so the
-	# first delta after the load carries everything that happened during it.
+	# Not awaited: a join does not wait on a store.
 	_begin(key)
 
 
@@ -254,7 +210,7 @@ func _end(key: String) -> void:
 		})
 
 
-# --- What happened -------------------------------------------------------------
+# --- What happened
 
 ## A bus touched a runner. Only a kill is a flattening, and only a driver who is a person
 ## is credited with one.
@@ -281,10 +237,6 @@ func _on_round_began(_number: int) -> void:
 
 
 ## The round is over. Every runner still standing survived it.
-##
-## [b]Before the sides swap, and the world's order guarantees it:[/b] `round_over` is
-## emitted before `_swap_sides` runs, so "a runner" here is somebody who spent this round
-## running rather than somebody about to spend the next one driving.
 func _on_round_over(_number: int, _winner: int) -> void:
 	var runners: Array = _world.call("runners")
 
@@ -368,7 +320,7 @@ func _on_unlocked(key: String, achievement: DotAchievement) -> void:
 		unlocked.emit(player_id, achievement)
 
 
-# --- Reading -------------------------------------------------------------------
+# --- Reading
 
 ## A player's numbers this session. Empty for a bot or a stranger.
 func session_values(player_id: StringName) -> DotStatsValues:

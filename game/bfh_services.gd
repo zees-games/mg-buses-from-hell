@@ -5,24 +5,6 @@ const BfhNetBridge := preload("net/bfh_net_bridge.gd")
 const BfhPlayer := preload("bfh_player.gd")
 
 ## Chat, voice and moderation — and the moderator's live tools — wired to this game's two sides.
-##
-## [b]Sixty lines, because [DotGameServices] holds the other five hundred.[/b] The five
-## games written before this one each carry their own copy — 557 to 718 lines, differing in
-## the channels, the rules and a voice range — and this is the first game to take the base
-## instead. What is left here is what is genuinely this game's: who can hear whom, and
-## where a player is standing.
-##
-## [b]The sides are the whole design, so the sides are the channels.[/b] Two drivers
-## against everybody else is a game about two conversations that must not overhear each
-## other: the drivers arranging who takes which half of the bowl, and the runners saying
-## which way one is coming. `team` is therefore the channel that matters here — in a
-## deathmatch it is a convenience and here it is the game — and it is what VOICE defaults
-## to, which no other game in this family does.
-##
-## [b]There is no proximity channel, and that is a decision about the map.[/b] The bowl is
-## 46 m across and a proximity range worth having would be most of it; a channel that
-## reaches nearly everybody is a channel that lies about who can hear you. game-playground
-## has one because a sandbox is a place with corners.
 
 # No `const CHANNEL`: [DotGameServices] declares one and GDScript refuses a redeclaration,
 # which is the right refusal — one layer, one channel an operator can turn up.
@@ -42,24 +24,11 @@ func _services_name() -> String:
 
 
 ## What a line may be.
-##
-## [b]Short and slow, because a runner types while being chased.[/b] 140 characters and 20
-## a minute is a game whose chat is called out rather than written out: "north ramp", "he's
-## turning". A sandbox's 200 at 30 is for people standing still, and this game has nobody
-## standing still in it.
 func _chat_rules() -> Object:
 	return chat_rules()
 
 
 ## The same rules, as a static a CLIENT can ask for without building a services layer.
-##
-## [b]Static because the other end needs them and must not instantiate this.[/b]
-## `BfhServices` is a [Node] with a moderation store and a router under it; a client that
-## called `new()` on one to read two numbers off it would build all of that, leak it, and
-## — inside a delivered pack — fail to compile, because a script whose base class comes
-## from the HOST cannot have its return type inferred by a script in the mount. Both were
-## measured: seven leaked objects in a suite, and a client scene that would not load at
-## all on a real server.
 static func chat_rules() -> DotChatRules:
 	var rules := DotChatRules.new()
 	rules.max_length = 140
@@ -128,19 +97,14 @@ static func chat_channels() -> Array[DotChatChannel]:
 
 
 ## The voice format, which both ends must agree on exactly.
-##
-## Static, because the CLIENT builds one too and a sample rate that differs between two
-## peers is a stream of packets the router refuses for being the wrong length, counted and
-## said to nobody. [method DotVoiceConfig.format_fingerprint] exists for that reason.
 static func voice_format() -> DotVoiceConfig:
 	var config := DotVoiceConfig.new()
 	config.sample_rate = 16000
 	config.frame_ms = 20.0
 	config.codec_id = &"adpcm"
-	# [b]Push to talk, in the one game in this family where it is not a preference.[/b] A
-	# runner is being chased by a bus and is breathing into a microphone; open-mic voice
-	# on a side of six people is six sets of breathing over the one thing anybody needs to
-	# hear, which is somebody saying which way it is coming.
+	# [b]Push to talk, in the one game in this family where it is not a preference.[/b] A runner is
+	# being chased by a bus and is breathing into a microphone; open-mic voice on a side of six people
+	# is six sets of breathing over the one thing anybody needs to hear, which is somebody.
 	config.push_to_talk = true
 	config.activation_rms = 0.02
 	config.hangover_ms = 250.0
@@ -156,20 +120,11 @@ func _voice_config() -> Object:
 
 
 ## TEAM, and this is the only game here that says so.
-##
-## Everywhere else voice is the whole server, because everywhere else the sides are teams
-## in a game rather than the game itself. Two drivers coordinating which half of the bowl
-## each takes is a conversation the runners must not hear, and the runners calling a bus's
-## line is one the drivers must not.
 func _voice_default_channel() -> int:
 	return DotVoiceRouter.Channel.TEAM
 
 
 ## Which side somebody is on, for the team channel and for team voice.
-##
-## [b]Read off the game rather than off dot-team, because the sides swap.[/b] `BfhGame`
-## owns `sides` and rewrites the whole table every few rounds; anything caching a team id
-## would put a player in the conversation they were in two rounds ago.
 func _team_of(peer_id: int) -> int:
 	var player := _player_of(peer_id)
 	return (game as BfhGame).team_of(player.player_id) if player != null else 0
@@ -196,16 +151,9 @@ func _player_of(peer_id: int) -> BfhPlayer:
 	return (game as BfhGame).players.get(BfhNetBridge.player_key(session_id))
 
 
-# --- dot-moderation's live tools ---------------------------------------------
+# --- dot-moderation's live tools
 
 ## What the admin set means here, one callable per ability. See `DotGameServices`.
-##
-## [b]What is refused is refused for a reason about THIS game, and says so.[/b] Respawn is
-## the one worth reading: a runner who is out stays out until the next round, and an admin
-## who put one back mid-round would be deciding who won. Give and strip are refused because
-## there is one thing anybody holds here and it is not a weapon. Anything that moves a body
-## is refused for a driver while they drive, because the bus is what is moving and the
-## body is a passenger in it.
 func _mod_abilities() -> Dictionary:
 	return {
 		"noclip": func(id: StringName, args: Dictionary) -> DotResult:
@@ -244,10 +192,8 @@ func _mod_abilities() -> Dictionary:
 			return _mod_hurt(id, -1.0),
 		"slap": func(id: StringName, args: Dictionary) -> DotResult:
 			return _mod_hurt(id, float(args.get("damage", 0.0))),
-		# [b]The screen and nothing else, for either side.[/b] A blinded runner still
-		# moves and can still be run over; a blinded driver still drives, which is the
-		# point. An admin who wants a runner stopped as well has freeze, and a verb that
-		# did both would be a verb nobody could use for only the first.
+		# [b]The screen and nothing else, for either side.[/b] A blinded runner still moves and can still
+		# be run over; a blinded driver still drives, which is the point.
 		"blind": func(id: StringName, args: Dictionary) -> DotResult:
 			var p := _mod_player(id)
 			if p == null:
@@ -281,11 +227,6 @@ func _mod_unsupported() -> Dictionary:
 
 
 ## Toggles that outlive a new body here, beyond dot-moderation's own god and buddha.
-##
-## [b]Blind and beacon are about the person, not the body.[/b] Noclip and freeze end with
-## the round because arriving in a new round frozen is the round broken; a player an admin
-## blinded, or wanted the bowl to watch, is still that player after a round — and a round
-## ending is exactly what a player being punished would otherwise wait out.
 const PERSIST_ON_RESPAWN: Array[String] = ["blind", "beacon"]
 
 
@@ -395,9 +336,6 @@ func _on_round_began_for_tools(_number: int) -> void:
 
 
 ## The team seam dot-chat and dot-voice both ask for, which the base cannot wire.
-##
-## [DotGameServices] knows nothing about teams — a lobby has none — so the two `team_fn`
-## hooks are set here, after the base has built each router.
 func setup(p_server: DotServer, p_game: Object, p_link: Object) -> DotResult:
 	var ready_now: DotResult = await super.setup(p_server, p_game, p_link)
 
@@ -410,11 +348,7 @@ func setup(p_server: DotServer, p_game: Object, p_link: Object) -> DotResult:
 	if voice != null:
 		voice.set("team_fn", Callable(self, "_team_of"))
 
-	# Read, appended and written back. Measured on 4.7.2, the append alone already reaches
-	# the tools' own [PackedStringArray] — a packed array fetched through `get` shares its
-	# buffer — but this family has also shipped the opposite case (an append to a packed
-	# array inside a Dictionary landed on a copy), and the `set` is what stops this line
-	# depending on which of the two the engine does. `dedicated` fails without the append.
+	# Read, appended and written back.
 	if mod_tools != null:
 		var keep: PackedStringArray = mod_tools.get("persist_on_respawn")
 		for action in PERSIST_ON_RESPAWN:

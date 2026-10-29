@@ -3,26 +3,6 @@ extends Node
 const BfhPaths := preload("bfh_paths.gd")
 
 ## What a client draws that nothing simulates: today, a barrel going off.
-##
-## [codeblock]
-## var fx := BfhFx.new()
-## add_child(fx)
-## fx.setup(world)
-## # once a frame:
-## fx.present(delta, camera.global_position, -camera.global_basis.z)
-## [/codeblock]
-##
-## [b]It listens to ONE world, as [BfhAudio] does, and never learns which half it is in.[/b]
-## Offline the world is the authority and emits its own `barrel_exploded`; connected, the
-## bridge re-emits it on the client's world from the BLAST the server sent. So the blast is
-## decided in one place — the server, or the offline world standing in for one — and this
-## only draws the place and the reach it was told. Nothing here is built on a server: only
-## [BfhClient] makes one.
-##
-## [b]dot-fx, because an effect is the one thing a client may drop.[/b] A tier, a frame
-## budget or a pack still arriving may refuse the blast, and every refusal is safe by that
-## addon's own invariant; the sound ([BfhAudio]) and the shove (the server's) do not depend
-## on it.
 
 const CHANNEL := "bfh.fx"
 
@@ -66,8 +46,7 @@ static func catalogue() -> DotFxCatalogue:
 	return c
 
 
-## Builds the manager and listens to [param world]. Not fatal to a caller: a client with no
-## effects is the client this game was until 2026-09-27.
+## Builds the manager and listens to [param world].
 func setup(world: Node) -> DotResult:
 	_world = world
 

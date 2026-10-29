@@ -6,26 +6,6 @@ const BfhPlayer := preload("bfh_player.gd")
 const BfhNetBridge := preload("net/bfh_net_bridge.gd")
 
 ## The score, and who is on which side: held on Tab, and up on its own between rounds.
-##
-## [b]Two sides, not two teams of the same thing.[/b] A symmetric game's scoreboard is one
-## ranked list with a team colour per row; here two people drive and everybody else runs, and
-## "who is still up" is a question about the runners only. So the board is two blocks side by
-## side, each under its side's tally, and the per-player column is the one thing a player
-## looks for: in a bus or on foot, up or out.
-##
-## [b]What dot-match scores in this game is rounds, per side.[/b] Its per-player records —
-## kills, deaths, score — are never reported to (a runner cannot kill and a driver cannot
-## die, so they would be one number and a column of zeros; see "What a player's numbers
-## are" in docs/services.md). The tallies are [method BfhGame.rounds_won], which is dot-match's
-## `rounds_won` on the authority and what the last CLOCK said on a client.
-##
-## [b]Drawn by dot-menu's `DotMenuScoreboard` since 2026-10-09[/b]; this file is what is this
-## game's: the sides, the statuses, the tallies, the line about the round, and being up on its
-## own after one. It drew its own two `DotTableView`s before, and had to give each an explicit
-## size because a table in a container is drawn zero pixels tall; the menu's board is
-## containers all the way down. Online the rows are the server's roster — names, pings and
-## time connected, which no client knew for anybody else — with the side and the status joined
-## in by id.
 
 ## Whose row is highlighted. Asked every time, because on a connected client the local
 ## player arrives in a JOIN frames after this exists.
@@ -199,9 +179,6 @@ func footer_text() -> String:
 
 
 ## One side's rows. Static so a check reads the same rows the board draws.
-##
-## Drivers by name. Runners who are up first, then by name: the living are the part of the
-## list a runner reads, and the table is capped at [constant RUNNER_ROWS].
 static func rows_for(p_game: BfhGame, team: int, own: StringName = &"") -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
 

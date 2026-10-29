@@ -3,30 +3,11 @@ extends RefCounted
 const BfhPaths := preload("bfh_paths.gd")
 
 ## What this game makes a noise about, as a document, and which stand-in voice says it.
-##
-## [b]Until 2026-09-25 this game made one sound: an administrator's beacon.[/b] A bus
-## doing 22 m/s at somebody made no noise at all, which in the one game in this family
-## whose whole threat is a vehicle nobody can outrun is the one sound that matters most —
-## a runner behind a 4.4 m tank judges which side the bus is coming round by EAR, because
-## that is the only sense the tank does not block. So the engine and the horn are the
-## first two entries, and both are positional.
-##
-## [b]The ids are the contract, twice.[/b] [method catalogue] says what each one is worth
-## — positional or flat, how far away it stops mattering, how many may overlap and what
-## loses to what — and [method sound_recipes] says which of dot-audio's synthesised voices
-## stands in for it until a real file is dropped at the path. `headless_run` asserts the two
-## directions that fail silently: an id with no recipe is a sound that stays silent for
-## ever, and a recipe naming an id the catalogue does not have is a decision that reaches
-## nothing.
-##
-## [b]The world's noises are ALSO a wire format.[/b] [constant WORLD] is the list a server
-## sends by index (`BfhEvents.Kind.SOUND`), so the order is part of the protocol: append,
-## never reorder.
 
 # No `const CHANNEL`: a static document. dot-audio's manager validates it and logs there,
 # and `BfhAudio` is what plays it.
 
-# --- The world: positional, decided by the server, sent by index -------------
+# --- The world: positional, decided by the server, sent by index
 
 ## A bus's engine. Played by the CLIENT from how fast each driven bus is moving, never
 ## sent: see `BfhAudio`. Not in [constant WORLD] for that reason.
@@ -57,7 +38,7 @@ const RUNNER_DOWN := &"runner_down"
 ## hears about as a BLAST, so it is not in [constant WORLD] either.
 const BARREL_BLAST := &"barrel_blast"
 
-# --- The round: flat, on the interface bus -----------------------------------
+# --- The round: flat, on the interface bus
 
 const ROUND_START := &"round_start"
 
@@ -70,7 +51,7 @@ const ROUND_LOST := &"round_lost"
 ## Everybody changed sides.
 const SIDE_SWAP := &"side_swap"
 
-# --- The interface -----------------------------------------------------------
+# --- The interface
 
 ## A spectator cycling their camera, a setting changed.
 const UI_CLICK := &"ui_click"
@@ -99,13 +80,6 @@ static func world_id(index: int) -> StringName:
 
 
 ## Where the sound files would be, under this game's own root.
-##
-## [b]Through the root, because a delivered pack is not at `res://`.[/b] A path written
-## as `res://audio/…` inside a mounted pack resolves against the HOST project, where it
-## names nothing — or, worse, another game's file of the same name, which `DotAudioSinkGodot`
-## would load and play in preference to the stand-in. [param root] is for a check: built in,
-## [method BfhPaths.root] is `res://` and every path is trivially under it, so the suite
-## asks with a mount prefix instead. See [method BfhPaths.rebase_onto] for why.
 static func sound_dir(root: String = "") -> String:
 	return (root if root != "" else BfhPaths.root()).path_join("audio")
 
@@ -119,11 +93,8 @@ static func catalogue(root: String = "") -> DotAudioCatalogue:
 	# stock/CREDITS.md), under the addon's own path, which an addon pack overlays at boot.
 	DotAudioStock.add_to(c)
 
-	# The engine is the most important sound in the game and the most frequent, so it is
-	# capped harder than anything else: two buses, and a pulse each that overlaps its
-	# neighbour at speed. Far-reaching, because a bus you can hear coming from across the
-	# bowl is the whole point — and positional, because WHICH side of a tank it is on is
-	# the only question a runner is asking.
+	# The engine is the most important sound in the game and the most frequent, so it is capped harder
+	# than anything else: two buses, and a pulse each that overlaps its neighbour at speed.
 	var engine := _positional(dir, BUS_ENGINE, 70.0, 6, 70)
 	engine.unit_size = 16.0
 	engine.pitch_min = 0.96
@@ -232,11 +203,6 @@ static func catalogue(root: String = "") -> DotAudioCatalogue:
 
 
 ## Which synthesised voice stands in for each id until a real file exists at its path.
-##
-## [b]A table rather than a guess inside dot-audio.[/b] Which noise belongs to which id is
-## this game's decision, the same way the distances are. Several ids share a voice and are
-## told apart by the pitch their catalogue entry gives them — thirteen voices and fifteen
-## sounds — which is a placeholder's honest limit rather than a design.
 static func sound_recipes() -> Dictionary:
 	return {
 		# A low, noisy thud, pulsed faster and higher as the bus speeds up. See `BfhAudio`.

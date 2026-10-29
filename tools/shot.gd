@@ -6,9 +6,6 @@ const BfhBowls := preload("../game/bfh_bowls.gd")
 const BfhVote := preload("../game/bfh_vote.gd")
 
 ## Renders the game from the local player's eyes and exits. The check no assertion makes.
-##
-## xvfb-run, never --headless: headless gives a null renderer and saves a frame of
-## nothing, which is worse than no screenshot because it looks like one.
 
 func _ready() -> void:
 	_run.call_deferred()
@@ -153,9 +150,6 @@ func _run() -> void:
 			window.add_said("Ada", "north ramp, north ramp", Color(0.88, 0.90, 0.94))
 			window.add_text("Bus driver 1 was run over by nobody", Color(0.98, 0.72, 0.35))
 
-	# The local runner stood on the deck from the first frame, so the bot bus has to come
-	# up the ramp for them, and a camera over the floor in front of the foot, where a bus
-	# that starts with its back to the ramp turns round (`--deck`, 2026-10-08).
 	var world_for_deck: BfhGame = client.get("game")
 	var runner_for_deck: Node3D = client.get("player")
 	if on_deck and world_for_deck != null and world_for_deck.arena != null and runner_for_deck != null:
@@ -192,11 +186,7 @@ func _run() -> void:
 		get_tree().quit(0)
 		return
 
-	# An administrator's marks, set the way the handlers set them and then given a few
-	# frames to draw. `--beacon` beacons everybody — the bot driver's is round the bus, which
-	# `--bus` looks at; alone it stands off behind the local runner so their own ring and
-	# the column over the bus are both in the frame. `--blind` blacks the local player's
-	# screen out and looks through it, HUD and all.
+	# An administrator's marks, set the way the handlers set them and then given a few frames to draw.
 	var world_for_marks: BfhGame = client.get("game")
 	var local_player: Node3D = client.get("player")
 	if (beacon or blind) and world_for_marks != null:
@@ -233,10 +223,8 @@ func _run() -> void:
 			shown += get_process_delta_time()
 			await get_tree().process_frame
 
-	# Run down, and then where the camera goes: `--watch=death` is the death camera,
-	# `cab` the freeze on the bus's cab, `follow` the first person it hands over to and
-	# `chase` the view behind them. A second runner is put in the bowl first, because the
-	# local player going down alone would end the round and the camera with it.
+	# Run down, and then where the camera goes: `--watch=death` is the death camera, `cab` the freeze
+	# on the bus's cab, `follow` the first person it hands over to and `chase` the view behind them.
 	if watch != "" and world_for_marks != null and local_player != null \
 			and not world_for_marks.drivers().is_empty():
 		var buddy: Node3D = world_for_marks.add_player(
@@ -266,10 +254,9 @@ func _run() -> void:
 		cam.current = true
 		await get_tree().process_frame
 
-	# Or stand over the stacks and look down the lane. A first-person camera dropped
-	# somewhere random on a 46 m disc shows the stacks only by luck, and "is this a map
-	# or a grey box" is a question about the whole cluster rather than about whichever
-	# pillar the spawn happened to face.
+	# Or stand over the stacks and look down the lane. A first-person camera dropped somewhere random
+	# on a 46 m disc shows the stacks only by luck, and "is this a map or a grey box" is a question
+	# about the whole cluster rather than about whichever pillar the spawn happened to face.
 	var world_for_stacks: BfhGame = client.get("game")
 	if look_at_stacks and world_for_stacks != null and world_for_stacks.arena != null:
 		var pillars := world_for_stacks.arena.pillars()
@@ -325,8 +312,6 @@ func _run() -> void:
 		cam.current = true
 		await get_tree().process_frame
 
-	# Or stand 9 m outside the courtyard's west lane at a runner's eyes and look through it
-	# to the courtyard's middle: 7.6 m between the 4.4 and 2.6 m drums since 2026-10-07.
 	var world_for_west: BfhGame = client.get("game")
 	if look_at_west_lane and world_for_west != null and world_for_west.arena != null \
 			and not world_for_west.arena.tanks().is_empty():
@@ -421,10 +406,8 @@ func _run() -> void:
 			cam.current = true
 			await get_tree().process_frame
 
-	# A barrel going off twelve metres in front of the local runner, drawn by the client's
-	# own effects from the world's `barrel_exploded` — the path a connected client takes from
-	# a BLAST. Rendered a fifth of a second in, when the ring has reached the blast's edge
-	# and the fireball has not burned out.
+	# A barrel going off twelve metres in front of the local runner, drawn by the client's own effects
+	# from the world's `barrel_exploded` — the path a connected client takes from a BLAST.
 	var world_for_blast: BfhGame = client.get("game")
 	var eye_for_blast: Camera3D = client.get("camera")
 	if blast and world_for_blast != null and eye_for_blast != null:
@@ -505,10 +488,9 @@ func _run() -> void:
 			after += get_process_delta_time()
 			await get_tree().process_frame
 
-	# The whole bowl from straight above, north (the deck) at the top. The one view that
-	# shows where everything is against everything else -- which is the question when
-	# choosing where a new piece of the map goes, and the one a runner's-eye camera
-	# cannot answer.
+	# The whole bowl from straight above, north (the deck) at the top. The one view that shows where
+	# everything is against everything else -- which is the question when choosing where a new piece of
+	# the map goes, and the one a runner's-eye camera cannot answer.
 	var world_for_plan: BfhGame = client.get("game")
 	if plan and world_for_plan != null and world_for_plan.arena != null:
 		var cam := Camera3D.new()
@@ -542,10 +524,9 @@ func _run() -> void:
 	get_tree().quit(0)
 
 
-## A real ballot from this game's vote: every bowl this server offers there is, four voters, three of whom
-## have voted, drawn the way the client shell's notice overlay draws a `map_ballot` — a
-## [DotBallotPanel] down the right-hand side. Waits a second for the voters' discs to slide
-## to the row they chose; a frame too soon catches one between rows.
+## A real ballot from this game's vote: every bowl this server offers there is, four voters, three
+## of whom have voted, drawn the way the client shell's notice overlay draws a `map_ballot` — a
+## [DotBallotPanel] down the right-hand side.
 func _show_ballot(list: Array, current: StringName) -> void:
 	var names := {&"1": "you", &"2": "bo", &"3": "quiet_one", &"4": "ana"}
 	var states: Array = []

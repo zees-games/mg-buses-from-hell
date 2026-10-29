@@ -1,20 +1,7 @@
 extends DotNetBehaviour
 
-## One of the map's toys on the wire (dot-props' [DotPropToy]): where its moving part is and
-## how it is turned, whether it is on, and how often it has been used.
-##
-## [b]The server's physics, never predicted[/b], for the reason game-arena's ArenaProps gives: Godot's
-## rigid-body solver is not the same on two machines. The client's toy is frozen and posed from
-## these ([method DotPropToy.show_state]), so a see-saw a person stands on there is the plank the
-## server tipped, an interpolation behind, and a roundabout's spin is measured from the poses.
-##
-## [b]Paired by index[/b]: both ends build the same toys in the same order from the map, so the
-## TOYS event carries only the net ids, in toy order, and nothing here says which toy it is.
-##
-## [b]A use count, not a use event[/b]: a honk, a switch and a bounce each move
-## [member net_count] by one, and a client plays the sound when it sees it move, so a joiner and
-## a lost packet cost nothing but a late sound. Eight bits; it wraps. game-hide-n-seek's
-## HsToyNet, game-playground's PlaygroundToyNet and game-arena's arena_toy_net.gd are the same file.
+## One of the map's toys on the wire (dot-props' [DotPropToy]): where its moving part is and how it
+## is turned, whether it is on, and how often it has been used.
 
 var toy: DotPropToy = null
 

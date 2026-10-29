@@ -12,18 +12,6 @@ const BfhSpectate := preload("bfh_spectate.gd")
 const BfhViewmodel := preload("bfh_viewmodel.gd")
 
 ## One local player, a camera and a HUD over a [BfhGame] — offline, or against a server.
-##
-## [b]One client for both, and the offline half is not a demo mode.[/b] It is the same
-## world class with `authoritative` true and nothing else different: the same bowl, the
-## same bot bus, the same rules. What changes is where the answers come from, and the
-## whole of that difference is [BfhNetBridge]. A separate "single player" build would be a
-## second game to keep in step, and the family has watched two copies of one thing drift
-## more than once.
-##
-## [b]Which half runs is decided by whether there is a link in the registry.[/b] A
-## dot-server client publishes a [DotClientLink] under `dot_client_link` before the game
-## scene loads; no link means nobody connected us to anything, and the honest answer to
-## that is a playable bowl rather than an error. `--offline` forces it.
 
 const CHANNEL := "bfh.client"
 
@@ -153,27 +141,17 @@ func _ready() -> void:
 	if _offline:
 		_start_offline()
 	else:
-		# [b]Here, in `_ready`, which runs INSIDE `DotClientLink._load_scene`.[/b] The link
-		# adds this scene and tells the server it has loaded on the next line, so the
-		# netcode is up before the server has been told there is anybody to send to —
-		# which is the order that leaves nothing to be missed. Measured against a real
-		# server in a second process: the join completes and the first snapshot arrives
-		# with the bowl already replicated.
+		# [b]Here, in `_ready`, which runs INSIDE `DotClientLink._load_scene`.[/b] The link adds this
+		# scene and tells the server it has loaded on the next line, so the netcode is up before the
+		# server has been told there is anybody to send to — which is the order that leaves nothing to be.
 		var netted := _build_netcode()
 		DotLog.result(CHANNEL, "the netcode", netted)
 		if netted.ok and link != null:
 			_start_remote_workbench()
 
 
-## The load gate is [member DotGameClient.gate]: covered, and the local body and the input
-## still, until the bowl stands, the local player exists and its camera is current.
-##
-## [b]Covered also means the round does not run.[/b] Offline the world ticks itself, so the bot
-## bus, the round clock and the barrels would all act on the runner in front of a picture;
-## [member BfhGame.hold_clock] steps only the bodies then, which settle onto the sand under the
-## cover with their input off. Connected, the server owns the round; what is left to hold is
-## this end's sampling and keys, which wait on [method _covered]. The vendored art is loaded
-## exactly as before: the gate only waits for it.
+## The load gate is [member DotGameClient.gate]: covered, and the local body and the input still,
+## until the bowl stands, the local player exists and its camera is current.
 
 
 ## The bowl is rebuilt (a vote's bowl, a server's radius in the HELLO): covered from the build
@@ -197,7 +175,7 @@ func _covered() -> bool:
 	return gate != null and not gate.is_open()
 
 
-# --- Dead bodies -----------------------------------------------------------
+# --- Dead bodies
 
 
 
@@ -237,12 +215,11 @@ func _fall(who: BfhPlayer) -> void:
 	var _body := ragdolls.spawn(who.figure, who.death if who.death != null else DotPlayerDeath.new(), velocity)
 
 
-# --- Offline ---------------------------------------------------------------
+# --- Offline
 
 func _start_offline() -> void:
-	# A driver and a runner, because a round needs both sides and there is one person
-	# here. What the bot is for is having a bus on the floor to run away from, which is
-	# the thing worth looking at.
+	# A driver and a runner, because a round needs both sides and there is one person here. What the
+	# bot is for is having a bus on the floor to run away from, which is the thing worth looking at.
 	# Named from dot-bot's pool, as a server's are.
 	var roster := DotBotRoster.new()
 	var taken: Array = ["You"]
@@ -286,7 +263,7 @@ func _start_offline() -> void:
 	DotLog.result(CHANNEL, "chat, offline", chat.attach(null))
 
 
-# --- Connected -------------------------------------------------------------
+# --- Connected
 
 func _build_netcode() -> DotResult:
 	# The server's sv_ragdoll* set: this end draws the bodies.
@@ -392,11 +369,6 @@ func _on_hello(session_id: int) -> void:
 
 
 ## A player arrived or changed. The one we are waiting for might be us.
-##
-## [b]Connected before anything can create a player rather than only checked on HELLO.[/b]
-## HELLO and JOIN are both reliable and ordered, so HELLO does arrive first — but "the
-## ordering happens to save us" is exactly the reasoning that put this bug in another game
-## here, and a check that costs nothing is cheaper than depending on it.
 func _on_roster_changed(session_id: int) -> void:
 	if session_id == _watch_id and player == null:
 		_adopt(game.players.get(BfhNetBridge.player_key(session_id)))
@@ -438,23 +410,21 @@ func _on_seat_changed(session_id: int, seated: bool) -> void:
 	if player == null or session_id != _watch_id:
 		return
 
-	# The camera goes up into the cab. [member BfhPlayer.EYE_HEIGHT] is where a person's
-	# eyes are when they are standing on the sand; a driver's are above the wheel, and a
-	# camera left at standing height while the bus carries the body means driving with
-	# your chin on the bonnet.
+	# The camera goes up into the cab. [member BfhPlayer.EYE_HEIGHT] is where a person's eyes are when
+	# they are standing on the sand; a driver's are above the wheel, and a camera left at standing
+	# height while the bus carries the body means driving with your chin on the bonnet.
 	if camera != null:
 		camera.position = Vector3(0.0, BfhPlayer.EYE_HEIGHT + (0.9 if seated else 0.0), 0.0)
 
 
 func _on_blast(at: Vector3, radius: float) -> void:
-	# The picture is [BfhFx]'s, from the world's `barrel_exploded` that the bridge re-emits,
-	# so the same path draws it offline. The log line is what tells somebody reading a
-	# client's records that the barrel they saw was one the server decided about, rather
-	# than one their own copy imagined.
+	# The picture is [BfhFx]'s, from the world's `barrel_exploded` that the bridge re-emits, so the
+	# same path draws it offline. The log line is what tells somebody reading a client's records that
+	# the barrel they saw was one the server decided about, rather than one their own copy imagined.
 	DotLog.debug(CHANNEL, "a barrel went off", {"at": str(at), "radius": radius})
 
 
-# --- The frame -------------------------------------------------------------
+# --- The frame
 
 func _build_camera() -> void:
 	if camera != null or player == null:
@@ -499,9 +469,6 @@ func _build_scoreboard() -> void:
 
 
 ## The player's settings, applied to everything that reads them. See [BfhSettings].
-##
-## After the audio and the sampler, because both are bound here and a binding applies at
-## once. The camera arrives with the player and is bound in [method _adopt].
 func _build_settings() -> void:
 	settings = BfhSettings.new()
 	settings.name = "Settings"
@@ -517,10 +484,9 @@ func _build_settings() -> void:
 	# The starter set: the equipped list needs a credential the client does not hold (the server reads it).
 	DotLog.result(CHANNEL, "avatar actions", platform.add_avatar_actions(net, _avatar_figure))
 	_add_noblock_and_workbench()
-	# Walking is off while the cover is up, a menu is open or a line is typed: the sampler polls
-	# the keyboard, and a player dragging a volume slider with the arrow keys would otherwise
-	# walk into the bus they had stopped to turn up (and a driver steer with the letters of the
-	# word they are typing).
+	# Walking is off while the cover is up, a menu is open or a line is typed: the sampler polls the
+	# keyboard, and a player dragging a volume slider with the arrow keys would otherwise walk into the
+	# bus they had stopped to turn up (and a driver steer with the letters of the word they are.
 	platform.input_blocked_changed.connect(_suspend_input)
 	_suspend_input(platform.is_input_blocked())
 
@@ -547,10 +513,9 @@ func _build_settings() -> void:
 			hud.follow_menu(settings.menu)
 
 
-## M: the bowl list (dot-menu's map menu). Solo a choice changes the bowl here at once;
-## connected the server decides, by the owner's `sv_map_menu_flag`, and anybody without it
-## gets a vote instead (dot-vote's map menu, wired in [BfhModule]). By name, so a client shell
-## older than the map menu still runs the game without it.
+## M: the bowl list (dot-menu's map menu). Solo a choice changes the bowl here at once; connected
+## the server decides, by the owner's `sv_map_menu_flag`, and anybody without it gets a vote instead
+## (dot-vote's map menu, wired in [BfhModule]).
 func _wire_maps() -> void:
 	if game != null:
 		game.workshop_index = DotContentIndex.shared()
@@ -568,9 +533,6 @@ func _suspend_input(value: bool) -> void:
 
 
 ## What this client hears, listening to its own world. See [BfhAudio].
-##
-## Not fatal: a client whose audio was refused is a silent client, which is what this game
-## was for its first eleven days, and a WARN is what says so.
 func _build_audio() -> void:
 	audio = BfhAudio.new()
 	audio.name = "Audio"
@@ -586,9 +548,6 @@ func _build_audio() -> void:
 
 
 ## What this client draws, listening to its own world. See [BfhFx].
-##
-## Not fatal, for the reason the audio is not: a client that draws no blast still hears it
-## and is still thrown by it, and a WARN says why the picture is missing.
 func _build_fx() -> void:
 	fx = BfhFx.new()
 	fx.name = "Fx"
@@ -604,18 +563,13 @@ func _build_fx() -> void:
 
 
 ## The chat box, before the netcode and before any player exists.
-##
-## [b]Built in both halves and attached to the bridge afterwards.[/b] A box that only
-## appeared on a server would be a box nobody could test offline, and a box built after the
-## first line arrived would miss it — the backlog a joining player is sent is the first
-## thing the server says.
 func _build_chat() -> void:
 	chat = BfhClientChat.new()
 	chat.name = "Chat"
 	add_child(chat)
 
 
-# --- The end of a round: killcam, winner reveal, board -------------------------
+# --- The end of a round: killcam, winner reveal, board
 
 ## Online: no local trust and no panel until the server names this player an admin (sv_workbench_remote). The sets are the game's own; the rows are the server's, through the bridge's profile link.
 func _start_remote_workbench() -> void:
@@ -666,12 +620,6 @@ func _pointer_ours() -> bool:
 
 
 ## The sampled command, on a connected client, once per tick the clock says has passed.
-##
-## [b]Offline this does nothing and the world ticks itself.[/b] The player samples inside
-## [method BfhPlayer.simulate] there, which is the shape a single process wants; a
-## connected client cannot use it, because its local player has to be simulated by the
-## PREDICTOR from the same command that was sent, and a second sample would predict
-## something different from what the server was told.
 func _physics_process(delta: float) -> void:
 	if _offline or net == null or not net.is_running() or bridge == null:
 		return
@@ -695,13 +643,9 @@ func _physics_process(delta: float) -> void:
 	if _swinging:
 		move.buttons |= BfhNetCommand.BUTTON_SWING
 
-	# [b]Each pass is its own tick.[/b] `advance` has already moved the clock by all of
-	# them, so `input_tick()` is the LAST one on every pass: a frame worth two ticks sent
-	# the second twice and the first never, the server repeated a stale command for the
-	# one it never got, and the predictor's replay stopped at the hole and drew the player
-	# short of where they were -- after every hitch, and on every frame the display and
-	# the tick rate do not line up. Arithmetic here rather than a new dot-net call,
-	# because a pack has to run on whatever client shell the player already has.
+	# [b]Each pass is its own tick.[/b] `advance` has already moved the clock by all of them, so
+	# `input_tick()` is the LAST one on every pass: a frame worth two ticks sent the second twice and
+	# the first never, the server repeated a stale command for the one it never got, and the.
 	for i in range(ticks):
 		if not net.clock.is_synced():
 			continue
@@ -746,33 +690,21 @@ func _process(delta: float) -> void:
 		return
 
 	if _spectating:
-		# Back into their own head: the view the seat or the sand gives them, which the lines
-		# below then move every frame. Without it the camera keeps the last spectator
-		# transform's LOCAL offset and a new round starts with the view floating wherever
-		# the last target was.
+		# Back into their own head: the view the seat or the sand gives them, which the lines below then
+		# move every frame. Without it the camera keeps the last spectator transform's LOCAL offset and a
+		# new round starts with the view floating wherever the last target was.
 		_spectating = false
 		camera.transform = Transform3D(Basis.IDENTITY, Vector3(
 			0.0, BfhPlayer.EYE_HEIGHT + (0.9 if player.riding else 0.0), 0.0
 		))
 
 	# Drawn every FRAME from the controller's own interpolated view, not once per tick.
-	# Another game in this family measured what the other way costs: a client stepping
-	# physics at one rate and drawing at another advances the camera in bursts, which is a
-	# 47% change in apparent speed several times a second and reads as "the game is
-	# jittery" with every simulated number correct.
 	var state := player.controller.state
 	camera.rotation = Vector3(deg_to_rad(state.pitch), deg_to_rad(state.yaw), 0.0)
 
-	# [b]And the position, which the angles above never needed.[/b] The camera hangs off the
-	# player's node and the node only moves on a tick, so a camera left there advances in
-	# steps while everybody it is looking at is now interpolated every frame — a runner
-	# watching another runner alongside them sees the other one shudder, because it is the
-	# VIEW that is stepping. `render_state` blends the last two ticks by the engine's physics
-	# fraction, which the bridge makes a fraction through a tick by putting the engine on
-	# the server's rate. Written globally rather than by moving the node, because the tick
-	# writes the node and prediction reads it back. Not while riding: the controller is not
-	# simulated in a bus, and a blend between two ticks that never happened drags the view
-	# backwards.
+	# [b]And the position, which the angles above never needed.[/b] The camera hangs off the player's
+	# node and the node only moves on a tick, so a camera left there advances in steps while everybody
+	# it is looking at is now interpolated every frame — a runner watching another runner alongside.
 	if not player.riding:
 		camera.global_position = player.controller.render_state().position \
 			+ Vector3(0.0, BfhPlayer.EYE_HEIGHT, 0.0)
@@ -837,11 +769,6 @@ func _other_players() -> Array:
 
 
 ## Puts [param eye] where a runner who is out is looking. Returns whether it did.
-##
-## [b]Static, so the net suite drives this and not a copy of it[/b] — the same reason
-## [method present_frame] is. The answer is the world's spectator camera, which on a
-## connected client is a mirror computing it from the view the server sent and the
-## positions this frame is drawing; see [BfhSpectate].
 static func present_spectator_camera(p_game: BfhGame, own: BfhPlayer, eye: Camera3D) -> bool:
 	if p_game == null or own == null or eye == null or p_game.spectate == null:
 		return false
@@ -866,21 +793,9 @@ static func present_spectator_camera(p_game: BfhGame, own: BfhPlayer, eye: Camer
 	return true
 
 
-## Everything a frame draws that a tick does not, in this order: the netcode's
-## interpolation, then every player's body, then every beacon. Returns how many bodies are
-## shown. Static so the net suite drives exactly this and not a copy of it.
-##
-## [b]The interpolation was never called in this game, and that is half of why nobody else
-## was visible.[/b] `DotNetManager.interpolate_frame` is what blends two snapshots and hands
-## the result to `BfhPlayerNet._net_interpolated` and `BfhPropNet._net_interpolated` — both
-## written, documented, and reached by nothing. So every remote runner, every crate and both
-## buses moved only when a snapshot landed, twenty times a second on a 60-tick server: the
-## render-jitter class this family has now paid for in three games. The other half was that
-## a remote runner had no body to move (see [BfhFigure]).
-##
-## [param alpha] is the fraction through the current tick; -1 derives it from the engine,
-## which is what a real frame wants. A suite passes it explicitly, because a suite's frames
-## are not an engine's.
+## Everything a frame draws that a tick does not, in this order: the netcode's interpolation, then
+## every player's body, then every beacon. Returns how many bodies are shown. Static so the net
+## suite drives exactly this and not a copy of it.
 static func present_frame(
 	p_net: DotNetManager, p_game: BfhGame, own: BfhPlayer, delta: float, alpha: float = -1.0,
 	own_seen: bool = false
@@ -890,12 +805,9 @@ static func present_frame(
 	if networked:
 		p_net.interpolate_frame(alpha)
 
-	# Your own runner is drawn at the clock's render alpha, not the engine's fraction: the
-	# clock stretches and shrinks its ticks while it settles on the server, so a physics frame
-	# now and then runs no tick or two, and drawn at the engine's fraction the eye stood still
-	# on one frame and moved double on the next. `DotFpsController.render_state` reads it from
-	# `render_clock` (dot-player-controller); by name both ways, so a shell older than either
-	# draws as before. Null offline, where every physics frame is one tick.
+	# Your own runner is drawn at the clock's render alpha, not the engine's fraction: the clock
+	# stretches and shrinks its ticks while it settles on the server, so a physics frame now and then
+	# runs no tick or two, and drawn at the engine's fraction the eye stood still on one frame and.
 	if own != null and own.controller != null:
 		own.controller.set(&"render_clock", p_net.clock if networked else null)
 
@@ -923,21 +835,15 @@ static func present_frame(
 
 
 ## Whether the mouse button is down this frame. Read by [method _physics_process].
-##
-## [b]A held state and not an event, because a hammer is held.[/b] An event queue is
-## sampled per frame and a tick is not a frame: at 60 Hz on a 144 Hz screen, two frames in
-## three carry no click at all, so a swing bound to the event would be dropped two times
-## in three at exactly the moment somebody was leaning on the button.
 var _swinging: bool = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Tab, M and a click taking the pointer back are the platform's (DotGameClient).
 	if event.is_action_pressed("ui_cancel"):
-		# Opens the settings when the menu left this Escape alone, because a released pointer
-		# with nothing on screen to click was a key that did half a job. A second Escape never
-		# reaches here: dot-ui's stack sits deeper in the tree, sees it first, and closes the
-		# screen.
+		# Opens the settings when the menu left this Escape alone, because a released pointer with nothing
+		# on screen to click was a key that did half a job. A second Escape never reaches here: dot-ui's
+		# stack sits deeper in the tree, sees it first, and closes the screen.
 		if settings != null:
 			settings.open()
 		return
@@ -1034,7 +940,7 @@ func _ask_to_watch(ask: int) -> void:
 		bridge.ask_watch(ask)
 
 
-# --- The free camera -------------------------------------------------------
+# --- The free camera
 
 ## The pose the free camera holds between frames, seeded from the camera as it was the frame
 ## the roam began, so the spectator starts where they were looking.
@@ -1071,11 +977,8 @@ func toggle_roam() -> void:
 		bridge.ask_watch(BfhSpectate.ASK_ROAM)
 
 
-## The free camera, once a frame: WASD along the view, Space and Ctrl up and down, Shift fast,
-## Alt slow, the mouse to look. Only the camera moves; the body stays where it fell.
-##
-## [b]The speed is the server's[/b] (`mp_freeroam_speed`, through the mirror's rules), so a
-## client cannot fly faster than it was told to. The server holds only the mode.
+## The free camera, once a frame: WASD along the view, Space and Ctrl up and down, Shift fast, Alt
+## slow, the mouse to look. Only the camera moves; the body stays where it fell.
 func _drive_free_camera() -> void:
 	if _free_cam == null:
 		_free_cam = DotSpectatorFreeCam.new()

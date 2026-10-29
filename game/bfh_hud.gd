@@ -6,18 +6,10 @@ const BfhArena := preload("bfh_arena.gd")
 const BfhBindings := preload("bfh_bindings.gd")
 
 ## Health, the clock, and how much cover is left. Four numbers and a crosshair.
-##
-## [b]How much cover is left is the one number that is not obvious, and it is the most
-## important of the four.[/b] Health tells a runner how many mistakes they have left
-## and the clock tells them how long they have to survive; neither tells them whether
-## surviving is still possible. The crate count does: a bowl down to its last few
-## blocks is a bowl where standing still stops working, and a player who can see that
-## number drop starts moving before it is too late rather than after.
 
-# No `const CHANNEL`. This draws four numbers from state somebody else owns and has
-# nothing an operator would act on; the round, the deaths and the bowl are logged by
-# [BfhGame], which is where the decisions are. A channel declared and never used is a file
-# that meant to say something and does not.
+# No `const CHANNEL`. This draws four numbers from state somebody else owns and has nothing an
+# operator would act on; the round, the deaths and the bowl are logged by [BfhGame], which is where
+# the decisions are.
 
 var game: BfhGame = null
 var player: BfhPlayer = null
@@ -32,14 +24,6 @@ var _crosshair: DotCrosshair = null
 var _root: Control = null
 
 ## An administrator's `blind`, over the world and under the four numbers.
-##
-## [b]Under the numbers, on purpose.[/b] A blind takes the bowl away, not the player's
-## bearings: the clock, their health and the cover count still say that the round is going
-## on and that they are in it, which is what makes it read as "an admin did this" rather
-## than as a client that stopped drawing. The chat box is its own layer above this one.
-##
-## Black rather than white. A white screen at full brightness is a thing a player can be
-## hurt by in a dark room, and taking the picture away is the whole of the point.
 var blind_overlay: ColorRect = null
 
 ## Seconds a blind takes to come down and to lift. Short, so it is unmistakably on, and
@@ -64,10 +48,9 @@ static func piece_theme() -> Theme:
 	return t
 
 
-## The Escape menu, whose theme this HUD follows (dot-menu's `follow_hud`): the menu sets the
-## theme on the HUD's root now and at every theme change, and applies the player's HUD size.
-## Christian's first play test (2026-10-11) asked for a darker HUD a player can restyle in
-## the menu. Duck-typed and called by name, for a client shell older than dot-menu 7.
+## The Escape menu, whose theme this HUD follows (dot-menu's `follow_hud`): the menu sets the theme
+## on the HUD's root now and at every theme change, and applies the player's HUD size. Duck-typed
+## and called by name, for a client shell older than dot-menu 7.
 var _menu: Object = null
 
 
@@ -88,12 +71,9 @@ func bind(p_game: BfhGame, p_player: BfhPlayer) -> void:
 
 
 func _build() -> void:
-	# [b]A full-rect Control between the CanvasLayer and the labels, and the first
-	# render is why.[/b] A CanvasLayer is not a Control and does not lay its children
-	# out, so anchors on a Label parented straight to one resolve against nothing:
-	# every label landed in the top-left corner stacked on top of the others, and the
-	# only one visible was the clock, clipped in half by the edge of the screen. It
-	# reads as the HUD being half-written rather than as four labels in one place.
+	# [b]A full-rect Control between the CanvasLayer and the labels, and the first render is why.[/b] A
+	# CanvasLayer is not a Control and does not lay its children out, so anchors on a Label parented
+	# straight to one resolve against nothing: every label landed in the top-left.
 	_root = Control.new()
 	_root.name = "Screen"
 	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -197,15 +177,6 @@ func _process(delta: float) -> void:
 
 
 ## Fades [member blind_overlay] toward whether this HUD's player is blinded.
-##
-## Read off [member player] rather than pushed by anybody, because the flag arrives in a
-## snapshot on a connected client and is set directly offline, and a HUD that had to be
-## told would need telling from two places. Public so a check can step it.
-##
-## [b]Sized to the viewport every frame it shows, not trusted to its anchors.[/b] The root
-## it sits in is full-rect under a [CanvasLayer], which today IS the viewport — but a blind
-## that left a strip of the bowl showing would be a blind a player can still play through,
-## and one line here costs less than finding that out from a picture.
 func present_blind(delta: float) -> void:
 	if blind_overlay == null:
 		return
@@ -245,11 +216,6 @@ func _status_line() -> String:
 
 
 ## What a runner who is out is told about the camera they are looking through.
-##
-## [b]Who, and how to change it, on one line.[/b] A camera that moved to somebody else's
-## eyes with nothing on screen saying whose reads as the client having lost track of the
-## player, and the three controls are the kind nobody finds by pressing keys at random.
-## Static and public so the suite reads the words a player would.
 static func watching_line(p_game: BfhGame, own: BfhPlayer) -> String:
 	if p_game == null or own == null or p_game.spectate == null \
 			or not p_game.spectate.is_spectating(own.player_id):

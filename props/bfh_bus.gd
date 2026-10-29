@@ -1,29 +1,6 @@
 extends VehicleBody3D
 
 ## The bus's own body: the art, and the four wheels that have to be seen turning.
-##
-## [b]A raycast vehicle's wheels are rays, and rays are invisible.[/b] [VehicleWheel3D]
-## is a suspension ray with a contact point and a steering angle; it draws nothing. The
-## wheels a player sees are four meshes inside the Kenney model, and by default they are
-## welded to the hull — so a bus doing 22 m/s round a corner slides on four static
-## cylinders pointed straight ahead. Every number about it is right and it reads as the
-## whole vehicle skating.
-##
-## Three things are drawn from the simulation and each is separately noticeable:
-##
-## - the front wheels STEER, which is how a runner reads where the bus is about to go
-##   before it goes there — the whole of their game;
-## - all four ROLL, which is the only thing that says a bus is moving rather than being
-##   slid along;
-## - and they do both on a MIRROR as well, from what the server replicated, because a
-##   client cannot derive either from a position.
-##
-## [b]The art is turned round, and that is not a preference.[/b] The Kenney garbage truck
-## faces +Z — its loader arms and forks are at the +Z end — and forward in this family is
-## -Z, which is what [method Basis.looking_at] produces and what dot-vehicle's wheel
-## layout assumes. Unturned, the bus chased people backwards: it drove cab-last with its
-## forks in front, which looks exactly like a bus reversing at 22 m/s and is invisible to
-## every assertion in this repository, because every number in it is correct.
 
 const BfhArt := preload("bfh_art.gd")
 
@@ -41,18 +18,9 @@ var _front: Array[MeshInstance3D] = []
 var _rear: Array[MeshInstance3D] = []
 
 ## Radius of the wheel a player can SEE, in metres, which is not the simulated one.
-##
-## Measured off the mesh rather than written down: the art is scaled to fit a hull whose
-## size comes from the catalogue, and a hard-coded radius here would be a number that
-## silently stops matching the picture the first time anybody rescales the model. What it
-## is for is the roll rate — a wheel of the wrong radius spins at the wrong speed, which
-## reads as the bus slipping.
 var _art_wheel_radius: float = 0.47
 
 ## +1 when the art faces the way the vehicle drives, -1 when it is turned round.
-##
-## Derived from the art's own transform, so this keeps telling the truth if the model is
-## ever replaced by one that faces the other way and the scene's 180° goes with it.
 var _art_sign: float = 1.0
 
 ## Radians of roll accumulated. Wrapped, because a float that grows for an hour loses the
@@ -124,10 +92,6 @@ func _find_mesh(under: Node, wanted: String) -> MeshInstance3D:
 
 
 ## Drawn per FRAME and not per tick, like every other visual in this family.
-##
-## A wheel advanced once per physics tick and drawn three times is a wheel that turns in
-## bursts, which is exactly the jitter game-g2gfast measured on its camera: every
-## simulated number correct and the picture wrong several times a second.
 func _process(delta: float) -> void:
 	if _front.is_empty() and _rear.is_empty():
 		return
@@ -152,11 +116,6 @@ func _process(delta: float) -> void:
 
 
 ## The steering angle the simulation is actually using, in radians.
-##
-## Read off the wheel rather than off the last command: the chassis ramps steering towards
-## what was asked for at [member DotVehicleTunables.steering_rate_deg] and falls it off
-## with speed, so the command is what the driver wants and this is what the bus is doing.
-## Drawing the command would show full lock on a bus that has barely begun to turn.
 func _steering_now() -> float:
 	for child in get_children():
 		var wheel := child as VehicleWheel3D
@@ -171,12 +130,6 @@ func _speed_now() -> float:
 
 
 ## What a client is told, by [code]bfh_bus_net.gd[/code], once a snapshot has arrived.
-##
-## [b]Set together and latched, because a mirror must never read its own body.[/b] A
-## mirrored bus is frozen and its transform is written from the packet, so
-## `linear_velocity` on it is whatever it was when it was frozen — usually zero. A client
-## that fell back to reading the body would draw every other bus in the game with its
-## wheels stopped.
 func draw_steering(radians: float) -> void:
 	_mirror_steering = radians
 	_mirrored = true

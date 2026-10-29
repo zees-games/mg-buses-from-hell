@@ -6,37 +6,9 @@ const BfhGame := preload("../game/bfh_game.gd")
 const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 const BfhPlayer := preload("../game/bfh_player.gd")
 
-## Renders a CONNECTED client looking at another runner, and measures how smoothly that
-## runner moves on screen. The check no assertion makes, from the side `tools/shot.gd`
-## cannot reach: offline there is nobody else on foot to look at.
-##
-## [codeblock]
-## tools/shot.sh 6 net.png --net              # four consecutive frames, net_0..net_3.png
-## tools/shot.sh 6 net.png --net --no-interp  # the same, with the client's interpolation off
-## tools/shot.sh 6 near.png --net --close      # four metres off, to judge the body itself
-## tools/shot.sh 8 walk.png --net --walk       # THIS client runs, and is it predicted?
-## [/codeblock]
-##
-## A server and a client in one process, joined by the same loopback `headless_net` uses:
-## the server's world is in a SubViewport with its own physics space that is never drawn,
-## and the client's is the one on screen. Every frame calls `BfhClient.present_frame`, the
-## function the real client's `_process` calls, so what is rendered is what a player sees.
-##
-## [b]The probe.[/b] Once a rendered frame, the other runner's drawn position is sampled and
-## divided by that frame's own delta: the apparent speed. A runner running in a straight
-## line at a constant speed should have the same apparent speed every frame, and the spread
-## of it is the judder. `--no-interp` is there to show what the spread looks like when it is
-## wrong, because a number with nothing to compare it to proves nothing.
-##
-## [b]`--walk` is the other probe: this client's OWN runner.[/b] It stands for half a second,
-## runs nine metres east, stands, runs back, through the same `client_tick` the real client
-## calls, and reports three numbers a player feels: how many ticks after a key is pressed
-## the runner is drawn moving (the prediction latency: 0 is the tick it was pressed in),
-## the predictor's corrections per second, and the eye's apparent speed per frame while the
-## server has them at full speed. Until 2026-09-25 the client predicted nothing, and this is
-## where that shows as a number rather than as a feeling.
-##
-## xvfb-run, never --headless: headless gives a null renderer and saves a frame of nothing.
+## Renders a CONNECTED client looking at another runner, and measures how smoothly that runner moves
+## on screen. The check no assertion makes, from the side `tools/shot.gd` cannot reach: offline
+## there is nobody else on foot to look at.
 
 const SESSION := 42
 const CLIENT_PEER := 7
@@ -164,10 +136,9 @@ func _build() -> void:
 
 	_server_net = _make_manager(true, 1, server_side, _server_game.tick_rate)
 	_client_net = _make_manager(false, CLIENT_PEER, client_side, _client_game.tick_rate)
-	# This harness stamps every command itself (`_tick + INPUT_LEAD`), not from the client's
-	# clock, so the client must not ask for dot-net's input-lead report: steered by reports
-	# about commands it never stamped, the clock runs away from them (only dot-net's cap
-	# holds it). By the constant map, so this parses against a dot-net from before the report.
+	# This harness stamps every command itself (`_tick + INPUT_LEAD`), not from the client's clock, so
+	# the client must not ask for dot-net's input-lead report: steered by reports about commands it
+	# never stamped, the clock runs away from them (only dot-net's cap holds it).
 	var lead_bit := int((DotNetMessageRegistry as Script).get_script_constant_map().get("FEATURE_INPUT_LEAD", 0))
 	_client_net.messages.features &= ~lead_bit
 
@@ -333,11 +304,9 @@ func _drive_runner() -> void:
 	if _runner == null or mine == null:
 		return
 
-	# The open north-west of the bowl: south of the ledge, north of the stacks, west of the
-	# ramp. The client's runner stands looking north and Bea runs across in front of them,
-	# ten metres off, so the pillars are behind her rather than in her way. Put back whenever
-	# a round starts and scatters everybody, which is what moved them the first time.
-	# With `--walk` this client moves its own runner, so it is placed once and then left alone.
+	# The open north-west of the bowl: south of the ledge, north of the stacks, west of the ramp. The
+	# client's runner stands looking north and Bea runs across in front of them, ten metres off, so the
+	# pillars are behind her rather than in her way.
 	if not _running or (not _walk and mine.controller.state.position.distance_to(OPEN_FLOOR) > 1.0):
 		_put(mine, OPEN_FLOOR)
 		_put(_runner, OPEN_FLOOR + Vector3(-5.0, 0.0, -_ahead))

@@ -5,17 +5,8 @@ const BfhGame := preload("../game/bfh_game.gd")
 const BfhBowls := preload("../game/bfh_bowls.gd")
 
 ## Bot soak on the real game: N bot-driven buses chase idle runners in one bowl for M simulated
-## minutes through dot-bot's DotBotSoak, fed by dot-spawn's DotSpawnWatch. A "map" here is a bowl id.
-##
-## [codeblock]
-## ./game.sh soak [bowl] [minutes]
-## godot --headless --path . res://tools/soak.tscn -- --map bfh_bowl --bots 4 --minutes 2
-## [/codeblock]
-##
-## Takes the harness's own flags too (--soak-max-stuck-sec and the rest of DotBotSoakConfig).
-## Writes .godot/test-logs/soak-<bowl>.json, prints the SOAK line, exits 1 when the run fails.
-## The movers are the bot-driven buses; runners are idle people (there is no runner bot in play), so
-## rounds end when the buses have run them down. Kills are off.
+## minutes through dot-bot's DotBotSoak, fed by dot-spawn's DotSpawnWatch. A "map" here is a bowl
+## id.
 
 const DEFAULT_MAP := &"bfh_bowl"
 const DEFAULT_MINUTES := 1.0

@@ -6,32 +6,6 @@ const BfhPlayer := preload("bfh_player.gd")
 const BfhSounds := preload("bfh_sounds.gd")
 
 ## What a client hears: the world's noises, the round's cues, and every bus's engine.
-##
-## [codeblock]
-## var audio := BfhAudio.new()
-## add_child(audio)
-## audio.setup(world, func() -> BfhPlayer: return my_player)
-## # once a frame:
-## audio.present(delta, camera.global_position)
-## [/codeblock]
-##
-## [b]It listens to ONE world and never learns which half it is in.[/b] Offline the world is
-## the authority and emits its own `noise`, `round_began` and the rest; connected, the
-## bridge re-emits the same signals on the client's world from the events the server sent
-## (`BfhNetBridge._heard_a_swap` has the reasoning). So there is one path from "a crate
-## broke" to a noise, and the net suite asserts it is reached from the wire.
-##
-## [b]The engine is the one sound nobody sends.[/b] It is continuous, it is a function of
-## how fast a bus is going, and every client is already drawing every bus at the speed it
-## is going — so each client makes it from what it draws. A server that sent it would be
-## sending, sixty times a second, a number the client has.
-##
-## [b]And an engine is a PULSE here, not a loop,[/b] for a reason that is partly dot-audio's
-## and partly the right answer anyway. dot-audio's Godot sink did not loop a stream (its
-## `looping` flag was carried in the request and read by nothing — reported upstream, and
-## honoured since 2026-09-25), and the synthesised stand-ins are one-shots. But a pulse whose RATE rises with speed is also
-## what a runner needs: how fast the thuds are coming is how fast the bus is, heard through
-## a tank.
 
 const CHANNEL := "bfh.audio"
 
@@ -82,10 +56,9 @@ func setup(world: Node3D, own: Callable = Callable()) -> DotResult:
 	audio.register_as_service = false
 	# Two buses pulsing and a crowd of hammers is the busiest this game gets.
 	audio.voices = 24
-	# Measured toward the family's -17 LUFS (dot-audio docs/loudness.md): a 40 s stand-in round
-	# read -25.4 LUFS integrated with the wind and the steps in (-20.1 before them, on a run
-	# with a crash in it); -19.9 at +6, -18.1 and -19.1 at +8. Once the stand-in turned off
-	# walls (2026-10-12, camera over 150 m a run): -19.0 at +8, -17.5 and -17.6 at +9.
+	# Measured toward the family's -17 LUFS (dot-audio docs/loudness.md): a 40 s stand-in round read
+	# -25.4 LUFS integrated with the wind and the steps in (-20.1 before them, on a run with a crash in
+	# it); -19.9 at +6, -18.1 and -19.1 at +8.
 	audio.loudness_trim_db = 9.0
 	add_child(audio)
 
@@ -144,10 +117,6 @@ func setup(world: Node3D, own: Callable = Callable()) -> DotResult:
 
 
 ## Once a frame: where the listener is, and every driven bus's engine.
-##
-## [param listener] is the camera's position, which is what dot-audio culls against. Not
-## the player's: a runner who is out is watching from somebody else's eyes, and a cull
-## measured from the patch of sand they fell on would silence the chase they are watching.
 func present(delta: float, listener: Vector3) -> void:
 	if audio == null or _world == null:
 		return
@@ -159,10 +128,6 @@ func present(delta: float, listener: Vector3) -> void:
 
 
 ## A bus's engine, from the bus this client is drawing.
-##
-## [b]Only a DRIVEN bus has an engine running.[/b] An empty bus is a vehicle nobody is in
-## — a driver who left mid-round, a bus waiting for a bot — and a thud from one would be a
-## bus telling runners to be afraid of nothing.
 func _present_engines(delta: float) -> void:
 	var seen := {}
 
@@ -210,7 +175,7 @@ func engine_speed(bus: Node3D) -> float:
 	return float(engine.get("speed", 0.0))
 
 
-# --- The world's signals ----------------------------------------------------------
+# --- The world's signals
 
 func _on_noise(id: StringName, at: Vector3) -> void:
 	audio.play_at(id, at)
@@ -229,9 +194,6 @@ func _on_round_began(_number: int) -> void:
 
 
 ## Won or lost, by THIS client's side. See `BfhSounds.ROUND_WON`.
-##
-## Nobody here yet — a client between connecting and its JOIN — hears the round end as a
-## loss rather than as nothing, because silence is what a broken client sounds like.
 func _on_round_over(_number: int, winner: int) -> void:
 	var mine := _own_side()
 	audio.play(BfhSounds.ROUND_WON if winner != 0 and winner == mine else BfhSounds.ROUND_LOST)

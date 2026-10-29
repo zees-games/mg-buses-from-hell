@@ -1,30 +1,6 @@
 extends RefCounted
 
 ## What a runner can get onto, as arithmetic over the movement they actually have.
-##
-## [b]Asked of the controller's own tunables, not of a copy.[/b] The two games that
-## answered this question first carry the three movement numbers as constants in their
-## map classes, because a map there is content that must load with no player in the tree,
-## and a check that the copies agree. The bowl here is built by the world that owns the
-## configuration, so every function below takes the [DotFpsTunables] that
-## [code]BfhPlayer.tunables_for(config)[/code] builds for a real runner. There is nothing
-## to drift.
-##
-## [b]`jump_height` is the APEX of a standing jump, not the height of something you can
-## climb onto.[/b] Measured at this game's numbers and 60 ticks a second, a runner's feet
-## rise 1.094 m of a nominal 1.15; landing ON something at exactly the apex needs the tick
-## to fall right. So a climb is held to [constant CLIMB_MARGIN] of the apex, which is the
-## same margin the family's other two answers use.
-##
-## [b]The arithmetic is the controller's.[/b] [method climb_limit] and [method jump_reach]
-## delegate to [DotFpsTunables]; this file keeps the names, the declared climbs and the
-## refusals, which are this game's.
-##
-## [codeblock]
-## var t := BfhPlayer.tunables_for(config)
-## BfhReach.climb_limit(t)       # 1.035 m: the highest top face a runner jumps onto
-## BfhReach.jump_reach(t, 1.0)   # clear air crossed while landing a metre higher
-## [/codeblock]
 
 ## The family's margin, owned by the controller.
 const CLIMB_MARGIN := DotFpsTunables.CLIMB_MARGIN
@@ -46,11 +22,6 @@ enum How {
 
 
 ## One way up the bowl expects a runner to take, measured off the geometry.
-##
-## [b]Built from two boxes, never from two numbers.[/b] A climb written as a rise and a
-## gap is one more description of geometry that is already described by the colliders,
-## and it goes stale the first time somebody moves a crate. What is declared is only WHICH
-## two surfaces are a route — the one thing the geometry does not say.
 class Climb:
 	extends RefCounted
 
@@ -107,13 +78,8 @@ static func climb_limit(t: DotFpsTunables) -> float:
 	return t.climb_limit(CLIMB_MARGIN)
 
 
-## The clear air a runner at full ground speed crosses in one jump, landing [param rise]
-## metres higher than they left. [method DotFpsTunables.jump_reach] at `max_speed`.
-##
-## [b]The landing height is the point.[/b] The airtime people write down is the time to
-## fall back to where you jumped FROM, and it is the wrong number for anything that
-## climbs: one sized a jump course in this family 30% long and nobody could finish it.
-## Returns 0 for a rise no jump reaches.
+## The clear air a runner at full ground speed crosses in one jump, landing [param rise] metres
+## higher than they left. [method DotFpsTunables.jump_reach] at `max_speed`.
 static func jump_reach(t: DotFpsTunables, rise: float) -> float:
 	return t.jump_reach(rise, t.max_speed)
 

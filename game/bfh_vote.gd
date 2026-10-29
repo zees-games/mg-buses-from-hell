@@ -1,25 +1,6 @@
 extends Node
 
 ## The players choose the next bowl.
-##
-## [DotVoteDirector] over a [DotVoteListSource] of this server's bowls, and the only thing
-## this file decides is WHEN: a ballot opens [member open_after_sec] into every bowl and is
-## applied when the round ends, because the bowl is rebuilt only between rounds — the next
-## round starts in whatever was chosen. The bowls are [code]BfhBowls[/code]: this game has
-## no map files, its map is a radius, and a bowl is a name for one. Everything about the ballot itself (how many options, the
-## counting method, the tie-break, rock the vote, nominations, cooldowns) is dot-vote's
-## settings and none of it is restated here; [method _rules] only says which of them a
-## one-bowl-per-round game wants by default.
-##
-## [b]`trigger` is MANUAL, not ROUND_END, and that is the point of this file.[/b] dot-vote's
-## ROUND_END opens a ballot at a round's end and applies it at the NEXT round's end, which is
-## right for a game that plays several rounds on a map and one round late here. Opening it
-## during the round and applying it at the end (`apply: END_OF_ROUND`) puts the choice on
-## the very next round.
-##
-## [b]Server side only.[/b] A client draws the ballot from the notice [member ballot_fn] sends
-## (the client shell's [DotBallotPanel]), and never holds a director: a client that applied a
-## result would be deciding what it plays.
 
 const CHANNEL := "buses.vote"
 
@@ -41,9 +22,8 @@ const COMMAND_NAMES := {"vote": "vote"}
 @export var open_after_sec: float = 20.0
 
 ## The file a server owner configures the vote in, keyed exactly as [DotVoteRules]. Layered:
-## [code]_rules() < game.yml metadata bowl_vote: < this file < DOT_VOTE_* < --vote-*[/code].
-## Empty skips the file. [code]{"enabled": false}[/code] turns the vote off and the rotation
-## the server's own bowl stays.
+## [code]_rules() < game.yml metadata bowl_vote: < this file < DOT_VOTE_* < --vote-*[/code]. Empty
+## skips the file.
 @export var config_path: String = "user://cfg/buses_vote.json"
 
 ## [code]func() -> Array[/code] of [code][id, name][/code] pairs: every bowl a ballot may
@@ -131,11 +111,9 @@ func setup() -> DotResult:
 	# The server's tick drives it, not the frame clock.
 	director.self_advance = false
 	director.round_based = true
-	# [b]Set by name, and only where it exists.[/b] A delivered pack runs on the shell's
-	# dot-vote, and one older than API 3 has no `round_in_progress_fn`: naming it would fail
-	# the pack's parse. There, a finish_round limit in warmup waits out finish_round_max_sec,
-	# which is what it did before. Read through this node's own field, so the order the host
-	# sets it in does not matter.
+	# [b]Set by name, and only where it exists.[/b] A delivered pack runs on the shell's dot-vote, and
+	# one older than API 3 has no `round_in_progress_fn`: naming it would fail the pack's parse. There,
+	# a finish_round limit in warmup waits out finish_round_max_sec, which is what it did before.
 	if "round_in_progress_fn" in director:
 		director.set(&"round_in_progress_fn", func() -> bool:
 			return not round_in_progress_fn.is_valid() or bool(round_in_progress_fn.call()))
@@ -151,13 +129,9 @@ func setup() -> DotResult:
 
 	add_child(director)
 
-	# [b]Rock the vote opens its own ballot under MANUAL from dot-vote API level 2.[/b] Before
-	# that the director handed every opening to its host, a rocked vote included: the clock
-	# expired with reason rtv, the director did nothing, and `!rtv` answered "Rocked. 1 of 1."
-	# and nothing happened. A pack runs on the client shell's dot-vote, which may be older than
-	# the one this repository links, so below level 2 this handler stays as the fallback. From
-	# level 2 it is gone, because two openers is one too many: a second ballot is only
-	# prevented by start_vote refusing while one is open.
+	# [b]Rock the vote opens its own ballot under MANUAL from dot-vote API level 2.[/b] Before that the
+	# director handed every opening to its host, a rocked vote included: the clock expired with reason
+	# rtv, the director did nothing, and `!rtv` answered "Rocked. 1 of 1." and nothing happened.
 	if DotAddonApi.build_level("dot_vote") < 2:
 		# Connected after the director's own handler (its _ready runs first), so the director
 		# has finished with the expiry before this asks for a ballot.
@@ -271,9 +245,6 @@ func note_bowl(id: StringName) -> void:
 
 
 ## The server woke from hibernation: the bowl ballot is owed again, from the top.
-##
-## The director restarts itself ([member DotVoteRules.wake_restart]); this is the half that is
-## this game's — the seconds into the bowl at which the ballot opens.
 func note_woke() -> void:
 	_on_bowl_sec = 0.0
 	_opened_this_bowl = false
@@ -292,10 +263,9 @@ func advance(delta: float) -> void:
 
 	director.advance(delta)
 
-	# [b]Before the warmup return, not after it.[/b] A ballot can be open in the warmup: a
-	# rocked vote opens one, and so does a ballot the server's game vote made wait. Polled
-	# only once a round had begun, it was open, counted and never drawn, so the only sign
-	# of it was a line in chat.
+	# [b]Before the warmup return, not after it.[/b] A ballot can be open in the warmup: a rocked vote
+	# opens one, and so does a ballot the server's game vote made wait. Polled only once a round had
+	# begun, it was open, counted and never drawn, so the only sign of it was a line in chat.
 	if feed != null:
 		feed.poll()
 
@@ -303,10 +273,8 @@ func advance(delta: float) -> void:
 	if director.current_id() == &"":
 		return
 
-	# The ballot's own timer waits with the director's clock while the server hibernates
-	# (DotGameModule hands the director the server's hibernation). Counted on, it ran past
-	# open_after_sec over an empty room, the ballot was refused for want of voters, and the
-	# first player in never got one on this bowl.
+	# The ballot's own timer waits with the director's clock while the server hibernates (DotGameModule
+	# hands the director the server's hibernation).
 	if director.hibernating:
 		return
 

@@ -3,13 +3,8 @@ extends DotGameCheckSuite
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhMapConfig := preload("../game/bfh_map_config.gd")
 
-## A bowl gets its `cfg/` file's values and the next bowl gets the previous values back, on the server's cvars and on the client's hooks.
-##
-## [codeblock]
-## godot --headless --path . res://examples/headless_mapcfg.tscn
-## [/codeblock]
-##
-## The cvars start away from the file's values; the file is written for the run and removed after it.
+## A bowl gets its `cfg/` file's values and the next bowl gets the previous values back, on the
+## server's cvars and on the client's hooks.
 
 const CHECKS := 10
 const DIR := "res://cfg/server/game/mg-buses-from-hell/dot_map/map"

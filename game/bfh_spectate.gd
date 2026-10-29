@@ -3,53 +3,6 @@ extends Node
 const BfhPlayer := preload("bfh_player.gd")
 
 ## Where a runner who has been run down looks until the next round.
-##
-## [b]Until 2026-09-25 a runner who was out looked at the patch of sand they were run over
-## on, for up to three minutes.[/b] Out means out here — there is no respawn until the next
-## round, by design — so the part of the game a runner spends dead is not two seconds before
-## a respawn, it is most of a round on a bad one. A first-person game whose dead players
-## stare at the floor for that long is a game people alt-tab out of.
-##
-## [codeblock]
-## spectate.setup(world, authoritative, tick_rate)
-## spectate.on_death(&"u7", where, &"u900000", tick)   # the world does this
-## spectate.request(&"u7", BfhSpectate.ASK_NEXT)       # the player's click
-## camera.global_transform = spectate.camera_for(&"u7")
-## [/codeblock]
-##
-## [b]The server decides and the client draws, and they are two instances of this.[/b] The
-## authority's [DotSpectatorManager] runs the chain — a death camera on the bus that did it,
-## a freeze on its cab, then somebody to follow — and answers every click. A connected
-## client's copy is a MIRROR: told its own view as per-player state
-## (`BfhPlayerNet.net_watch`, owner-only), it computes the camera from the positions it is
-## already drawing, and it decides nothing. An offline client is an authority, so it is the
-## same code as a server.
-##
-## [b]The policy, and why it is the loosest one in the family.[/b]
-## - [b]Anybody may be watched, a bus included[/b] (`force_camera` 0). The obvious worry —
-##   a dead runner calling out where the bus is — is not one this game can defend against
-##   with a camera: every player and every bus is ALWAYS relevant here (`BfhNetBridge`
-##   replicates everything to everybody, because the bowl is a disc with nothing tall in
-##   it), so any client already has every position the camera could show it. A policy that
-##   forbade the bus would protect nothing from a modified client and deny an honest one the
-##   most watchable thing on the server. And "own side only" would mean a runner may watch
-##   runners — the half of the round that is not being chased by anything.
-## - [b]No delay[/b], for the same reason: a delay that only a client enforces, over data
-##   the client already has, is theatre. (A mirror records its own history since
-##   2026-09-25, so it would draw — but only what this client already has.)
-## - [b]Roaming is on, as everywhere in the family[/b] (decided 2026-10-21; `mp_freeroam 0`
-##   or `mp_forcecamera` 1 or 2 switches it off). The worry that kept it off, a map of the
-##   bowl above the tanks, is the same one as the positions above: this server replicates
-##   everything to everybody, so a modified client has the map whatever the camera shows,
-##   and an honest runner who is out is owed something better than three minutes of one bus.
-##   The camera is the client's ([code]DotSpectatorFreeCam[/code]); the server holds only the
-##   mode.
-## - [b]The living do not watch.[/b] A runner who is up is playing; a driver cannot be out.
-##
-## [b]A bus's "eyes" are its cab.[/b] A driver's own position is where they sat down —
-## nothing moves a rider (see [member BfhPlayer.ridden]) — so a camera on a driver's body
-## would sit on the sand watching an empty patch while the bus they are steering chases
-## somebody else. [method pose_of] answers with the bus.
 
 const CHANNEL := "bfh.spectate"
 
@@ -60,14 +13,8 @@ const ASK_VIEW := 2
 ## The free-camera key: into one, or back onto a player. The fourth value of the two bits.
 const ASK_ROAM := 3
 
-## Where a driver's view is, in their bus's own frame: over the cab roof, behind the
-## container its forks carry out front.
-##
-## [b]Higher than a driver's head, on purpose, and the first render is why.[/b] At seat
-## height (2.9 m, just forward of the seat) the Kenney truck's container filled the bottom
-## third of the frame and the road the bus was about to take was behind it. Up here the
-## container is a strip along the bottom edge that says "you are the bus", and the runners
-## it is chasing are in the middle of the picture.
+## Where a driver's view is, in their bus's own frame: over the cab roof, behind the container its
+## forks carry out front.
 const CAB_EYE := Vector3(0.0, 3.8, -1.2)
 
 ## And pitched down the road rather than at the horizon, which is where the runners are.
@@ -137,7 +84,7 @@ static func rules_for(tick_rate: int) -> DotSpectatorRules:
 	return rules
 
 
-# --- Callables the manager asks ------------------------------------------------
+# --- Callables the manager asks
 
 func _players() -> Dictionary:
 	return _world.get("players") as Dictionary if _world != null else {}
@@ -164,10 +111,6 @@ func _team(key: String) -> int:
 
 
 ## Where somebody's eyes are: a runner's, or a driver's bus's cab.
-##
-## Read from what this machine is drawing — the controller's state on a runner, which a
-## client's interpolation writes every frame, and the bus's body, which it moves — so a
-## mirror's camera is exactly as smooth as the picture it is looking at.
 func pose_of(key: String) -> Transform3D:
 	var player: BfhPlayer = _players().get(StringName(key))
 
@@ -185,7 +128,7 @@ func pose_of(key: String) -> Transform3D:
 	return Transform3D(basis, state.position + Vector3(0.0, BfhPlayer.EYE_HEIGHT, 0.0))
 
 
-# --- What the world reports ----------------------------------------------------
+# --- What the world reports
 
 ## The world ticked. Runs the death camera's hand-overs and moves anybody whose target
 ## went away. A mirror's is a no-op inside dot-spectate.
@@ -225,12 +168,9 @@ func on_leave(player_id: StringName) -> void:
 		manager.on_leave(String(player_id))
 
 
-# --- What a spectator asks -----------------------------------------------------
+# --- What a spectator asks
 
 ## A click, on the authority. [param ask] is one of the ASK_* constants.
-##
-## [b]Every answer is the manager's.[/b] A living runner asking to watch is refused by the
-## same rule that decides everything else, rather than by this function having an opinion.
 func request(player_id: StringName, ask: int) -> DotResult:
 	if manager == null:
 		return DotResult.fail(DotError.CODE_STATE, "Spectating is not set up.")
@@ -262,7 +202,7 @@ func request(player_id: StringName, ask: int) -> DotResult:
 	return DotResult.fail(DotError.CODE_INVALID, "Unknown spectator request %d." % ask)
 
 
-# --- Reading, and the mirror ---------------------------------------------------
+# --- Reading, and the mirror
 
 func is_spectating(player_id: StringName) -> bool:
 	return manager != null and manager.is_spectating(String(player_id))
@@ -301,12 +241,6 @@ func target_of(player_id: StringName) -> StringName:
 
 
 ## A mirror is told its own view. [param target] is who [method target_of] would answer.
-##
-## [b]The place they fell is taken from where THIS machine last drew them[/b], on the
-## transition into watching, because it is not in the state that is replicated
-## (`net_watch` is a mode and a target). dot-spectate's own wire carries it since
-## 2026-09-25, but this game does not send that wire. A mirror left at the default would
-## draw every death camera from the world origin.
 func adopt(player_id: StringName, mode: int, target: StringName) -> void:
 	if manager == null or manager.authoritative:
 		return

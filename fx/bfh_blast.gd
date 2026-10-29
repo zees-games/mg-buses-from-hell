@@ -1,20 +1,7 @@
 extends Node3D
 
-## A barrel going off, as a client draws it: a fireball, a shock ring on the sand out to
-## exactly the blast's reach, a flash of light and a few puffs of smoke.
-##
-## [b]Drawn, never decided.[/b] Where it went off and how far it reached arrive from the
-## server in a BLAST (or from the offline world's own `barrel_exploded`); this reads the
-## two numbers and moves nothing. dot-fx may refuse to spawn it at all — a low tier, a
-## budget, a client whose pack is still arriving — and the round is the same round.
-##
-## [b]The ring is the part a runner reads, so it is sized to the radius and not to taste.[/b]
-## What a runner needs from a barrel they did not see is "was I inside it", and the ring
-## ends where the blast's reach ends: [method drawn_reach] measures the drawn mesh, and
-## `headless_net` holds it to the radius the server sent.
-##
-## Built in code rather than authored in the scene, like the bowl and the beacon: this game
-## ships no particle art, and a mesh made here needs no texture a mounted pack could lose.
+## A barrel going off, as a client draws it: a fireball, a shock ring on the sand out to exactly the
+## blast's reach, a flash of light and a few puffs of smoke.
 
 ## How far the blast reached, in metres. Set by [method configure]; one metre until then,
 ## rather than the barrel's shipped reach, so a blast nobody sized is visibly wrong.

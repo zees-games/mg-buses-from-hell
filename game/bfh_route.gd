@@ -1,29 +1,7 @@
 extends RefCounted
 
-## A route for a bot bus through a town: the streets between the buildings, found on a grid
-## laid over the one obstacle description and pulled straight.
-##
-## [b]Why the nudge is not enough here.[/b] `BfhArena.steer_around` moves the aim beside the
-## nearest obstacle in the bus's corridor, and it keeps `radius + PILLAR_CLEARANCE` off each
-## axis. A district's streets are laid out at `BfhDistricts.STREET`, 7.6 m of clear floor, which
-## is 0.4 m more than two clearances: a line down the middle of one is clear by centimetres, a bus
-## a metre off it has a building in its corridor, and the nudge sends it to the point beside that
-## building, which is the next building's ring. Head-on at a roundabout's island it hands a bus
-## 7 m away a point 8 m to one side, which a nine-metre bus cannot turn for, and it stands on
-## the island with the throttle down until the stuck rule sends it home. A grid of towers is a
-## maze, and the doc's rule is that a maze is a route, not a nudge ([docs/bots.md](bots.md)).
-##
-## [b]Still one obstacle description.[/b] The grid is built from the arena's own obstacle
-## circles, the wall and the ramp's slab; a building a district adds is in it because it is in
-## `_obstacles`, with nothing declared twice.
-##
-## [b]Cells are solid when a bus's centre may not be there[/b]: within an obstacle's radius plus
-## the route clearance, outside the wall by the same, or on the ramp's slab or the deck widened by it. The clearance
-## is `BfhConfig.bot_route_clearance` (3.4 m: a bus's half width, and the swing of its nose and tail
-## through the turns), a little under the nudge's 3.6 because a street is only 0.4 m wider than twice that. A bus start is
-## usually inside the slab's margin, so the route starts from the nearest open cell.
-##
-## No `class_name`: this game is delivered as a pack (see docs/delivery.md).
+## A route for a bot bus through a town: the streets between the buildings, found on a grid laid
+## over the one obstacle description and pulled straight.
 
 ## Grid pitch in metres. A street leaves 0.8 m of open centre line at the default clearance, so
 ## a cell must be narrower than that or a street could fall between two columns of cells.

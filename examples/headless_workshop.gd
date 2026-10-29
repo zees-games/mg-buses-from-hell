@@ -5,15 +5,9 @@ const BfhGame := preload("../game/bfh_game.gd")
 const BfhBowls := preload("../game/bfh_bowls.gd")
 const BfhArena := preload("../game/bfh_arena.gd")
 
-## What a subscribed map pack does to this game's lists, against a fixture [DotContentIndex]
-## and never the process's shared one: a solo map is listed (ballot and map menu) as
-## Name [Pack], an online session lists none, a map kind the game does not accept is left
-## out, and the game's own ids win. A pack's bowl is a JSON document {radius} named in `scene`;
-## a pack entry whose document is missing is not listed at all.
-##
-## [codeblock]
-## godot --headless --path . res://examples/headless_workshop.tscn
-## [/codeblock]
+## What a subscribed map pack does to this game's lists, against a fixture [DotContentIndex] and
+## never the process's shared one: a solo map is listed (ballot and map menu) as Name [Pack], an
+## online session lists none, a map kind the game does not accept is left out, and the game's own.
 
 const SECTIONS := 4
 const MAP := &"fixture_hill"

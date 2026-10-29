@@ -1,10 +1,7 @@
 extends DotGameCheckSuite
 
-## BfhConfig through DotGameConfigBinder: fields, cvars, strict refusal, the diff and the workbench round trip.
-##
-## [codeblock]
-## godot --headless --path . res://examples/headless_config.tscn
-## [/codeblock]
+## BfhConfig through DotGameConfigBinder: fields, cvars, strict refusal, the diff and the workbench
+## round trip.
 
 const BfhConfig := preload("../game/bfh_config.gd")
 const ROOT := "user://bfh_cfgtest"

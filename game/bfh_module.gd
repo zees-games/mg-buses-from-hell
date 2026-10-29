@@ -16,12 +16,6 @@ const AMBIENT_KIND := "ambience"
 
 ## Where the services keep punishments. Empty is [DotGameServices]'s own default,
 ## `user://buses_punishments.json` — the store a real server enforces.
-##
-## [b]Static, because nothing holds this module before it exists[/b]: dot-server constructs
-## it from a path inside `load_module`, so there is no instance for a host to set a field on
-## first. `examples/dedicated.tscn` points it at a directory of its own; before it could,
-## every run appended the live tools' audit warnings to the real store, 134 of them by the
-## time anybody counted.
 static var punishments_file: String = ""
 
 ## The players' vote for the next bowl; null when it could not be built.
@@ -31,25 +25,10 @@ var vote: BfhVote = null
 const BOWL_BALLOT_TOPIC := &"map_ballot"
 
 ## This game, as a module a dedicated server loads.
-##
-## [b]The first game to subclass [DotGameModule].[/b] The netcode, the bridge, the seal, the identity layer,
-## the roster, the tick and the teardown are the base's; this file is only what is this game's.
-##
-## [b]No `class_name`, and that is a requirement rather than a style.[/b]
-## [method DotModuleHost.load_module] takes a PATH and constructs the module itself — it
-## must, because that is the shape that lets an operator name one in a config file — and a
-## module delivered inside a dot-cloud pack cannot have a `class_name` at all: a mounted
-## pack's globals are not registered in the host.
-##
-## [codeblock]
-## server.modules.load_module("res://game/bfh_module.gd")
-## [/codeblock]
 
-# [b]No `const CHANNEL` here, and its absence is the point.[/b] [DotGameModule] already
-# declares one and GDScript refuses to let a subclass redeclare it — which is the right
-# refusal: a module logs through [method DotModule.log_info], which stamps the module's
-# own name, so a second channel would split one module's records across two places an
-# operator has to know to turn up separately.
+# [b]No `const CHANNEL` here, and its absence is the point.[/b] [DotGameModule] already declares one
+# and GDScript refuses to let a subclass redeclare it — which is the right refusal: a module logs
+# through [method DotModule.log_info], which stamps the module's own name, so a second.
 
 
 func _module_name() -> String:
@@ -69,22 +48,14 @@ func _game_missing_hint() -> String:
 
 
 ## The netcode's numbers, which are the game's and not the addon's.
-##
-## Tick rate from the world, so `sv_tickrate` reaches it: the server sets the engine's
-## physics rate from that cvar at boot, the world is built after the server and reads it,
-## and this reads the world. A number written here instead would be a netcode running at a
-## rate the operator did not choose, silently.
 func _net_config() -> DotNetConfig:
 	var config := DotNetConfig.new()
 	config.tick_rate = (game as BfhGame).tick_rate
 	config.snapshot_rate = BfhGame.NET_SNAPSHOT_RATE
 	config.world_extent = BfhGame.NET_WORLD_EXTENT
 	config.enable_prediction = true
-	# [b]Off, and this is the one game in the family where that is obviously right.[/b]
-	# Lag compensation exists to resolve one player's shot against where they saw
-	# somebody. Nothing here is resolved that way: the hammer has a reach of 2.4 m and
-	# hits scenery, and a bus hits people by being where they are. There is no shot to
-	# rewind for.
+	# [b]Off, and this is the one game in the family where that is obviously right.[/b] Lag
+	# compensation exists to resolve one player's shot against where they saw somebody.
 	config.enable_lag_compensation = false
 	# A bowl holds thirty-odd crates, nine barrels, a handful of blocks and two buses, and
 	# they are all always relevant — see [BfhNetBridge] on why nothing here is culled.
@@ -97,13 +68,6 @@ func _make_bridge() -> Node:
 
 
 ## Chat, voice and moderation, over [DotGameServices].
-##
-## [b]The bridge is handed over as the link, and that is the whole of the wiring.[/b] A
-## chat line goes out through `send_chat` and a voice frame through `send_voice`, both on
-## this game's own wire — see [BfhNetLink]. [DotGameModule] does the rest: it assigns the
-## bridge's `voice_relay_fn`, checks `check_admission` before seating anybody, and tells
-## the roster to follow this layer so a leaver is forgotten by the rate limiter and the
-## voice router together.
 func _make_services() -> Node:
 	var services := BfhServices.new()
 	services.bridge = bridge
@@ -111,14 +75,9 @@ func _make_services() -> Node:
 	return services
 
 
-## Profiles, avatars and admission: dot-platform's [DotPlatformIdentity] over this game's
-## one-slot schema. [DotGameModule] builds it before the services and loads dot-platform's
-## own module beside it.
-##
-## [b]Authentication is not here and was never this game's.[/b] Whether a player is proven
-## to be somebody is the host's `dot_auth_server`, the same for every game it runs; what
-## this layer does is everything after — a scoped profile, the name on it, a face, and a key
-## their numbers outlive the connection under.
+## Profiles, avatars and admission: dot-platform's [DotPlatformIdentity] over this game's one-slot
+## schema. [DotGameModule] builds it before the services and loads dot-platform's own module beside
+## it.
 func _make_identity() -> Node:
 	var identity_layer := DotPlatformIdentity.new()
 	identity_layer.avatar_schema = BfhAvatars.schema()
@@ -201,15 +160,9 @@ func _game_load() -> DotResult:
 		"Bots in empty driving seats: 1 keeps as many as bot_quota and bot_quota_mode say, 0 none at all."
 	)
 
-	# [b]How many is dot-server's [DotBotQuota], so `bot_quota` and `bot_quota_mode` mean the
-	# same thing on every server in the family[/b] — counted in DRIVING SEATS here, because a
-	# bot only ever drives. The people it is given are the people driving, not everybody on
-	# the server: counting runners would stand a bus down for a person who joined on foot,
-	# and two people joining inside one check would leave both on foot with no bus at all,
-	# which is a round that never starts. The default is the seat count in fill mode, the
-	# rule this game ran before the policy was shared: every seat nobody is driving has a bot
-	# in it, and a person who takes a seat (the sides swap every few rounds) takes it from a
-	# bot. `bfh_drivers` is still how many seats there are and caps whatever the quota says.
+	# [b]How many is dot-server's [DotBotQuota], so `bot_quota` and `bot_quota_mode` mean the same
+	# thing on every server in the family[/b] — counted in DRIVING SEATS here, because a bot only ever
+	# drives.
 	_quota = DotBotQuota.install(self, world.config.driver_count)
 
 	# How well the bots drive: dot-bot's `bot_difficulty` and its `bot_*` settings, held on
@@ -221,12 +174,9 @@ func _game_load() -> DotResult:
 	if not configured.ok:
 		return configured
 
-	# [b]Started here and not in the world's own `_ready`.[/b] `start()` lays the bowl out
-	# and puts the buses on it, and a world that did that before the bridge existed would
-	# have spawned every crate with nothing listening to `props.spawned` — thirty-four
-	# bodies the server knows about and no client is ever told about. They would be
-	# invisible cover: a runner shelters behind a crate a bus cannot see, and the bus
-	# drives through it.
+	# [b]Started here and not in the world's own `_ready`.[/b] `start()` lays the bowl out and puts the
+	# buses on it, and a world that did that before the bridge existed would have spawned every crate
+	# with nothing listening to `props.spawned` — thirty-four bodies the server knows about and no.
 	world.start()
 
 	log_info("the bowl is open", world.describe())
@@ -243,19 +193,6 @@ func _map_config_game() -> String:
 
 
 ## The numbers an operator is actually going to want to change, as cvars.
-##
-## [b]Live, and each one writes through to the config the world already reads.[/b] The
-## alternative is what most of this family's games still do — a JSON file and a restart —
-## and the reason to do better here is the shape of this particular game: the whole thing
-## is a balance between a bus's top speed, how much cover there is and how long a round
-## lasts, and an operator finds their server's numbers by moving one of them between
-## rounds with people watching.
-##
-## [b]What is NOT here is anything the world has already built.[/b] `bfh_crates` changes
-## how many crates the NEXT round is laid out with; it does not put crates in the bowl
-## now. A cvar that pretended otherwise would be one an admin sets in the middle of a
-## round and then reports as broken.
-## The cvars dot-spectate's rules were bound to, kept for the suite.
 var _spectate_cvars: Array = []
 
 
@@ -283,11 +220,8 @@ func _add_tunables(world: BfhGame) -> void:
 	_tunable("bfh_scaffold_margin", config.scaffold_scatter_margin,
 		"Metres round the scaffold kept clear when the next round is laid out (never under 2.2)",
 		func(value: float) -> void: config.scaffold_scatter_margin = maxf(value, 0.0))
-	# The bots' knobs, live from the next tick: the autopilot and the stuck rule run on the
-	# authority only and read these every tick, so no client has anything to agree with.
-	# The hook and the courtyard's west lane are NOT here (`hook_layout`,
-	# `courtyard_west_lane`): they are the map, which every client builds from the HELLO it
-	# joined with, so they are set in the JSON file or the environment and need a restart.
+	# The bots' knobs, live from the next tick: the autopilot and the stuck rule run on the authority
+	# only and read these every tick, so no client has anything to agree with.
 	_tunable("bfh_bot_aim_past", config.bot_aim_past,
 		"Metres past a runner a bot bus aims, so it arrives at speed",
 		func(value: float) -> void: config.bot_aim_past = maxf(value, 0.0))
@@ -405,12 +339,6 @@ func _on_config_field(key: String, _value: Variant, source: String) -> void:
 
 
 ## A number as an operator would type it: `34`, not `34.000000`.
-##
-## [b]Not `%g`, which GDScript's format strings do not have.[/b] It is accepted by the
-## parser and fails at RUNTIME with "unsupported format character" — inside `_game_load`,
-## which is the one place in the module sequence that unwinds everything above it. The
-## symptom was a server whose netcode came up, logged that it was ready, and then reported
-## that the game would not load.
 static func _number(value: float) -> String:
 	return "%d" % int(round(value)) if is_equal_approx(value, round(value)) else "%.2f" % value
 
@@ -465,12 +393,6 @@ func _cmd_maps_reload(ctx: DotCmdContext) -> void:
 
 
 ## One cvar, its default taken from the configuration rather than written twice.
-##
-## [b]The default is the value the world was built with, and that is the whole point.[/b]
-## A cvar declared with a literal default is a second copy of a number that
-## `defaults < JSON < environment < argv` has already decided — so an operator who set
-## `BFH_ROUND_SECONDS=300` would see `bfh_round_seconds` report 180 and, worse, would
-## reset their own setting the moment anything wrote the value back.
 func _tunable(
 	cvar_name: String, current: float, description: String, apply: Callable
 ) -> void:
@@ -486,11 +408,9 @@ func _tunable(
 	)
 
 
-## [b]Nothing to undo.[/b] The commands are the module's own and [DotModule] removes them;
-## the netcode, the bridge and the roster are [DotGameModule]'s and it tears them down in
-## the reverse order it built them. The world is NOT this module's to free: it was in the
-## tree before the module loaded and a server can unload and reload a game module without
-## the bowl going away, which is what `module reload` is for.
+## [b]Nothing to undo.[/b] The commands are the module's own and [DotModule] removes them; the
+## netcode, the bridge and the roster are [DotGameModule]'s and it tears them down in the reverse
+## order it built them.
 func _game_unload() -> void:
 	if workbench != null:
 		workbench.queue_free()
@@ -528,17 +448,9 @@ var _quota: DotBotQuota = null
 var _since_bot_check: float = 0.0
 
 
-## [b]A server with nobody in the buses is a server with no game in it, and that is
-## specific to this game rather than a general nicety.[/b] Every other game in this family
-## degrades gracefully when it is empty: a deathmatch with one person in it is a person
-## walking around a map, a sandbox with one person in it is the whole sandbox. This one is
-## ASYMMETRIC — a runner with no bus to run from has nothing at all to do, and
-## `sides_are_playable` correctly refuses to start a round, so the first visitor to an
-## empty server would stand in a bowl watching a clock that never moves.
-##
-## So the seats are kept full. A bot is removed the moment a person wants to drive, which
-## is the other half: the bots are there to make the game exist, not to take the fun half
-## from the people who came to play it.
+## [b]A server with nobody in the buses is a server with no game in it, and that is specific to this
+## game rather than a general nicety.[/b] Every other game in this family degrades gracefully when
+## it is empty: a deathmatch with one person in it is a person walking around a map, a sandbox with.
 func _game_tick(_tick: int, delta: float) -> void:
 	if vote != null:
 		vote.advance(delta)
@@ -558,10 +470,9 @@ func _keep_the_seats_full() -> void:
 	if world == null or bridge == null or _quota == null:
 		return
 
-	# Bots are told apart by the flag rather than by a list of the ones this module added,
-	# as they always were here: a bot an admin or a test put in a seat is a bot in that
-	# seat, and it stands down for a person like any other. A leaver is gone from the world
-	# the moment the bridge removes them, so nobody half-disconnected is counted.
+	# Bots are told apart by the flag rather than by a list of the ones this module added, as they
+	# always were here: a bot an admin or a test put in a seat is a bot in that seat, and it stands
+	# down for a person like any other.
 	var drivers_human := 0
 	var bots: Array[BfhPlayer] = []
 
@@ -571,11 +482,9 @@ func _keep_the_seats_full() -> void:
 		else:
 			drivers_human += 1
 
-	# [b]A bot that is no longer a driver is removed rather than left to walk.[/b] Sides
-	# swap every few rounds and take the bots with them, and a bot RUNNER is a person
-	# shaped obstacle that never moves: free points for the drivers and nothing for
-	# anybody else. There is no walking AI here and there should not be one — the bots
-	# exist to fill a bus, and a bus is the only thing this game can drive itself.
+	# [b]A bot that is no longer a driver is removed rather than left to walk.[/b] Sides swap every few
+	# rounds and take the bots with them, and a bot RUNNER is a person shaped obstacle that never
+	# moves: free points for the drivers and nothing for anybody else.
 	var people := 0
 
 	for player in world.runners():
@@ -622,20 +531,6 @@ static func _bot_name(world: BfhGame) -> String:
 
 
 ## Joins the bridge's two chat seams to the services layer's router.
-##
-## [b]Here rather than in either of them, because this is the only object that holds
-## both.[/b] The bridge knows what arrived on the wire and nothing about what a line means;
-## the services layer knows the rules and nothing about the wire. That separation is the
-## reason a client cannot send a line with somebody else's name on it: what crosses is a
-## channel id and a string, and everything else is decided on this side.
-## The players' vote for the next bowl, over dot-vote: `!vote`, `!rtv`, `!nominate`.
-##
-## [b]Opened [member BfhVote.open_after_sec] into every round and applied when it ends[/b],
-## because the bowl is rebuilt only between rounds; see [code]game/bfh_vote.gd[/code] and
-## [code]game/bfh_bowls.gd[/code]. A server owner turns it off or reshapes it in
-## `user://cfg/buses_vote.json` or `game.yml`'s `metadata: bowl_vote:`, keyed as dot-vote's
-## [DotVoteRules]. A vote that cannot be built is a WARN and the server's own bowl, never a
-## server that will not start.
 func _build_vote(world: BfhGame) -> void:
 	vote = BfhVote.new()
 	vote.name = "BowlVote"
@@ -770,10 +665,6 @@ func _on_say_requested(peer_id: int, channel_id: StringName, text: String) -> vo
 
 
 ## A `!command` typed into chat. Run through the console as the person who typed it.
-##
-## [b]As THEM, not as the server.[/b] `run_command_as_uid` builds a context with that
-## player's own flags, so `!kick` from somebody without the flag is refused by the same
-## file that refuses it at the console — rather than by this function having an opinion.
 func _on_chat_command(peer_id: int, command: String, args: PackedStringArray) -> void:
 	if server == null:
 		return
@@ -810,14 +701,8 @@ func _cmd_say(ctx: DotCmdContext) -> void:
 	ctx.reply("Said: %s" % text)
 
 
-## Who somebody is reaches the world: a face as they are seated, the real name and face once
-## dot-platform has them, and the key what they keep is filed under.
-##
-## [b]Three events and one path.[/b] Admission finishes AFTER a player is seated whenever the
-## profile store is slower than the join — dot-server has no stage to hold them in — so
-## `player_admitted` is the moment the real name and face exist; a wardrobe change and an
-## operator's `platform_name` are the same thing later. All three end in
-## [method BfhNetBridge.refresh_player], a JOIN everybody already knows how to apply.
+## Who somebody is reaches the world: a face as they are seated, the real name and face once dot-
+## platform has them, and the key what they keep is filed under.
 func _wire_identity(world: BfhGame) -> void:
 	var link := bridge as BfhNetBridge
 
@@ -834,11 +719,6 @@ func _wire_identity(world: BfhGame) -> void:
 
 
 ## dot-platform's state for a session, through its module, or null.
-##
-## [b]Through the module's `player_for`, never the hub by a key made here.[/b] The hub keys a
-## player by their scoped profile key, which only admission knows; a lookup by
-## `u<session>` finds nobody, every time, and reads as "no avatar" rather than a wrong key.
-## Duck-typed, because a server without dot-platform is a configuration.
 func _platform_player(session_id: int) -> Object:
 	var session := server.session_by_userid(session_id) if server != null else null
 	var platform: Object = server.modules.get_module("platform") \
@@ -875,11 +755,8 @@ func _on_profile(event: DotEvent) -> void:
 	link.refresh_player(session_id, session.display_name, _avatar_for(session_id))
 
 
-## One player's session: the five numbers and what they have earned. With no argument,
-## everybody counted, one line each.
-##
-## [b]By userid, as the player list prints it, not by the storage key.[/b] The key is an
-## implementation detail (`bfh-u<userid>`) and an operator types what `status` shows.
+## One player's session: the five numbers and what they have earned. With no argument, everybody
+## counted, one line each.
 func _cmd_stats(ctx: DotCmdContext) -> void:
 	var world := game as BfhGame
 

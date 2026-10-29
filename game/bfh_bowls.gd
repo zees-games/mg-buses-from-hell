@@ -3,21 +3,6 @@ extends RefCounted
 const BfhDistricts := preload("bfh_districts.gd")
 
 ## The bowls a round can be played in: this game's maps, for the players' vote.
-##
-## [b]A bowl is a radius, not a file.[/b] The map here is [method BfhArena.build] run on both
-## ends from one number (and the hook and the courtyard's west lane, which stay the
-## operator's), so a bowl is a name and a radius. Every feature is placed as a fraction of
-## the radius and spaced for a bus, so a different radius is a different map with the same
-## rules: `headless_run` builds every bowl here and holds each to the gap rule, the same
-## way it holds the minimum radii.
-##
-## [b]`bfh_bowl` is the operator's own[/b]: whatever `arena_radius` says (46 m shipped). The
-## other two are the sizes the arena's own minimum radii already describe from either
-## side: a small bowl below the scaffold's and the colonnade's minimum, where only the
-## stacks and the tank farm stand and the bowl is open floor between them, and a big one
-## where every feature is further apart and a bus has room to build speed.
-##
-## No `class_name`: this game is delivered as a pack (see docs/delivery.md).
 
 const DEFAULT := &"bfh_bowl"
 

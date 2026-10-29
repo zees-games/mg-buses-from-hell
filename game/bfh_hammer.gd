@@ -3,19 +3,6 @@ extends RefCounted
 const BfhConfig := preload("bfh_config.gd")
 
 ## The only weapon in the game, and it does not hurt people.
-##
-## [b]A hammer that cannot kill is the whole balance of the runners' side.[/b] The
-## obvious version of this game gives the runners something to shoot the drivers with,
-## and that version is a deathmatch in a bowl: the buses stop mattering, the crates
-## stop mattering, and the round is decided by aim. What the hammer does instead is
-## change the map — break a crate somebody else is hiding behind, shove one into a
-## bus's line, open a path, close one. Every use of it is about geometry, which is the
-## only thing a person on foot has against a vehicle.
-##
-## [b]It is not a [DotWeapon] and there is no dot-loadout here.[/b] Both addons exist
-## and both are about choosing between things; there is exactly one thing. A catalogue
-## of one is a catalogue that will be wrong the moment somebody adds a second entry
-## and forgets the rules that went with it, so this is a plain object that swings.
 
 # No `const CHANNEL`. This is a value object that swings and emits: `hit` and `missed` are
 # what a caller acts on, and a line per swing at two a second per player is a log nobody
@@ -57,15 +44,6 @@ func ready_to_swing() -> bool:
 
 
 ## Swing from [param origin] along [param direction].
-##
-## [b]Given an origin and a direction rather than a camera.[/b] The same rule
-## dot-props' own tools follow: a tool that owned a camera could not be swung by a bot,
-## by a replay, or by a headless test, and all three are things this game's suite does.
-##
-## Returns whether the swing happened at all — false means it was still on cooldown,
-## which is different from a swing that missed.
-## A swing's weight against a toy, as a shot's damage (dot-props' `DotPropToyBox.shot`): a
-## beach ball goes off at its nine metres a second, a barrel rolls.
 const TOY_WHACK := 45.0
 
 
@@ -116,10 +94,9 @@ func swing(
 		missed.emit(at)
 		return true
 
-	# The shove first, then the damage, and the order is what makes the last swing
-	# feel right: applied the other way round, the blow that breaks a crate applies an
-	# impulse to a body that is already being freed, so the crate that finally goes is
-	# the one crate that does not fly anywhere.
+	# The shove first, then the damage, and the order is what makes the last swing feel right: applied
+	# the other way round, the blow that breaks a crate applies an impulse to a body that is already
+	# being freed, so the crate that finally goes is the one crate that does not fly anywhere.
 	if carry != null and push > 0.0:
 		carry.push(prop.instance_id, at, direction.normalized() * push)
 

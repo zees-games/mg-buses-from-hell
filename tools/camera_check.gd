@@ -1,14 +1,8 @@
 extends Node
 
-## The third-person camera and the spectator's chase camera flown round the bowl in the real
-## offline game (dot-core's DotCameraCheck: never inside, armed by the unprotected camera
-## being in or behind the level on some frames), `mp_forceview` through the view key's path,
-## and with `--render` both views and another player at the lens before and after the fade.
-## No body check: runners and buses share layer one here, so this game binds no
-## `mp_solidplayers` (see bfh_game.gd's `view_rules`).
-##
-##   tools/camera_check.sh            # headless; exit 1 on a failure
-##   tools/camera_check.sh --render   # and the frames, in screenshots/cameras/
+## The third-person camera and the spectator's chase camera flown round the bowl in the real offline
+## game (dot-core's DotCameraCheck: never inside, armed by the unprotected camera being in or behind
+## the level on some frames), `mp_forceview` through the view key's path, and with `--render` both.
 
 const BfhClient := preload("../game/bfh_client.gd")
 const BfhGame := preload("../game/bfh_game.gd")

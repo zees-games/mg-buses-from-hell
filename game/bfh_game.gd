@@ -14,18 +14,6 @@ const BfhSounds := preload("bfh_sounds.gd")
 const BfhSpectate := preload("bfh_spectate.gd")
 
 ## The simulation. Headless, authoritative, and the only thing that decides anything.
-##
-## [b]One side drives and the other side runs, and every decision in this file comes
-## from that being asymmetric.[/b] It is not a deathmatch with vehicles in it: the
-## drivers have no way to lose except the clock, the runners have no way to win except
-## the clock, and the only thing either side can change is the shape of the bowl
-## between them. So the crates are the game, and everything here is about keeping
-## enough of them standing to make the last thirty seconds interesting.
-##
-## [b]What it owns and what it borrows.[/b] The round, the sides and the scoreboard are
-## dot-match's; health and damage are dot-combat's; the crates and barrels are
-## dot-props'; the bus is dot-vehicle's; the bowl is this file's. The joins are the
-## part that is new, and they are the part worth reading.
 
 const CHANNEL := "bfh.game"
 
@@ -33,29 +21,12 @@ const TEAM_DRIVERS := 1
 const TEAM_RUNNERS := 2
 
 ## Where this world publishes itself, so a module can find it.
-##
-## [b]A registry name and not an autoload, which is the family rule and here also a
-## requirement.[/b] A server and a client in one editor session is two of these, and the
-## suite builds two worlds in one process on purpose -- see [method _build_random] for
-## what the other kind of global already cost this game.
 const SERVICE := &"bfh_game"
 
 ## Snapshots a second. Twenty, against a sixty-tick simulation.
-##
-## [b]Lower than the games whose whole content is a person aiming at another person.[/b]
-## Nothing here is decided at the precision of a single frame: a bus is nine metres of
-## telegraphed intent, and what a runner reads off it is a direction and a speed rather
-## than a silhouette. The interpolator covers the rest, and the bandwidth goes to the
-## thirty-odd rigid bodies instead, which is where this game's snapshot actually is.
 const NET_SNAPSHOT_RATE := 20
 
 ## How far a position may be from the origin, in metres, on the wire.
-##
-## [b]The bowl is 46 m across and this is 256.[/b] Not tidiness: a quantised position is
-## decoded against this range, so a client and a server that disagree about it do not
-## lose precision, they land somewhere else entirely. It is written here, once, and both
-## ends read it from here -- the arena client and the module said 256 and 128 in two
-## other games in this family and that is the bug being avoided.
 const NET_WORLD_EXTENT := 256.0
 
 ## Somebody is in the world. The bridge answers this by making them an entity.
@@ -84,13 +55,7 @@ signal player_died(player_id: StringName, by: StringName)
 ## A barrel went off. The client draws it; this decides it.
 signal barrel_exploded(at: Vector3, radius: float)
 
-## Something in the bowl made a noise worth hearing: one of `BfhSounds.WORLD`, where it
-## happened.
-##
-## [b]Emitted by the authority, and by a connected client's world when the server says
-## so[/b] (`BfhEvents.Kind.SOUND`), so the thing that plays it — `BfhAudio` — listens to
-## one signal in both halves and never learns which it is in. A sound is presentation: it
-## is decided here because WHAT happened is decided here, and it never changes anything.
+## Something in the bowl made a noise worth hearing: one of `BfhSounds.WORLD`, where it happened.
 signal noise(id: StringName, at: Vector3)
 
 ## A bus touched a runner. [param lethal] is whether they are out, read AFTER the damage
@@ -115,26 +80,12 @@ signal earned(player_id: StringName, title: String, points: int)
 @export_range(1, 240, 1) var tick_rate: int = 60
 
 ## Whether something else drives the tick.
-##
-## [b]Set by the bridge on both ends, and it has to be both.[/b] A game's tick has to
-## happen INSIDE the netcode's -- between applying each peer's inputs and building the
-## snapshot -- so a world still running its own `_physics_process` moves every player
-## twice a tick, and what that looks like is a server running at double speed only while
-## somebody is connected. A client's is worse: it would simulate the local player twice
-## and dead-reckon every remote one from stale state.
 @export var external_tick: bool = false
 
 ## Whether this world counts statistics and achievements. Authority only either way.
-##
-## On by default, because a server and an offline game both want it. A suite that builds a
-## world to test a bus does not need two trackers under it, but pays nothing much for them
-## either, so the default is not about cost — it is here so a caller can say "no".
 @export var track_progress: bool = true
 
 ## Whether this world publishes itself under [constant SERVICE].
-##
-## Off on a client that shares a process with a server -- the suite, an editor session
-## running both -- because a registry name is global and the last one to register wins.
 @export var register_service: bool = true
 
 var arena: BfhArena = null
@@ -151,10 +102,9 @@ var random: DotRandomManager = null
 ## client's world mirrors what it is told. See [BfhSpectate].
 var spectate: BfhSpectate = null
 
-## dot-player-controller's `mp_forceview`: whether a player may switch to third person (0),
-## or is held in first (1) or third (2). Bound by the module (REPLICATED) and followed by a
-## client through its link. (No `mp_solidplayers` here: runners and buses share layer one,
-## and a hull on it would be something every bus hits.)
+## dot-player-controller's `mp_forceview`: whether a player may switch to third person (0), or is
+## held in first (1) or third (2). Bound by the module (REPLICATED) and followed by a client through
+## its link.
 var view_rules: DotPlayerViewRules = DotPlayerViewRules.new()
 
 ## dot-player-controller's body rules, there for dot-team's block rules to feed. Players are never solid to each other here (no hull is built), so it changes nothing physical; `mp_solidplayers` is deliberately not bound.
@@ -217,12 +167,6 @@ var workshop_index: DotContentIndex = null
 var round_elapsed: float = 0.0
 
 ## What the server last said about the numbers a client cannot count for itself.
-##
-## [b]Negative means "count it yourself", which is what a server and an offline client
-## do.[/b] A client does not run the prop spawner — its crates are mirrored bodies with
-## no [DotPropInstance] behind them — so `crates_left()` there would count zero and the
-## HUD would tell every networked player that all the cover was gone. See
-## `BfhEvents.Kind.CLOCK`.
 var remote_cover: int = -1
 
 ## And whether the server says there is somebody on each side.
@@ -239,14 +183,6 @@ var _tick: int = 0
 var _started: bool = false
 
 ## Every world object this game has an id for. See [DotEntityTable].
-##
-## Replaces a `_next_entity_id` counter that was correct and did two things this is
-## not: it had no reverse index, so finding out who an attacker was walked every
-## player on the server ([method _on_player_died]); and nothing ever closed anything,
-## so `DotCombatManager` kept a `DotHealth` for every player who had ever joined --
-## nodes that were freed with their player, leaving the manager holding references to
-## deleted objects for the life of the process. `forget()` is called now, from the one
-## place that knows a player has gone.
 var entities := DotEntityTable.new()
 
 ## What a dead body does, and which death reactions the server allows: dot-player-char's
@@ -257,10 +193,9 @@ var ragdoll_rules: DotPlayerRagdollRules = DotPlayerRagdollRules.new()
 ## dot-props' `sv_toys*`, bound by the module (REPLICATED) and followed by a client.
 var toy_rules: DotPropToyRules = DotPropToyRules.new()
 
-## The bowl's toys (dot-props' loose ones: beach balls, barrels, a tyre), on a ring the arena
-## works out from its build (`BfhArena.toy_placements`), so both ends place the same toys in the
-## same order. A bus ploughs them, a hammer whacks them, a walk pushes them; nobody stands on
-## one or hides behind one. Rebuilt with the arena; home at every round's start.
+## The bowl's toys (dot-props' loose ones: beach balls, barrels, a tyre), on a ring the arena works
+## out from its build (`BfhArena.toy_placements`), so both ends place the same toys in the same
+## order.
 var toys: DotPropToyBox = null
 
 ## The bowl's toys are about to go (the arena is rebuilt), and are built: what the bridge
@@ -339,16 +274,6 @@ func _exit_tree() -> void:
 
 
 ## Puts this world's physics space on the gravity the game was tuned for.
-##
-## [b]On the SPACE, not on `ProjectSettings`.[/b] Two worlds in one process is the normal
-## case here — a server and a client in one editor session, and every section of the
-## suite — and a global would be one of them deciding for the other. A space is a world's
-## own, so each gets the same answer independently.
-##
-## [b]And it is done at all because a project setting does not travel in a pack.[/b] See
-## [member BfhConfig.gravity]: delivered into the server tool's project, this game ran at
-## Godot's default 9.8 against numbers chosen for 20, and the only symptom was that
-## everything floated.
 func _apply_gravity() -> void:
 	var world := get_world_3d()
 
@@ -364,12 +289,9 @@ func _apply_gravity() -> void:
 func _build_random() -> void:
 	random = DotRandomManager.new()
 	random.name = "Random"
-	# [b]Off, and the addon's own comment says why.[/b] A registry name is global to
-	# the process, so the last manager to register wins — and two worlds in one
-	# process is not exotic here: it is a server and a client in one editor session,
-	# and it is what the suite does in every section. With it on, the second world's
-	# manager displaced the first's and two worlds built from the same seed laid out
-	# different bowls, which is the one thing a seed exists to prevent.
+	# [b]Off, and the addon's own comment says why.[/b] A registry name is global to the process, so
+	# the last manager to register wins — and two worlds in one process is not exotic here: it is a
+	# server and a client in one editor session, and it is what the suite does in every section.
 	random.register_as_service = false
 	add_child(random)
 	random.setup()
@@ -394,10 +316,9 @@ func _build_props() -> void:
 	props.name = "Props"
 	props.catalogue = BfhContent.props(config)
 	props.limits = DotPropLimits.new()
-	# The bowl's furniture is spawned by the world rather than by a player, so the
-	# per-player budget and the cooldown are not what is being defended against here —
-	# the world cap is, and it has to be above what a round lays out or the last few
-	# crates silently never appear.
+	# The bowl's furniture is spawned by the world rather than by a player, so the per-player budget
+	# and the cooldown are not what is being defended against here — the world cap is, and it has to be
+	# above what a round lays out or the last few crates silently never appear.
 	props.limits.spawn_interval = 0.0
 	props.limits.per_player_budget = 400
 	props.limits.world_budget = 400
@@ -422,29 +343,16 @@ func _build_vehicles() -> void:
 	vehicles.name = "Vehicles"
 	vehicles.catalogue = BfhContent.vehicles(config)
 	vehicles.authoritative = authoritative
-	# The buses are put out by the world at the top of a round, not requested by
-	# players, so the limits that exist to stop somebody spamming a spawn key are the
-	# wrong shape here. The interval in particular: every bus is placed in the same
-	# instant, and at the shipped 1.0 s only the first one appears — silently, because
-	# a refused spawn is a refusal rather than an error.
+	# The buses are put out by the world at the top of a round, not requested by players, so the limits
+	# that exist to stop somebody spamming a spawn key are the wrong shape here.
 	vehicles.spawn_interval = 0.0
 	vehicles.per_player_budget = 16
 	vehicles.world_budget = 16
 	add_child(vehicles)
 
-	# [b]The SPAWNER'S ride, not a second one.[/b] `DotVehicleSpawner` builds one in its
-	# own `_init` and uses it for three things: evacuating a vehicle that is destroyed
-	# with people in it, answering `vehicle_of_rider`, and reporting how many riders there
-	# are. This game used to construct its own beside it, so those three read an index
-	# that was always empty — `describe()` said nobody was driving while somebody was, and
-	# a destroyed bus released nobody, which is the "stuck aboard a bus that no longer
-	# exists" failure this game already had once from the other direction.
-	#
-	# It is a [RefCounted] rather than a Node, and dot-vehicle made it one deliberately:
-	# seating a rider means stopping their controller and reparenting their node, and
-	# neither is something that addon can do without naming dot-player-controller — which
-	# would make it fail to parse in a project that does not have it. The two callables
-	# below are that seam, and this game is the half that knows what a player is.
+	# [b]The SPAWNER'S ride, not a second one.[/b] `DotVehicleSpawner` builds one in its own `_init`
+	# and uses it for three things: evacuating a vehicle that is destroyed with people in it, answering
+	# `vehicle_of_rider`, and reporting how many riders there are.
 	ride = vehicles.ride
 	ride.carry_rider_nodes = false
 	ride.on_seated = func(rider_id: StringName, v: DotVehicleInstance, _s: DotVehicleSeat) -> void:
@@ -460,21 +368,9 @@ func _build_combat() -> void:
 	combat.name = "Combat"
 	combat.is_authority = authoritative
 
-	# [b]Said out loud, because the inherited default says the opposite of what this game
-	# does.[/b] [DotDamageRules] defaults `friendly_fire` to false, and a reader who found
-	# that here would conclude that a runner cannot hurt another runner. A runner very much
-	# can: [method _on_prop_exploded] filters a barrel blast on dead-or-riding and on nothing
-	# else, and a blast that asked whose side you were on would not be a blast.
-	#
-	# [b]And `team_of` stays unset deliberately.[/b] dot-combat decides friendly fire through
-	# a `team_of` [Callable] and treats a missing one as "nobody is anybody's team mate" —
-	# which is a real trap, and cost another game in this family a round where friendly fire
-	# was on in a game whose rules said it was off. It is not a trap HERE, because the one
-	# damage path that could hit your own side already does the side test itself before it
-	# calls in: a bus skips every driver by key, so a bus cannot run over a driver even after
-	# its own driver has been evacuated onto foot. Wiring `team_of` now would not fix
-	# anything; it would silently start refusing the barrel splash that is meant to be
-	# indiscriminate.
+	# [b]Said out loud, because the inherited default says the opposite of what this game does.[/b]
+	# [DotDamageRules] defaults `friendly_fire` to false, and a reader who found that here would
+	# conclude that a runner cannot hurt another runner.
 	var rules := DotDamageRules.new()
 	rules.friendly_fire = true
 	combat.rules = rules
@@ -507,16 +403,13 @@ func _build_match() -> void:
 	rules.warmup_sec = config.warmup_seconds
 	rules.countdown_sec = 0.0
 	rules.rounds_to_win = 99
-	# [b]One.[/b] dot-match defaults to two because a deathmatch with one player in it
-	# is not a match; a round here with one runner and no drivers is a legitimate, if
-	# dull, thing for a nearly-empty server to be doing, and the alternative is a
-	# server that sits in warmup for ever and looks broken to the one person on it.
+	# [b]One.[/b] dot-match defaults to two because a deathmatch with one player in it is not a match;
+	# a round here with one runner and no drivers is a legitimate, if dull, thing for a nearly-empty
+	# server to be doing, and the alternative is a server that sits in warmup for ever.
 	rules.min_players = 1
-	# [b]The rule asks the game who is alive, and that is the seam dot-match is built
-	# around.[/b] Being alive is a `DotHealth`, which lives in dot-combat, which
-	# dot-match deliberately does not depend on. Left unset this falls back to a score
-	# and a clock — and the tell is specific and visible in the first round played:
-	# the round runs to the full clock instead of ending on the last kill.
+	# [b]The rule asks the game who is alive, and that is the seam dot-match is built around.[/b] Being
+	# alive is a `DotHealth`, which lives in dot-combat, which dot-match deliberately does not depend
+	# on.
 	rules.alive_fn = _is_alive
 	match_node.rules = rules
 
@@ -525,38 +418,26 @@ func _build_match() -> void:
 	match_node.round_started.connect(_on_round_started)
 	match_node.round_ended.connect(_on_round_ended)
 
-	# [b]Here, in both halves, and it was not.[/b] From 2026-09-26 these lines sat at the end
-	# of [method _build_progress], below its two early returns, because that function and
-	# [method _build_spectate] were inserted into the middle of this one. So a client's
-	# world kept dot-match's default pair, "Red" and "Blue" — nothing read them until the
-	# scoreboard asked for a side's name — and so would a server with `track_progress` off
-	# or whose tracker failed to attach, with dot-match's balancing and its one-ahead cap
-	# back on, which is the bug the lines below exist to prevent. Nothing ships with the
-	# tracker off, which is why no round said so.
+	# So a client's world kept dot-match's default pair, "Red" and "Blue" — nothing read them until the
+	# scoreboard asked for a side's name — and so would a server with `track_progress` off or whose
+	# tracker failed to attach, with dot-match's balancing and its one-ahead cap back on, which is the.
 	var teams: Array[DotTeam] = [
 		DotTeam.make(TEAM_DRIVERS, "Drivers", Color(0.92, 0.74, 0.17)),
 		DotTeam.make(TEAM_RUNNERS, "Runners", Color(0.35, 0.62, 0.88)),
 	]
 	match_node.teams.teams = teams
-	# [b]And re-indexed, because assigning the list does not.[/b] dot-match fills in its
-	# standard pair when it is added to the tree and indexes it on first lookup, and
-	# `teams.team(id)` goes on answering from that index: the ids agree (1 and 2), so every
-	# rule worked, and the first thing to ask for a side's NAME — the scoreboard — was told
-	# "Red" and "Blue". Found in its first render.
+	# [b]And re-indexed, because assigning the list does not.[/b] dot-match fills in its standard pair
+	# when it is added to the tree and indexes it on first lookup, and `teams.team(id)` goes on
+	# answering from that index: the ids agree (1 and 2), so every rule worked, and the first thing to.
 	match_node.teams.reindex()
-	# Off: this game balances itself, because the sides are not interchangeable. Two
-	# drivers against six runners is the design rather than an imbalance, and a
-	# balancer that did not know that would move four people into the buses every
-	# round and there are two seats.
+	# Off: this game balances itself, because the sides are not interchangeable. Two drivers against
+	# six runners is the design rather than an imbalance, and a balancer that did not know that would
+	# move four people into the buses every round and there are two seats.
 	match_node.teams.force_balance = false
 	match_node.teams.allow_choice = true
-	# [b]And off in the second place dot-match balances, which `force_balance` does not
-	# reach.[/b] `max_difference` defaults to 1 and REFUSES any join that puts a side more
-	# than one ahead — so on a shipped server the second driver and every runner past the
-	# drivers' count plus one were on no team at all in dot-match, while `sides` had them
-	# placed correctly. The elimination rule counts survivors off dot-match's teams, so a
-	# round was handed to the drivers the moment the runners it knew about were down, with
-	# the others still standing. `sides` decides who is on which side; dot-match is told.
+	# [b]And off in the second place dot-match balances, which `force_balance` does not reach.[/b]
+	# `max_difference` defaults to 1 and REFUSES any join that puts a side more than one ahead — so on
+	# a shipped server the second driver and every runner past the drivers' count plus one were on no.
 	match_node.teams.max_difference = 0
 
 
@@ -577,10 +458,6 @@ func _build_spectate() -> void:
 
 
 ## Statistics and achievements, on the authority. See [BfhProgress].
-##
-## [b]Not fatal either, and deliberately loud:[/b] a server that cannot count is a server
-## people can still play on, and a WARN is what tells the operator their players are not
-## earning anything.
 func _build_progress() -> void:
 	if not authoritative or not track_progress:
 		return
@@ -603,14 +480,9 @@ func _build_progress() -> void:
 	)
 
 
-# --- Players ---------------------------------------------------------------
+# --- Players
 
 ## Puts somebody in the world. [param wanted_team] is a TEAM_* constant, or 0 to be placed.
-##
-## [param bot] is here rather than set by the caller afterwards, because [signal
-## player_added] is answered by things that need to know: `BfhProgress` does not count a
-## bot, and a flag set on the line after this returns is a flag every listener read as
-## false. The bridge and the offline client both used to set it that way.
 func add_player(
 	player_id: StringName,
 	display_name: String,
@@ -645,10 +517,8 @@ func add_player(
 	)
 
 	if not opened.ok:
-		# A refusal here means this player id is already an entity, which cannot
-		# happen -- `add_player` returns early on a duplicate. Logged rather than
-		# ignored because arming them anyway would register a second health record
-		# against one body, and the symptom of that is a player taking half damage.
+		# A refusal here means this player id is already an entity, which cannot happen -- `add_player`
+		# returns early on a duplicate.
 		DotLog.error(CHANNEL, "could not open an entity for a player", {
 			"id": String(player_id), "why": opened.error.message,
 		})
@@ -682,12 +552,8 @@ func add_player(
 		_arm(player)
 
 	# [b]Somebody arriving in the middle of a round is placed NOW, not at the next one.[/b]
-	# `_place_players` only runs when a round is laid out, so a runner who joined a live
-	# server stood where a `CharacterBody3D` starts — the centre of the bowl, on the ramp's
-	# line — until the round ended, which on a real server is most of their first two
-	# minutes. It was found by a second client DRAWING them there: every suite asserts
-	# the joiner exists and moves, and a player at the origin does both. mg-smash-copter
-	# shipped the same line, where the origin was inside the floor that kills you.
+	# `_place_players` only runs when a round is laid out, so a runner who joined a live server stood
+	# where a `CharacterBody3D` starts — the centre of the bowl, on the ramp's line — until the round.
 	if authoritative and _started:
 		_place_one(player, team, random.stream(&"late_spawns"))
 
@@ -708,13 +574,6 @@ func add_player(
 
 
 ## Puts a driver who arrived after the buses were placed into one nobody is driving.
-##
-## [b]Seating used to happen only at the top of a round, and the bots made that a real
-## gap.[/b] A person driving disconnects, their bus stays where it stopped, and the module
-## fills the seat with a bot inside two seconds -- in `sides`, and nowhere else. The bot
-## then stood on the sand as a pedestrian nothing can run over while its bus sat still for
-## the rest of the round. With no empty bus this does nothing and the next round seats
-## them, which is what always happened.
 func _seat_in_an_empty_bus(player: BfhPlayer) -> void:
 	if ride == null or ride.is_riding(player.player_id):
 		return
@@ -729,17 +588,6 @@ func _seat_in_an_empty_bus(player: BfhPlayer) -> void:
 
 
 ## Which side somebody new goes on.
-##
-## [b]Drivers are capped and runners are not, which is the opposite of a balancer.[/b]
-## There are `driver_count` buses and a driver without one is a person standing on a
-## ledge watching, so the cap is the number of seats rather than a fraction of the
-## server.
-##
-## [b]Except that somebody has to be on foot, and only a person can be.[/b] A round needs a
-## runner ([method sides_are_playable]) and a bot only ever drives, so the first person on
-## a server took a seat, the module put a bot in the other one, and the match sat in warmup
-## for ever with two drivers and nobody to run over. The offline client always put its
-## player on foot; a dedicated server's first joiner now gets the same.
 func _side_for_new_player() -> int:
 	var drivers := 0
 	var runners := 0
@@ -764,11 +612,9 @@ func remove_player(player_id: StringName) -> void:
 	if ride != null and ride.is_riding(player_id):
 		ride.exit(vehicles.get_vehicle(ride.vehicle_id_of(player_id)), player_id, true)
 
-	# Before the node goes. dot-combat keyed a `DotHealth` on this entity and NOTHING
-	# in this game had ever told it to let go -- so every player who had ever joined
-	# left a health record behind, pointing at a node freed with them. The manager's
-	# own documentation says what that costs; what made it invisible is that a stale
-	# entity is never asked about, because nothing traces against a player who left.
+	# Before the node goes. dot-combat keyed a `DotHealth` on this entity and NOTHING in this game had
+	# ever told it to let go -- so every player who had ever joined left a health record behind,
+	# pointing at a node freed with them.
 	if combat != null and is_instance_valid(combat) and player.entity_id != 0:
 		combat.forget(player.entity_id)
 		entities.close(player.entity_id, DotEntityTable.REASON_OWNER_LEFT)
@@ -795,11 +641,6 @@ func remove_player(player_id: StringName) -> void:
 
 
 ## Hands a runner their hammer and listens to it.
-##
-## [b]The hammer is a plain object that swings and emits, and this is where its two
-## signals become the world's.[/b] A swing is a sound and a number: `noise` for whoever
-## is listening to the bowl, `swung` for [BfhProgress]. Both are decided on the authority,
-## because the authority is the only place a hammer is ever swung.
 func _arm(player: BfhPlayer) -> void:
 	player.give_hammer(config)
 
@@ -838,11 +679,6 @@ func _on_hammer_missed(player_id: StringName) -> void:
 
 
 ## A driver's horn. The swing button, for somebody whose only weapon is the bus.
-##
-## [b]Rate-limited here, on the authority,[/b] because a horn is heard by everybody and a
-## modified client holding the button down would otherwise be a server-wide siren. A bot
-## sounds it far less often than a person may, and only when it has somebody lined up —
-## see [method _autopilot]. Returns whether it sounded.
 func sound_horn(player: BfhPlayer) -> bool:
 	if player == null or not player.riding or player.ridden == null \
 			or not is_instance_valid(player.ridden):
@@ -930,18 +766,15 @@ func _is_alive(key: String) -> bool:
 	return player != null and player.health != null and player.health.alive
 
 
-# --- The round -------------------------------------------------------------
+# --- The round
 
 func start() -> void:
 	if not authoritative:
 		return
 
-	# [b]The bowl is laid out here and not only on `round_started`, and that is the
-	# difference between an empty server and a broken-looking one.[/b] dot-match runs
-	# a warmup before the first round, so a world that only furnished itself when a
-	# round began sat for the whole warmup as a bare disc with nothing in it — which
-	# is what somebody joining an empty server would see, and is indistinguishable
-	# from the props having failed to spawn. A round re-lays it; this puts it there.
+	# [b]The bowl is laid out here and not only on `round_started`, and that is the difference between
+	# an empty server and a broken-looking one.[/b] dot-match runs a warmup before the first round, so
+	# a world that only furnished itself when a round began sat for the whole warmup as a bare disc.
 	_clear_bowl()
 	_lay_out_bowl()
 	_place_players()
@@ -956,10 +789,9 @@ func _on_round_started(number: int) -> void:
 	round_elapsed = 0.0
 
 	if config.reseed_each_round:
-		# Derived from the configured seed and the round number rather than from a
-		# clock, so a server and a replay of it lay the same round out. `hash` would
-		# do; this is one multiply and is stable across engine versions, which `hash`
-		# on a built-in is not promised to be.
+		# Derived from the configured seed and the round number rather than from a clock, so a server and
+		# a replay of it lay the same round out. `hash` would do; this is one multiply and is stable
+		# across engine versions, which `hash` on a built-in is not promised to be.
 		_layout_seed = config.arena_seed + number * 7919
 		random.reseed(_layout_seed)
 
@@ -989,15 +821,10 @@ func _on_round_ended(number: int, winner: int, _outcome: int) -> void:
 
 
 ## Swaps every player's side.
-##
-## [b]Driving is the fun half and there are two seats for it.[/b] A server that never
-## swaps is a server where the same two people drive all night, which is the failure
-## this game has that a symmetric one does not.
 func _swap_sides() -> void:
-	# [b]Not when nobody driving is a person.[/b] Bots only drive, and the module removes a
-	# bot that finds itself on foot, so swapping a server whose seats are all bots put every
-	# person in a bus and left nobody to run: the next round never started. The people keep
-	# running until one of them is driving.
+	# [b]Not when nobody driving is a person.[/b] Bots only drive, and the module removes a bot that
+	# finds itself on foot, so swapping a server whose seats are all bots put every person in a bus and
+	# left nobody to run: the next round never started.
 	var person_driving := false
 	for driver in drivers():
 		if not driver.is_bot:
@@ -1013,10 +840,9 @@ func _swap_sides() -> void:
 		var now := TEAM_RUNNERS if was == TEAM_DRIVERS else TEAM_DRIVERS
 		sides[id] = now
 
-		# [b]dot-match as well, because its elimination rule is what decides the round
-		# and it reads teams off its own scoreboard.[/b] Flipping `sides` alone left the
-		# rule on the old sides for the rest of the server's life: the drivers ran the new
-		# runners down and every such round was announced as the runners' win.
+		# [b]dot-match as well, because its elimination rule is what decides the round and it reads teams
+		# off its own scoreboard.[/b] Flipping `sides` alone left the rule on the old sides for the rest
+		# of the server's life: the drivers ran the new runners down and every such round was.
 		var switched := match_node.switch_team(String(id), now, _tick)
 		if not switched.ok:
 			DotLog.error(CHANNEL, "dot-match refused a side swap", {
@@ -1042,19 +868,9 @@ func _clear_bowl() -> void:
 		if bus == null:
 			continue
 
-		# [b]Riders out before the bus goes, and nothing else does this for us.[/b]
-		# `DotVehicleRide` is a RefCounted holding its own rider index and it does not
-		# watch the spawner — so a bus removed underneath somebody leaves the ride
-		# still believing they are aboard, and every later `enter` is refused with
-		# "You are already in a vehicle." Permanently: there is no bus left to get out
-		# of. The symptom is a driver who is put on the ledge at the top of round two
-		# and never gets into anything again, which reads as the seating being broken
-		# rather than as a round having cleaned up in the wrong order.
-		# `occupants` is keyed by SEAT id and valued by rider id, which is the
-		# direction `seat_of()` reads it in. Iterating the keys hands `exit` a seat
-		# name where it wants a rider, and it answers "You are not in that vehicle" —
-		# truthfully, about a rider called "driver" who does not exist — so the real
-		# rider is never released and is stuck aboard a bus that no longer exists.
+		# [b]Riders out before the bus goes, and nothing else does this for us.[/b] `DotVehicleRide` is a
+		# RefCounted holding its own rider index and it does not watch the spawner — so a bus removed
+		# underneath somebody leaves the ride still believing they are aboard, and every later `enter` is.
 		for rider_id: StringName in bus.occupants.values():
 			ride.exit(bus, rider_id, true)
 
@@ -1224,13 +1040,9 @@ func rotation_commands() -> Dictionary:
 	return rotation_file.commands() if rotation_file != null else {}
 
 
-## Every bowl this server plays, as the map menu (M) lists them: `{id, name, detail, current}`,
-## its size under the name. Solo the client's list, online the server's (the module hands it
-## to dot-vote's map menu), so both say the same.
-##
-## [param index] is the Workshop's: a subscribed map of an accepted kind whose bowl document
-## loads is listed after the bowls as "Name [Pack]", for the index's current session only (so
-## never online). Null lists the game's own.
+## Every bowl this server plays, as the map menu (M) lists them: `{id, name, detail, current}`, its
+## size under the name. Solo the client's list, online the server's (the module hands it to dot-
+## vote's map menu), so both say the same.
 func bowl_rows(index: DotContentIndex = null) -> Array:
 	var out: Array = []
 	for bowl in BfhBowls.allowed(config):
@@ -1244,10 +1056,9 @@ func bowl_rows(index: DotContentIndex = null) -> Array:
 	return out
 
 
-## The bowls a subscribed pack adds, each `{id, name, radius}`. A pack's `map` entry of an
-## accepted `map_kind` names, in `scene`, a bowl document: JSON `{"radius": metres}`, clamped
-## to what the arena's gap rule has been built and checked for. One that does not load is
-## left out (nothing broken is listed), and the game's own ids win.
+## The bowls a subscribed pack adds, each `{id, name, radius}`. A pack's `map` entry of an accepted
+## `map_kind` names, in `scene`, a bowl document: JSON `{"radius": metres}`, clamped to what the
+## arena's gap rule has been built and checked for.
 func workshop_bowls(index: DotContentIndex) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if index == null:
@@ -1377,10 +1188,6 @@ func _place_players() -> void:
 
 
 ## Where one person stands at the top of a round, or on arriving during one.
-##
-## A late joiner draws from its own stream ([method add_player]), so somebody connecting
-## does not move where everybody ELSE is scattered next round — the layout a seed promises
-## is the same whoever came and went.
 func _place_one(player: BfhPlayer, team: int, stream: DotRandomStream) -> void:
 	if team == TEAM_DRIVERS:
 		player.global_position = arena.ledge_centre() + Vector3(0.0, 1.0, 0.0)
@@ -1397,13 +1204,9 @@ func _place_buses() -> void:
 	for i in range(maxi(seats, 1)):
 		var at := arena.bus_start(i, maxi(seats, 1))
 
-		# [b]Turned to face the bowl, and the default is 180 degrees wrong.[/b]
-		# `spawn` orients with `Basis.IDENTITY` unless told otherwise, and identity
-		# faces -Z — which from a ledge at the north edge is straight into the wall
-		# seven metres behind it. The bus then drove forward, at full throttle, into
-		# that wall, for the whole round: four wheels on the ground, correct engine
-		# force, correct steering, and a speedometer reading 0.0 m/s. Every number was
-		# right and the only wrong one was which way it was pointing.
+		# [b]Turned to face the bowl, and the default is 180 degrees wrong.[/b] `spawn` orients with
+		# `Basis.IDENTITY` unless told otherwise, and identity faces -Z — which from a ledge at the north
+		# edge is straight into the wall seven metres behind it.
 		var facing := Vector3(-at.x, 0.0, -at.z)
 		var orientation := (
 			Basis.looking_at(facing.normalized()) if facing.length() > 0.01
@@ -1421,14 +1224,13 @@ func _place_buses() -> void:
 		var seated := drivers()
 		if i < seated.size():
 			var driver := seated[i]
-			# `on_seated` is what flips the player, not this call site: a rider can also
-			# be put down by the ride itself — a destroyed bus, an admin removing one —
-			# and a game that only flipped the flag where it seated somebody would leave
-			# them frozen in mid-air the one time it mattered.
+			# `on_seated` is what flips the player, not this call site: a rider can also be put down by the
+			# ride itself — a destroyed bus, an admin removing one — and a game that only flipped the flag
+			# where it seated somebody would leave them frozen in mid-air the one time it mattered.
 			ride.enter(bus, driver.player_id, driver, &"driver")
 
 
-# --- The tick --------------------------------------------------------------
+# --- The tick
 
 func _physics_process(delta: float) -> void:
 	if not authoritative or match_node == null or external_tick:
@@ -1467,13 +1269,6 @@ func _step_bodies_only(delta: float) -> void:
 
 
 ## One simulated tick, numbered by the netcode. What the bridge uses.
-##
-## [b]The tick number comes from outside and the step does not.[/b] A snapshot is
-## stamped with the netcode's tick and a client reconciles against that number, so a
-## world counting its own would be replying about a different tick than the one it was
-## asked about. The STEP stays a fixed `1 / tick_rate` either way: a simulation stepped
-## by a frame's delta is a simulation that runs differently on a server having a bad
-## second, and this family has paid for that twice.
 func tick_once(tick: int) -> void:
 	if match_node == null:
 		return
@@ -1502,14 +1297,9 @@ func _step(delta: float) -> void:
 	if spectate != null:
 		spectate.tick(_tick)
 
-	# [b]A round with one side empty is not a round, and letting the clock run on one
-	# is an infinite loop with a scoreboard.[/b] The elimination rule ends a round the
-	# moment a side has nobody alive, and a side with nobody *at all* satisfies that on
-	# the first tick — so a server holding five runners and no drivers starts a round,
-	# ends it, swaps the sides, starts another and ends that, several times a second,
-	# for as long as nobody joins. Nothing errors: every round is decided correctly
-	# and the decision is correct. The suite found it as crates vanishing out from
-	# under a test that had just spawned them.
+	# [b]A round with one side empty is not a round, and letting the clock run on one is an infinite
+	# loop with a scoreboard.[/b] The elimination rule ends a round the moment a side has nobody alive,
+	# and a side with nobody *at all* satisfies that on the first tick — so a server holding five.
 	if not sides_are_playable():
 		return
 
@@ -1517,11 +1307,6 @@ func _step(delta: float) -> void:
 
 
 ## How long a round lasts, from now on: the config AND dot-match's rule.
-##
-## [b]The rule is the clock that ends a round[/b]; `config.round_seconds` is only what it was
-## built from and what the HUD counts down. `bfh_round_seconds` used to write the config
-## alone, so an owner's 50 s was shown on the HUD while every round ran the built-in 180.
-## Read live by dot-match, so it applies to the round in progress too.
 func set_round_seconds(seconds: float) -> void:
 	config.round_seconds = seconds
 
@@ -1529,7 +1314,7 @@ func set_round_seconds(seconds: float) -> void:
 		match_node.rules.time_limit_sec = seconds
 
 
-# --- Toys ----------------------------------------------------------------------
+# --- Toys
 
 func _build_toys() -> void:
 	if toys != null:
@@ -1580,12 +1365,6 @@ func delta_for_tick() -> float:
 
 
 ## Adopts a tick rate, on a client being told what the server runs at.
-##
-## [b]Every player's controller as well as this world, and that is the whole reason it
-## is a method.[/b] `tick_rate` is a plain property on a [BfhPlayer] with a setter that
-## forwards to the controller, so a world that changed only its own left every player
-## integrating at the old rate -- which is a client that walks at 60/128 of the speed
-## the server moves it at and is corrected on every snapshot for doing so.
 func set_tick_rate(rate: int) -> bool:
 	if rate <= 0 or rate == tick_rate:
 		return false
@@ -1614,21 +1393,15 @@ func sides_are_playable() -> bool:
 				has_runner = true
 
 	if not authoritative:
-		# A client knows the sides from JOIN and TEAM, but not whether the server has
-		# decided a round is playable — and the answer is the whole of the HUD's "waiting
-		# for both sides" line, which is the only thing telling somebody on an empty
-		# server that nothing is broken.
+		# A client knows the sides from JOIN and TEAM, but not whether the server has decided a round is
+		# playable — and the answer is the whole of the HUD's "waiting for both sides" line, which is the
+		# only thing telling somebody on an empty server that nothing is broken.
 		return remote_playable
 
 	return has_driver and has_runner
 
 
 ## Turns each driver's movement keys into throttle and steering.
-##
-## [b]The sample is the same one the walking controller takes, deliberately.[/b] A
-## driver's forward key is the throttle and their strafe keys are the wheel, so nobody
-## has to learn a second set of controls for the half of the game they only play every
-## third round.
 func _drive_buses(delta: float) -> void:
 	for id: StringName in players:
 		var player: BfhPlayer = players[id]
@@ -1644,10 +1417,8 @@ func _drive_buses(delta: float) -> void:
 		if bus == null or not bus.is_alive():
 			continue
 
-		# `current_command` is what `apply_command` stored and what the next tick would
-		# have moved them with. Read rather than re-sampled: sampling a second time
-		# here would consume a frame's mouse motion twice and make the driver's view
-		# turn at double rate, which reads as the bus having drifty steering.
+		# `current_command` is what `apply_command` stored and what the next tick would have moved them
+		# with.
 		var command: DotVehicleCommand = null
 
 		if player.is_bot:
@@ -1669,10 +1440,9 @@ func _drive_buses(delta: float) -> void:
 			command.handbrake = pending.is_pressed(DotFpsCommand.BUTTON_CROUCH)
 			command.aim_yaw = pending.yaw
 			command.aim_pitch = pending.pitch
-			# S brakes while the bus is still rolling forward and reverses once it has
-			# (nearly) stopped, as the key list says; W while rolling back brakes too.
-			# Reverse thrust stopped a bus from 15 m/s in 21 m against the foot brake's
-			# 7.6. A person's keys only: the autopilot's reverse legs mean reverse.
+			# S brakes while the bus is still rolling forward and reverses once it has (nearly) stopped, as
+			# the key list says; W while rolling back brakes too. Reverse thrust stopped a bus from 15 m/s in
+			# 21 m against the foot brake's 7.6.
 			command.brake_then_reverse(bus.forward_speed())
 
 		bus.command = command
@@ -1682,33 +1452,17 @@ func _drive_buses(delta: float) -> void:
 
 
 ## Drives a bot's bus at whoever is nearest.
-##
-## [b]`set_target` each tick rather than a route, and that is what makes a bot bus
-## readable.[/b] [DotVehicleDriver] will follow a waypoint list, which is the right
-## shape for traffic and the wrong one here: a runner's entire game is reading where a
-## bus has committed to and stepping out of it, and a bus on rails is not committing to
-## anything about them. Re-aimed every tick it behaves like a person who has picked a
-## target — it overshoots, it has to come round again, and the gap while it does is the
-## opening the round is played in.
 func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> DotVehicleCommand:
 	if player.autopilot == null:
 		player.autopilot = DotVehicleDriver.new()
 		player.autopilot.target_speed = config.bus_top_speed
-		# Wider than the default, because a bus is nine metres long: a waypoint radius
-		# tighter than the vehicle means it can never be "at" its target and it circles
-		# the spot for ever.
-		# [b]Tiny, because arriving is the one thing this driver must never do.[/b]
-		# `DotVehicleDriver` slows down inside `arrive_radius` and stops at the
-		# waypoint, which is right for traffic and exactly wrong for a chase: at 6 m
-		# the bus coasted to a halt beside the runner and sat there with the throttle
-		# at zero. A bus is not trying to reach a person, it is trying to be where
-		# they are at speed.
+		# Wider than the default, because a bus is nine metres long: a waypoint radius tighter than the
+		# vehicle means it can never be "at" its target and it circles the spot for ever.
 		player.autopilot.arrive_radius = 0.5
 		player.autopilot.waypoint_radius = 2.0
-		# [b]No corner-cutting toward the next waypoint.[/b] The point beside a pillar is
-		# placed at exactly the clearance `steer_around` measured; blending it 4 m toward the
-		# quarry (the driver's default) drove the bus inside that clearance, and the colonnade's
-		# drive along the walk from its deck end wedged on a pillar and was sent home.
+		# [b]No corner-cutting toward the next waypoint.[/b] The point beside a pillar is placed at
+		# exactly the clearance `steer_around` measured; blending it 4 m toward the quarry (the driver's
+		# default) drove the bus inside that clearance, and the colonnade's drive along the walk from its.
 		player.autopilot.look_ahead = 0.0
 
 	var quarry := _nearest_runner(bus.position())
@@ -1719,17 +1473,8 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 		# that drives into the wall for the rest of the round.
 		return DotVehicleCommand.new()
 
-	# Aimed PAST them, not at them. The driver decides its speed from the distance to
-	# its target, so a target sitting on the runner is a target that is always nearly
-	# reached — the bus arrives gently. A point eight metres beyond them, along the
-	# line the bus is already on, keeps the throttle down through the moment that
-	# matters and is what makes a near miss look like one.
-	# [b]How well it drives is dot-bot's `bot_difficulty`[/b] (the module binds the cvars, the
-	# offline client the console variables). Two of its settings mean something at a wheel:
-	# `bot_prediction` is how far ahead of a running target it aims, and `bot_aggression` how
-	# close to top speed it drives. Both are taken relative to medium, so medium is exactly
-	# the bus this game always had: a nightmare bus cuts a runner off, an easy one trails
-	# where they were and comes in slower.
+	# Aimed PAST them, not at them. The driver decides its speed from the distance to its target, so a
+	# target sitting on the runner is a target that is always nearly reached — the bus arrives gently.
 	var skill := DotBotSettings.of(self).profile
 	var target := quarry.global_position + _bot_lead(bus, quarry, skill)
 	var line := target - bus.position()
@@ -1740,26 +1485,18 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 		else target
 	)
 
-	# The horn, when somebody is lined up in front of it. Not every tick — see
-	# [method sound_horn] — and not at somebody behind it or off to one side, because a
-	# horn is a bus saying "you", and a bot that honked at everybody would be saying
-	# nothing.
+	# The horn, when somebody is lined up in front of it. Not every tick — see [method sound_horn] —
+	# and not at somebody behind it or off to one side, because a horn is a bus saying "you", and a bot
+	# that honked at everybody would be saying nothing.
 	var forward := -bus.body().global_basis.z
 	forward.y = 0.0
 	if line.length() < config.bot_horn_range and line.length() > 0.5 and forward.length() > 0.01 \
 			and line.normalized().dot(forward.normalized()) > BOT_HORN_ALIGNMENT:
 		sound_horn(player)
 
-	# And round the stacks, because the driver has no idea they are there. A bus aimed
-	# through a pillar wedges nose-on and the stuck rule then teleports it back to its
-	# start line, which from the runner's side reads as hiding behind a pillar deleting
-	# the bus. See [method BfhArena.steer_around].
-	# Slower while bound up the ramp: 5 m of slab for 2.5 m of bus leaves 1.25 m either
-	# side, and at full speed the line-up overshoots the middle. See
-	# [method BfhArena._up_the_ramp].
-	# [b]In a district the ramp's own rules begin at the foot.[/b] Further out the street route
-	# carries the bus there: the open-floor turn and line-up, planned with `steer_around`, drove
-	# a bus into a street's buildings 45 m from the ramp and stood it braking there for 26 s.
+	# And round the stacks, because the driver has no idea they are there. A bus aimed through a pillar
+	# wedges nose-on and the stuck rule then teleports it back to its start line, which from the
+	# runner's side reads as hiding behind a pillar deleting the bus.
 	var bound := arena.ramp_bound(bus.position(), beyond)
 	var resting := float(_bus_turn_rest.get(bus.instance_id, 0.0))
 	if resting > 0.0:
@@ -1775,11 +1512,9 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 	arena.steer_clearance = config.bot_steer_clearance
 	arena.route_clearance = config.bot_route_clearance
 
-	# [b]A district is a maze and is driven by a route.[/b] Through the streets with
-	# [method BfhArena.street_route]; the first waypoints are passed at speed like any detour
-	# and the point past the quarry is last. No nudge on top of it: the route already keeps a
-	# bus off every building, and the nudge's wider berth is what wedged it in a 7.6 m street.
-	# Not up the ramp, whose line-up is its own rule.
+	# [b]A district is a maze and is driven by a route.[/b] Through the streets with [method
+	# BfhArena.street_route]; the first waypoints are passed at speed like any detour and the point
+	# past the quarry is last.
 	if not bound and arena.routes_through_streets():
 		var path := _street_path(bus, quarry.global_position, beyond, delta)
 		var backed := _back_off(bus, path[0] if not path.is_empty() else beyond, delta)
@@ -1790,17 +1525,9 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 		return player.autopilot.drive(bus, delta)
 
 	var aim := arena.steer_around(bus.position(), beyond)
-	# [b]And never the point the bus is already standing on.[/b] `steer_around` hands a
-	# bus the point beside a pillar across its line; a bus that stops there with the
-	# pillar still (just) across it -- level with it, centimetres ahead -- is handed the
-	# same point again, which `DotVehicleDriver` calls arrived: it brakes with the
-	# throttle at zero, and `_unstick` only answers a bus asking to go, so it was parked
-	# for the rest of the round with the runner in plain view (measured 2026-10-01 from
-	# the spawn lane, chasing a runner on the deck). Level with a pillar is past it, so a
-	# bus at a standstill on its waypoint drives on along its line to the quarry. Only at a
-	# standstill: done at speed, inside `steer_around`, it threw the stacks' pillar drive
-	# off its line onto the next pillar in the row. `headless_run`'s "no bot bus ... is
-	# ever parked" holds it.
+	# Level with a pillar is past it, so a bus at a standstill on its waypoint drives on along its line
+	# to the quarry. Only at a standstill: done at speed, inside `steer_around`, it threw the stacks'
+	# pillar drive off its line onto the next pillar in the row. `headless_run`'s "no bot bus ...
 	var on_it := Vector2(aim.x - bus.position().x, aim.z - bus.position().z).length()
 	if on_it < PARKED_ON_WAYPOINT and bus.speed() < 1.0 and line.length() > 0.5:
 		aim = bus.position() + line.normalized() * config.bot_steer_clearance
@@ -1819,15 +1546,9 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 	else:
 		_bus_backing.erase(bus.instance_id)
 		_bus_turning.erase(bus.instance_id)
-	# [b]A point beside an obstacle is passed THROUGH, not arrived at.[/b] As the only
-	# waypoint it was the last one, and `DotVehicleDriver` slows into its last waypoint and
-	# brakes hard once inside `arrive_radius`: a bus coming round a stacks pillar at 15 m/s
-	# stood on the brake for two ticks beside it, lost its line, and put its front corner
-	# into the next pillar of the row, every time (measured 2026-10-07, round pillar 5:
-	# 4.6 s for a 27 m line, against 3.0 s as a route). So the detour is the first of two
-	# waypoints and the point past the quarry the second, which the driver passes at
-	# `waypoint_radius` with no slowing. Not up the ramp, whose line-up points are meant to
-	# be arrived at slowly and are tuned for it.
+	# So the detour is the first of two waypoints and the point past the quarry the second, which the
+	# driver passes at `waypoint_radius` with no slowing. Not up the ramp, whose line-up points are
+	# meant to be arrived at slowly and are tuned for it.
 	if not bound and Vector2(aim.x - beyond.x, aim.z - beyond.z).length() > 0.5:
 		player.autopilot.set_route(PackedVector3Array([aim, beyond]))
 	else:
@@ -1839,15 +1560,9 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 var _bus_backing_off: Dictionary = {}
 
 
-## A bot bus that has been throttling against something, backing out of it: reverse with the
-## wheel over (in reverse it swings the nose towards the side [param toward] is on) for
+## A bot bus that has been throttling against something, backing out of it: reverse with the wheel
+## over (in reverse it swings the nose towards the side [param toward] is on) for
 ## `bot_unwedge_seconds`, then null so the ordinary drive takes over from where it got to.
-##
-## [b]Because the driver only ever goes forward.[/b] A bus whose nose is in a building, or whose
-## aim is behind it with a wall of towers either side, held the throttle until `_unstick` put it
-## back on its start line five seconds later (measured 2026-10-15: every map, two to five times
-## in 45 s). Triggered by the same clock the stuck rule reads, so nothing here decides what
-## "wedged" is; only sooner, and by a driver's remedy instead of a teleport.
 func _back_off(bus: DotVehicleInstance, toward: Vector3, delta: float) -> DotVehicleCommand:
 	var left := float(_bus_backing_off.get(bus.instance_id, 0.0))
 	var held := float(_bus_stuck.get(bus.instance_id, 0.0))
@@ -1861,10 +1576,6 @@ func _back_off(bus: DotVehicleInstance, toward: Vector3, delta: float) -> DotVeh
 	left -= delta
 	if left <= 0.0:
 		_bus_backing_off.erase(bus.instance_id)
-		# [b]A leg that left it pinned is followed by the other direction.[/b] The stuck clock
-		# only restarts when the bus moves, so a bus held in reverse (a tank behind it as well
-		# as in front) restarted the same reverse leg every 1.4 s until the stuck rule sent it
-		# home: measured 2026-10-18 with four bot buses in a bowl, 5.1 s stalls on every map.
 		if held >= config.bot_unwedge_after:
 			_bus_back_forward[bus.instance_id] = not _bus_back_forward.get(bus.instance_id, false)
 		return null
@@ -1925,11 +1636,8 @@ const STREET_REPLAN_MOVED := 6.0
 const STREET_PASSED := 3.5
 
 
-## A bot bus that has to face the other way to get up the ramp turns round in legs, or null to drive on.
-## The bowl has no room for a circle (about 22 m, boxed by stacks, hook and farm), so past
-## [constant RAMP_BACK_FROM] degrees off it reverses with the wheel over, then goes forward the other
-## way, each leg for at most [constant RAMP_BACK_LONGEST] / [constant RAMP_FORWARD_LONGEST] seconds,
-## until the nose is within [constant RAMP_BACK_TO]. Both legs: reversing alone dithered at the foot.
+## A bot bus that has to face the other way to get up the ramp turns round in legs, or null to drive
+## on.
 func _turn_for_the_ramp(bus: DotVehicleInstance, aim: Vector3, delta: float) -> DotVehicleCommand:
 	var basis := bus.body().global_basis
 	var forward := -basis.z
@@ -1974,14 +1682,9 @@ func _turn_for_the_ramp(bus: DotVehicleInstance, aim: Vector3, delta: float) -> 
 	return command
 
 
-## A bot bus bound up the ramp that cannot simply drive at it (back to it, or climbing off the middle) turns
-## or backs down and lines up again. Null when neither applies and the ordinary line-up drives.
-## Planned against the floor that is there, where [method _turn_for_the_ramp] is planned against the clock:
-## it drives to [method BfhArena.ramp_turn_point], ends each leg when the end it moves towards is about to
-## run out of floor ([method _end_blocked]) or off the centreline ([constant RAMP_TURN_ACROSS]), turns to the
-## ramp's fixed axis, and hands over only when it will arrive ON the centreline ([constant RAMP_LINE_RADIUS],
-## [constant RAMP_LINED_X]). A bus on the ramp heading for its edge backs down it. Done here, not in
-## `DotVehicleDriver`, and only for the ramp. See docs/bots.md.
+## A bot bus bound up the ramp that cannot simply drive at it (back to it, or climbing off the
+## middle) turns or backs down and lines up again. Null when neither applies and the ordinary line-
+## up drives.
 func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
 		delta: float) -> DotVehicleCommand:
 	var id := bus.instance_id
@@ -2121,14 +1824,9 @@ func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
 			command.sanitise()
 			return command
 		if not reverse:
-			# Onto the centreline the way a lane-keeping controller does it: the heading it
-			# wants is the ramp's axis turned towards the centreline by an angle that grows
-			# with how far off it is, so the offset and the heading are taken out together
-			# and the bus arrives on the line pointing along it. The angle is the one from
-			# which a full-lock straightening lands on the line. A pursuit point 6 m up the
-			# line (what the ordinary line-up uses) does not converge in the room there is:
-			# from 4 m off and 12.5 m out it was still 1.7 m off and 18 degrees across 4.8 m
-			# from the foot, measured.
+			# Onto the centreline the way a lane-keeping controller does it: the heading it wants is the
+			# ramp's axis turned towards the centreline by an angle that grows with how far off it is, so the
+			# offset and the heading are taken out together and the bus arrives on the line pointing along.
 			var across := minf(acos(clampf(1.0 - absf(pos.x) / RAMP_LINE_RADIUS, -1.0, 1.0)),
 				deg_to_rad(RAMP_LINE_STEEPEST))
 			var wanted := axis * cos(across) + Vector3(-signf(pos.x), 0.0, 0.0) * sin(across)
@@ -2160,10 +1858,9 @@ func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
 		# way: a bus already outside them would otherwise find both ends "blocked" and
 		# never move again (measured from the sw start, stood still for 17 s).
 		var bounds: Variant = centre if held > RAMP_LEG_FREE else null
-		# [b]A leg that has not moved is not ended by the floor.[/b] A bus within the margin of
-		# something at both ends found each new leg blocked on its first tick, flipped and
-		# braked again, and stood braking for 27 s with no throttle for the stuck rule to
-		# see (small bowl, in front of the foot). It pushes instead, and the stall ends it.
+		# [b]A leg that has not moved is not ended by the floor.[/b] A bus within the margin of something
+		# at both ends found each new leg blocked on its first tick, flipped and braked again, and stood
+		# braking for 27 s with no throttle for the stuck rule to see (small bowl, in front of the foot).
 		var moved := pos.distance_to(plan.get("leg_from", pos)) > RAMP_LEG_MOVED
 		if (moved and _end_blocked(bus, pos, forward, right, reverse, bounds)) or stopped \
 				or held > RAMP_LEG_LONGEST:
@@ -2189,11 +1886,9 @@ func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
 	return command
 
 
-## Whether the end of [param bus] it is moving towards ([param reverse] for the tail) is
-## about to run out of floor: any of its two corners and its middle, a margin ahead along
-## the way that point is moving, inside [constant RAMP_TURN_MARGIN] of an obstacle, the
-## slab or the deck, or, with a [param centre], further than [constant RAMP_TURN_REACH]
-## from it and still going out.
+## Whether the end of [param bus] it is moving towards ([param reverse] for the tail) is about to
+## run out of floor: any of its two corners and its middle, a margin ahead along the way that point
+## is moving, inside [constant RAMP_TURN_MARGIN] of an obstacle, the slab or the deck, or, with a.
 func _end_blocked(bus: DotVehicleInstance, pos: Vector3, forward: Vector3, right: Vector3,
 		reverse: bool, centre: Variant = null) -> bool:
 	var lead := forward * (-BUS_HALF_LENGTH if reverse else BUS_HALF_LENGTH)
@@ -2260,10 +1955,9 @@ const RAMP_LINE_SLOW := 4.0
 ## wheels are a quarter of a metre from the edge.
 const RAMP_EDGE_CHECK := 10.0
 const RAMP_EDGE_X := 1.5
-## The speed a leg is held under (m/s); how still the bus has to be, and for how long the
-## wheel has to swing, between legs; how long a leg can push without moving before it
-## counts as stopped; how long a leg runs before the turning point's bounds apply; and the
-## longest a leg lasts whatever the floor says (s).
+## The speed a leg is held under (m/s); how still the bus has to be, and for how long the wheel has
+## to swing, between legs; how long a leg can push without moving before it counts as stopped; how
+## long a leg runs before the turning point's bounds apply; and the longest a leg.
 const RAMP_LEG_STILL := 0.8
 const RAMP_LEG_SETTLE := 0.2
 const RAMP_LEG_STALL := 0.6
@@ -2289,10 +1983,9 @@ const PARKED_ON_WAYPOINT := 1.0
 ## How near the ramp's foot a district bus is before the ramp rules take over from its route (m).
 const STREET_RAMP_NEAR := 24.0
 
-## Degrees off its nose the point a ramp-bound bot steers for has to be before it turns
-## round, on the floor and on the line-up; the angle it turns round to; the longest each
-## leg of the turn lasts, in seconds; and the throttle it turns at. See
-## [method _turn_for_the_ramp].
+## Degrees off its nose the point a ramp-bound bot steers for has to be before it turns round, on
+## the floor and on the line-up; the angle it turns round to; the longest each leg of the turn
+## lasts, in seconds; and the throttle it turns at. See [method _turn_for_the_ramp].
 const RAMP_BACK_FROM := 110.0
 const RAMP_BACK_TO := 15.0
 const RAMP_LINED_UP := 35.0
@@ -2349,11 +2042,6 @@ func _nearest_runner(to: Vector3) -> BfhPlayer:
 
 
 ## A bus that touched somebody, and what that costs them.
-##
-## [b]Closing speed, not the bus's speed.[/b] A runner sprinting into the side of a
-## parked bus is not being run over, and a bus reversing at 3 m/s into somebody who is
-## running away from it at 6 is not either. Taking the bus's own speed makes both of
-## those kills, which reads as the game being unfair in a way nobody can point at.
 func _check_bus_impacts(delta: float) -> void:
 	for instance_id in _bus_ids:
 		var bus := vehicles.get_vehicle(instance_id)
@@ -2377,29 +2065,20 @@ func _check_bus_impacts(delta: float) -> void:
 				continue
 
 			var offset := player.global_position - body.global_position
-			# A crude bound rather than a physics contact: the bus is a 2.5 x 2.6 x 9
-			# box and this is the sphere around it. Deliberately generous, because a
-			# miss that should have been a hit is the complaint this game would
-			# actually get, and a hit is checked against closing speed anyway.
+			# A crude bound rather than a physics contact: the bus is a 2.5 x 2.6 x 9 box and this is the
+			# sphere around it. Deliberately generous, because a miss that should have been a hit is the
+			# complaint this game would actually get, and a hit is checked against closing speed anyway.
 			if offset.length() > 4.2:
 				continue
 
-			# [b]And nothing above the roof, which the sphere cannot tell.[/b] A sphere
-			# round a box that is wider than it is tall reaches over the top of it: a
-			# runner standing three crates up, with a bus driving past the foot of the
-			# stack, was 3.2 m from its centre and killed — by a vehicle whose hull
-			# ends at 2.5 m. Found by the scaffold's own check, whose runner died on
-			# the top step with one crate out of place. Height is the scaffold's whole
-			# point, so it has to be the one thing this bound gets right.
+			# [b]And nothing above the roof, which the sphere cannot tell.[/b] A sphere round a box that is
+			# wider than it is tall reaches over the top of it: a runner standing three crates up, with a bus
+			# driving past the foot of the stack, was 3.2 m from its centre and killed — by a vehicle whose.
 			if player.global_position.y > roof + BUS_ROOF_MARGIN:
 				continue
 
-			# [b]Along the offset, not against it.[/b] `offset` runs from the bus to
-			# the player, so a bus moving toward them has a POSITIVE component along
-			# it. The first version negated this, which made every genuine run-over
-			# read as a closing speed below the threshold and every impact was
-			# silently skipped — a bus that drove through people and left them
-			# standing. Nothing errored; the arithmetic was simply backwards.
+			# [b]Along the offset, not against it.[/b] `offset` runs from the bus to the player, so a bus
+			# moving toward them has a POSITIVE component along it.
 			var closing := (bus_velocity - player.controller.state.velocity).dot(
 				offset.normalized()
 			)
@@ -2415,9 +2094,6 @@ func _check_bus_impacts(delta: float) -> void:
 
 
 ## The top of a bus's hull in world height, from its own collider.
-##
-## Read off the scene rather than written down, because the art is a truck twice the
-## hull's height and the number anybody would guess from a picture is the wrong one.
 func _roof_of(body: Node3D) -> float:
 	var hull := body.get_node_or_null(^"Collision") as CollisionShape3D
 	if hull == null or not (hull.shape is BoxShape3D):
@@ -2470,13 +2146,6 @@ func _bus_hit(player: BfhPlayer, by: StringName, closing: float, offset: Vector3
 
 
 ## Crates and barrels a moving bus has driven into.
-##
-## [b]The bus's own box, not a sphere around it, and the sphere was wrong in both
-## directions.[/b] A nine-metre bus has a centre five metres from its nose, so a radius
-## generous enough to catch what it is about to hit also catches everything beside and
-## behind it — a bus flattened a line of crates it merely drove past. Testing the prop
-## in the bus's local frame is the same arithmetic and answers the question actually
-## being asked: is this thing under the bus.
 const BUS_HALF_WIDTH := 1.5
 const BUS_HALF_LENGTH := 3.2
 
@@ -2520,29 +2189,13 @@ var _bus_pinned: Dictionary = {}
 
 
 ## A bus that is throttling and going nowhere, and what to do about it.
-##
-## [b]A crate stops a bus, and it should not, and no amount of tuning fixes it.[/b] A
-## raycast vehicle has no wheel collider: each wheel is a ray, so a crate does not hit
-## a wheel, it passes under one and lifts the corner of the bus off the ground. The bus
-## ends up high-centred with two wheels in the air and a crate wedged under the
-## chassis, going nowhere — and the speed-gated impact rule cannot save it, because by
-## then it has no speed. Lowering the hull so it rams crates instead was tried and is
-## worse: the hull then drags on the ground and the bus barely moves at all.
-##
-## So the rule is about intent rather than geometry. A bus asking for throttle and not
-## moving is caught on something; after a second, whatever is under it stops existing,
-## and after five it goes back to its start line. That second rule is not a fallback
-## for the first — it is what recovers a bus that drove up the ramp and beached itself
-## on the ledge, where there is no prop to blame.
 func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
 	var asking := bus.command != null and absf(bus.command.throttle) > 0.3
 	var moving := bus.speed() > 1.0
 
-	# [b]Rocking in place is not moving.[/b] The back-off reverses and goes forward again, and
-	# each lurch passes 1 m/s and restarts the clock below, so a bus wedged among crates in a
-	# street shuffled within three metres for 20 s without ever being caught (hill town).
-	# Asking for throttle and not having left the `bus_pinned_radius` circle for `bus_pinned_seconds` counts as stuck
-	# whatever the speed.
+	# [b]Rocking in place is not moving.[/b] The back-off reverses and goes forward again, and each
+	# lurch passes 1 m/s and restarts the clock below, so a bus wedged among crates in a street
+	# shuffled within three metres for 20 s without ever being caught (hill town).
 	var pin: Dictionary = _bus_pinned.get(bus.instance_id, {})
 	var here := bus.position()
 	if pin.is_empty() or not asking or here.distance_to(pin["at"]) > config.bus_pinned_radius:
@@ -2582,12 +2235,9 @@ func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
 			bus_struck.emit(prop.instance_id, by)
 			prop_damage.break_now(prop.instance_id, by)
 
-	# [b]Before the start line, a short hop back the way it came.[/b] A bus sitting on a concrete
-	# block (it cannot be broken or pushed, so the rule above has nothing to remove) is
-	# high-centred in both directions, and the back-off rocking cannot lift it. Measured
-	# 2026-10-18 with four bot buses: three of four maps held a bus on a block or crate for the
-	# full five seconds and then sent it across the bowl. A hop of a few metres along its own
-	# axis puts it where it was driving a moment ago, still in the chase.
+	# [b]Before the start line, a short hop back the way it came.[/b] A bus sitting on a concrete block
+	# (it cannot be broken or pushed, so the rule above has nothing to remove) is high-centred in both
+	# directions, and the back-off rocking cannot lift it.
 	var hop_at := minf(config.bus_stuck_hop_seconds, config.bus_stuck_reset_seconds * 0.5)
 	if held >= hop_at and not _bus_hopped.has(bus.instance_id):
 		_bus_hopped[bus.instance_id] = true
@@ -2629,21 +2279,6 @@ var _bus_inverted: Dictionary = {}
 
 
 ## A bus that has rolled over, and why it is not left there.
-##
-## [b]A bus on its roof is a driver out of the round through no decision anybody made.[/b]
-## dot-vehicle's own tunables comment says it about the centre of mass; this is the other
-## half, because no amount of lowering the centre of mass makes a 2.6 m box on a 2.5 m
-## track impossible to flip — a ramp, a crate under one wheel and a hard turn will do it.
-## The round is three minutes long and there are two buses, so a driver spending one of
-## those minutes upside down is a quarter of the game's threat gone for reasons the
-## runners cannot see and did not cause.
-##
-## [b]Rolled over where it lies rather than put back on its start line.[/b] `_unstick` has
-## the start line for the case where the bus is somewhere it cannot get out of; this is
-## for the case where it is somewhere perfectly good and merely inverted, and teleporting
-## it across the bowl would take it away from the chase it was in the middle of. Its
-## heading is kept and its velocity is not: a bus that lands upright still carrying the
-## roll's momentum immediately flips again.
 func _upright(bus: DotVehicleInstance, delta: float) -> void:
 	if not bus.is_inverted():
 		_bus_inverted.erase(bus.instance_id)
@@ -2681,9 +2316,6 @@ func _upright(bus: DotVehicleInstance, delta: float) -> void:
 
 
 ## Who is driving the bus with this instance id, or an empty name.
-##
-## Public because a bridge, a console command and a suite all ask it, and the alternative
-## is three copies of a loop over the ride's index.
 func driver_of(instance_id: int) -> StringName:
 	for id: StringName in players:
 		if ride.vehicle_id_of(id) == instance_id:
@@ -2691,15 +2323,9 @@ func driver_of(instance_id: int) -> StringName:
 	return &""
 
 
-# --- Reacting --------------------------------------------------------------
+# --- Reacting
 
 ## A barrel went off. dot-props described the blast; this is what it does to people.
-##
-## [b]The blast reaches players through dot-combat and props through dot-props, and
-## that split is the addon boundary rather than an accident.[/b] dot-props knows what a
-## prop is and nothing else — a player, an NPC and a vehicle each need somebody else's
-## id space and authority rules — so it shoves the other crates itself and hands the
-## rest over here.
 func _on_prop_exploded(
 	at: Vector3, radius: float, damage_amount: float, force: float, by: StringName
 ) -> void:
@@ -2730,12 +2356,9 @@ func _on_prop_exploded(
 		damage.context = {"why": KILLED_BY_BARREL}
 		combat.apply_damage(damage)
 
-		# Thrown, and a barrel is the only thing in the game that throws a runner
-		# UPWARD — two metres from the hammer's reach, past any jump, which is why a
-		# barrel is worth standing near as well as away from. NOT onto a loose stack
-		# of crates beside it, which this comment used to promise: the same blast
-		# shoves the stack further than it throws the runner. See docs/map.md, "What a
-		# runner can climb".
+		# Thrown, and a barrel is the only thing in the game that throws a runner UPWARD — two metres from
+		# the hammer's reach, past any jump, which is why a barrel is worth standing near as well as away
+		# from. See docs/map.md, "What a runner can climb".
 		var push := damage.direction * force * falloff * 0.004
 		push.y = 0.0
 		var state := player.controller.state
@@ -2743,11 +2366,9 @@ func _on_prop_exploded(
 		state.velocity.y = maxf(
 			state.velocity.y, BfhReach.launch_speed(config.gravity, config.barrel_lift_height * falloff)
 		)
-		# [b]And off the ground, or none of that survives the tick.[/b] A velocity added
-		# to a runner the motor still has as GROUND is snapped back onto the sand before
-		# it moves them — which is what this did for nine days, and a barrel lifted
-		# people 7 cm. The motor's own launch path does exactly these two lines; see
-		# `DotFpsMotor.add_modifier`.
+		# [b]And off the ground, or none of that survives the tick.[/b] A velocity added to a runner the
+		# motor still has as GROUND is snapped back onto the sand before it moves them — which is what
+		# this did for nine days, and a barrel lifted people 7 cm.
 		state.mode = DotFpsState.Mode.AIR
 		state.time_since_grounded = 1000.0
 
@@ -2757,10 +2378,8 @@ const KILLED_BY_BUS := &"bus"
 const KILLED_BY_BARREL := &"barrel"
 
 
-## The fall a death gets: dot-player-char's reaction rule over the server's weights, seeded from
-## the player and the tick. [b]A bus or a barrel always throws the body[/b] (the power launch,
-## unless the server turned it off): being run over by a bus from hell is the one death this
-## game is named for, and a body that just slumped in front of the grille would undersell it.
+## The fall a death gets: dot-player-char's reaction rule over the server's weights, seeded from the
+## player and the tick.
 func decide_death(player: BfhPlayer, damage: DotDamage) -> DotPlayerDeath:
 	var why: StringName = damage.context.get("why", &"")
 	var thrown := why == KILLED_BY_BUS or why == KILLED_BY_BARREL
@@ -2772,13 +2391,9 @@ func decide_death(player: BfhPlayer, damage: DotDamage) -> DotPlayerDeath:
 
 
 func _on_player_died(player: BfhPlayer, damage: DotDamage) -> void:
-	# One dictionary read. This walked every player on the server comparing ints,
-	# which is the reverse index [DotEntityTable] keeps so nobody has to -- and it
-	# ran on every death, which on this game is a lot of them.
-	#
-	# An attacker of 0 is dot-combat's "the world" -- a bus that nobody was driving,
-	# a fall -- and the table returns an empty key for it, which is the same answer
-	# the scan gave and means the same thing.
+	# One dictionary read. This walked every player on the server comparing ints, which is the reverse
+	# index [DotEntityTable] keeps so nobody has to -- and it ran on every death, which on this game is
+	# a lot of them.
 	var by := entities.key_for_id(damage.attacker)
 
 	# How the body falls, picked once, here, and carried on DEATH to every client.
@@ -2799,7 +2414,7 @@ func _on_prop_broken(prop: DotPropInstance, at: Vector3, _by: StringName) -> voi
 		noise.emit(BfhSounds.CRATE_BREAK, at)
 
 
-# --- Reporting -------------------------------------------------------------
+# --- Reporting
 
 func alive_runners() -> int:
 	var count := 0
@@ -2810,11 +2425,6 @@ func alive_runners() -> int:
 
 
 ## Rounds [param team] has won this match, which is what dot-match scores here.
-##
-## [b]A SIDE's tally, not a group of people's.[/b] Everybody changes sides every
-## `rounds_before_swap` rounds, and dot-match's `rounds_won` is keyed by team id, so this is
-## "rounds the buses have won" and "rounds the runners have won" whoever was in them. On a
-## client it is what the last CLOCK said; dot-match is not ticked there.
 func rounds_won(team: int) -> int:
 	if not authoritative:
 		return int(remote_rounds.get(team, 0))
@@ -2863,10 +2473,6 @@ func describe() -> Dictionary:
 
 
 ## Where each bus is and how fast, for a console dump and a bug report.
-##
-## [b]Position and speed, because "the bus does nothing" has three causes and they look
-## identical from the floor.[/b] It can be stuck on the ledge, upside down, or driving
-## perfectly well somewhere the player is not — and only one of those is a bug.
 func _bus_report() -> String:
 	var parts := PackedStringArray()
 

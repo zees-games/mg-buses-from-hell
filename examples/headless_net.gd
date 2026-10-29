@@ -1,31 +1,7 @@
 extends "headless_net_harness.gd"
 
-## game-buses-from-hell over the wire: a real server, a real client, and a lossy loopback
-## between them.
-##
-## [codeblock]
-## godot --headless --path . res://examples/headless_net.tscn
-## [/codeblock]
-##
-## [b]Everything here is the real path minus the socket.[/b] Two [BfhGame]s, two
-## [DotNetManager]s, two [BfhNetBridge]s and two links, with [member BfhNetLink.loopback]
-## standing in for the RPC — which means the encoders, the schema seal, the snapshot
-## build, the interest decision, the prediction and the reconciliation all run. What it
-## cannot test is Godot's own RPC routing, and that is what `dedicated.gd` and a real
-## client are for.
-##
-## [b]The client world lives in its own [World3D], and that is a finding rather than
-## tidiness.[/b] Both halves are in one scene tree, so without it they share one physics
-## space: the client's mirrored crates are frozen bodies sitting exactly where the
-## server's real ones are, and every server crate spends the round being pushed out of a
-## copy of itself. Nothing errors — the positions just stop agreeing, which reads as the
-## replication being wrong when it is the test harness that is wrong.
-##
-## [b]And the client is deliberately put on a different tick rate and a different bowl
-## size than the server.[/b] One process has one engine rate and one default config, so
-## two halves agree by construction and a check that asserts they agree is passing for
-## the wrong reason. A real client is a separate program with its own export and its own
-## `user://` config. Make them disagree, and let HELLO correct it.
+## game-buses-from-hell over the wire: a real server, a real client, and a lossy loopback between
+## them.
 
 const CHECKS := 219
 
@@ -85,13 +61,9 @@ func _run() -> void:
 	_report_sections(_completed, _completed, SECTIONS, CHECKS)
 
 
-# --- The wire --------------------------------------------------------------
+# --- The wire
 
 ## Every encoder against its decoder, because nothing else checks that they are inverses.
-##
-## This family has already shipped a serialisation whose two ends never met: dot-moderation
-## wrote `"voice muted"` and read back a warning, and the one thing that addon existed for
-## silently did nothing.
 func _test_the_wire() -> void:
 	_section("the wire format")
 
@@ -289,7 +261,7 @@ func _test_the_wire() -> void:
 	_done()
 
 
-# --- A client joins --------------------------------------------------------
+# --- A client joins
 
 func _test_a_client_joins() -> void:
 	_section("a client joins")
@@ -373,7 +345,7 @@ func _test_a_client_joins() -> void:
 	_done()
 
 
-# --- The bowl --------------------------------------------------------------
+# --- The bowl
 
 func _test_the_bowl_arrives() -> void:
 	_section("the bowl arrives")
@@ -389,11 +361,9 @@ func _test_the_bowl_arrives() -> void:
 		"client %d, server %d" % [client_bodies, server_bodies]
 	)
 
-	# A mirrored body has to be where the server says, and it has to have got there from a
-	# SNAPSHOT rather than from the announcement: the PROP event carries a spawn position,
-	# so a client that never applied a snapshot would still pass a naive comparison. The
-	# crates are dropped from above and settle, so their y moves after the announcement —
-	# which is what makes this check meaningful.
+	# A mirrored body has to be where the server says, and it has to have got there from a SNAPSHOT
+	# rather than from the announcement: the PROP event carries a spawn position, so a client that
+	# never applied a snapshot would still pass a naive comparison.
 	var moved := 0
 	var matched := 0
 
@@ -461,7 +431,7 @@ func _mirror_near(at: Vector3) -> BfhPropNet:
 	return best
 
 
-# --- The bus ---------------------------------------------------------------
+# --- The bus
 
 func _test_the_bus() -> void:
 	_section("the bus")
@@ -508,10 +478,8 @@ func _test_the_bus() -> void:
 		"the mirror's wheels are drawn from the wire"
 	)
 	# [b]Off the replicated layout, not off the node.[/b] A bus goes over the wire through
-	# [DotVehicleNetSync] — three floats, a quantised quaternion, a speed and a steering
-	# angle — and NOT through the `net_position` a crate uses. Reading the wrong one gets
-	# the zero the property was constructed with, which is a mirror that looks like it is
-	# parked at the origin.
+	# [DotVehicleNetSync] — three floats, a quantised quaternion, a speed and a steering angle — and
+	# NOT through the `net_position` a crate uses.
 	_check(
 		mirror.replicated_position().distance_to(server_bus.position()) < 1.5,
 		"and its position follows the server's",
@@ -525,7 +493,7 @@ func _test_the_bus() -> void:
 	_done()
 
 
-# --- Moving ----------------------------------------------------------------
+# --- Moving
 
 func _test_moving() -> void:
 	_section("a runner moves")
@@ -544,11 +512,8 @@ func _test_moving() -> void:
 	await _steps(40, _forward())
 	var after := server_player.controller.state.position
 
-	# [b]At what speed, not only whether.[/b] "More than a metre in 40 ticks" is a sixth
-	# of what 40 ticks at `runner_speed` covers, so a runner the server moved at a fifth
-	# of their speed passed it. The distance is short of the full 4.3 m by the input lead
-	# (the first commands are still in flight when the window opens), so the speed on the
-	# last tick is the number that says the commands arrived whole. Printed, always.
+	# [b]At what speed, not only whether.[/b] "More than a metre in 40 ticks" is a sixth of what 40
+	# ticks at `runner_speed` covers, so a runner the server moved at a fifth of their speed passed it.
 	var top := server_player.controller.tunables.max_speed
 	var v := server_player.controller.state.velocity
 	var speed := Vector2(v.x, v.z).length()
@@ -560,10 +525,9 @@ func _test_moving() -> void:
 		"%.2f m, %.2f of %.2f m/s" % [after.distance_to(before), speed, top]
 	)
 
-	# [b]The client predicted the same move rather than waiting for the answer.[/b] This
-	# is the one thing in the whole game that IS predicted, and the measurement that says
-	# so is that the two are close — not that the client moved at all, which a client
-	# simply adopting snapshots would also do.
+	# [b]The client predicted the same move rather than waiting for the answer.[/b] This is the one
+	# thing in the whole game that IS predicted, and the measurement that says so is that the two are
+	# close — not that the client moved at all, which a client simply adopting snapshots would also do.
 	_check(
 		client_player.controller.state.position.distance_to(after) < 1.0,
 		"and the client's prediction agrees with it",
@@ -578,7 +542,7 @@ func _test_moving() -> void:
 	_done()
 
 
-# --- Prediction ------------------------------------------------------------
+# --- Prediction
 
 func _identity_of(player: BfhPlayer) -> DotNetIdentity:
 	if player == null:
@@ -602,15 +566,6 @@ func _corrections_per_second(ticks: int, command: DotFpsCommand) -> float:
 
 
 ## [b]The local runner is predicted, and nobody else is.[/b]
-##
-## Until 2026-09-25 `BfhNetBridge._apply_join` mirrored every player with owner 0, this
-## client's own included, so `is_owner` was false for the local runner, `predicted()` was
-## empty, and the runner moved only when a snapshot came back. "A runner moves" passed
-## throughout, because a client adopting the server's answer also agrees with the server,
-## and its "without being corrected" passed with zero corrections because the predictor
-## never ran. So these assert the MECHANISM rather than the agreement: who owns the entity,
-## what the registry predicts, that a key moves the runner in the tick it is pressed with
-## no snapshot in between, and that a disagreement is corrected and converges.
 func _test_the_local_runner_is_predicted() -> void:
 	_section("the local runner is predicted, and nobody else is")
 
@@ -707,10 +662,7 @@ func _test_the_local_runner_is_predicted() -> void:
 		"%.3f m apart" % _client_shown().distance_to(server_player.controller.state.position)
 	)
 
-	# [b]A disagreement the client cannot know about[/b]: an admin moves the runner on
-	# the server. The client predicted standing still, so the next snapshot is a
-	# correction — and the proof that the predictor RUNS rather than the client simply
-	# adopting what it is sent is that the correction counter moves.
+	# [b]A disagreement the client cannot know about[/b]: an admin moves the runner on the server.
 	var corrections_before := _corrections()
 	var moved_to := server_player.controller.state.position + Vector3(1.2, 0.0, 0.0)
 	server_player.controller.teleport(
@@ -766,11 +718,9 @@ func _test_the_local_runner_is_predicted() -> void:
 		"%.3f m apart" % _client_shown().distance_to(server_player.controller.state.position)
 	)
 
-	# [b]A JOIN that beat its HELLO.[/b] `_admit` sends HELLO first, so the order this
-	# guards is not one the server produces today — which is exactly why it is driven
-	# through the real path rather than trusted: the local entity is put back to how an
-	# early JOIN would have built it (owned by nobody here), and the server admits the peer
-	# again, so a real HELLO arrives for a player the client already has.
+	# [b]A JOIN that beat its HELLO.[/b] `_admit` sends HELLO first, so the order this guards is not
+	# one the server produces today — which is exactly why it is driven through the real path rather
+	# than trusted: the local entity is put back to how an early JOIN would have built it (owned by.
 	var _unclaimed := _client_net.registry.change_owner(mine.net_id, 0)
 	_server_bridge._admit(CLIENT_PEER)
 	_exchange()
@@ -783,7 +733,7 @@ func _test_the_local_runner_is_predicted() -> void:
 	_done()
 
 
-# --- The hammer ------------------------------------------------------------
+# --- The hammer
 
 func _test_the_hammer() -> void:
 	_section("the hammer")
@@ -834,7 +784,7 @@ func _test_the_hammer() -> void:
 	_done()
 
 
-# --- Driving ---------------------------------------------------------------
+# --- Driving
 
 func _test_driving() -> void:
 	_section("driving")
@@ -885,7 +835,7 @@ func _test_driving() -> void:
 	_done()
 
 
-# --- The clock -------------------------------------------------------------
+# --- The clock
 
 func _test_the_clock() -> void:
 	_section("the round clock")
@@ -901,9 +851,8 @@ func _test_the_clock() -> void:
 	)
 
 	# [b]The number this message exists for.[/b] A client does not run the prop spawner, so
-	# `crates_left()` on one counts zero — and that number is the most important thing on
-	# this game's HUD, because it is what tells a runner whether standing still is still an
-	# option.
+	# `crates_left()` on one counts zero — and that number is the most important thing on this game's
+	# HUD, because it is what tells a runner whether standing still is still an option.
 	_check(
 		_client_game.crates_left() == _server_game.crates_left(),
 		"and so is the cover count, which a client cannot count for itself",
@@ -922,7 +871,7 @@ func _test_the_clock() -> void:
 	_done()
 
 
-# --- Chat, voice and moderation --------------------------------------------
+# --- Chat, voice and moderation
 
 func _test_chat() -> void:
 	_section("a line crosses the wire")
@@ -1076,9 +1025,6 @@ func _test_voice() -> void:
 		"a frame from a peer with nobody in the world is refused"
 	)
 
-	# [b]The client's own talk key reaches the server.[/b] Armed: until 2026-10-11 the
-	# client chat never opened its microphone, so the key gated a capture that was not
-	# running and no buses player was ever heard; every check above hands the link bytes.
 	var heard_at_server: Array[int] = []
 	_server_bridge.voice_relay_fn = func(peer_id: int, _payload: PackedByteArray) -> void:
 		heard_at_server.append(peer_id)
@@ -1112,12 +1058,9 @@ func _test_voice() -> void:
 func _test_a_gag() -> void:
 	_section("a gag actually silences somebody")
 
-	# [b]The one piece of state in this suite that outlives the process.[/b] A punishment
-	# store is a FILE, and a gag issued by the last run is loaded by this one — so the
-	# check that a line goes through BEFORE the gag fails on the second run and passes on
-	# the first, which is the worst way for a test to be wrong. Removed rather than
-	# scoped: a suite that leaves punishments in `user://` is a suite that changes what the
-	# next one measures.
+	# [b]The one piece of state in this suite that outlives the process.[/b] A punishment store is a
+	# FILE, and a gag issued by the last run is loaded by this one — so the check that a line goes
+	# through BEFORE the gag fails on the second run and passes on the first, which is the worst way.
 	var store_path := "user://bfh_net_test_punishments.json"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(store_path))
 
@@ -1160,11 +1103,9 @@ func _test_a_gag() -> void:
 		"before the gag, a line goes through"
 	)
 
-	# Through `issue`, with the SUBJECT spelling dot-moderation uses — `key_for_peer` above
-	# answers the same way, and a gag against a differently-spelled subject is a gag that
-	# silences nobody and reports success.
-	# Awaited, because a punishment MAY be written to an HTTP store; a file store runs to
-	# completion inside the call and returns like an ordinary function.
+	# Through `issue`, with the SUBJECT spelling dot-moderation uses — `key_for_peer` above answers the
+	# same way, and a gag against a differently-spelled subject is a gag that silences nobody and
+	# reports success.
 	var gagged: DotResult = await moderation.issue(
 		DotPunishment.Kind.GAG,
 		DotPunishmentSubject.for_uid("peer%d" % CLIENT_PEER),
@@ -1194,7 +1135,7 @@ func _test_a_gag() -> void:
 	_done()
 
 
-# --- A lossy link ----------------------------------------------------------
+# --- A lossy link
 
 func _test_a_lossy_link() -> void:
 	_section("a link that drops snapshots")
@@ -1242,17 +1183,10 @@ func _test_a_lossy_link() -> void:
 	_done()
 
 
-# --- A snapshot over the MTU ----------------------------------------------
+# --- A snapshot over the MTU
 
-## A snapshot bigger than [member DotNetConfig.mtu] arrives in parts, through this game's
-## own link and bridge, and every body ends up where the server's is.
-##
-## [b]The round's spawn is the snapshot that needed it.[/b] A full bowl is about 88 crates,
-## barrels and buses, all new and all falling at once, at about 16.6 bytes each: 1450 to
-## 1478 bytes, over the 1392 that Godot's ENet peer carries in one unreliable packet, so ENet
-## fragmented it and a native client lost it whenever it lost either fragment. This suite's
-## bowl is ten crates, so the MTU is lowered to give the same shape here: every body thrown
-## up at once, more state than one packet holds.
+## A snapshot bigger than [member DotNetConfig.mtu] arrives in parts, through this game's own link
+## and bridge, and every body ends up where the server's is.
 func _test_a_snapshot_in_parts() -> void:
 	_section("a snapshot over the MTU arrives in parts")
 
@@ -1326,18 +1260,10 @@ func _test_a_snapshot_in_parts() -> void:
 	_done()
 
 
-# --- An admin's blind and beacon -------------------------------------------
+# --- An admin's blind and beacon
 
-## An administrator's blind and beacon, through this game's real handlers, over a link
-## that drops one snapshot in five.
-##
-## [b]The audience is the whole point of both.[/b] This client owns player 42 and does not
-## own the bot driver. A blind is its owner's screen and nobody else's, so the client must
-## be told about its own and must NOT be told about the bot's — a driver who could read a
-## runner's blind would know who cannot see the bus coming, and this is the same audience
-## rule seen from the other seat. A beacon is for everybody, so the client must get both.
-## Asserted on the client's own copies of the players, which is what its HUD and its
-## beacon markers read.
+## An administrator's blind and beacon, through this game's real handlers, over a link that drops
+## one snapshot in five.
 func _test_blind_and_beacon() -> void:
 	_section("an admin's blind and beacon: who is told")
 
@@ -1442,7 +1368,7 @@ func _test_blind_and_beacon() -> void:
 	_done()
 
 
-# --- Somebody else, on this client's screen ---------------------------------
+# --- Somebody else, on this client's screen
 
 ## Frames drawn per tick in [method _test_somebody_else_is_drawn], each at its own fraction
 ## through the tick, which is what a screen faster than the tick rate does.
@@ -1450,25 +1376,6 @@ const FRAMES_PER_TICK := 4
 
 
 ## Another runner has a body, it is where the server has them, and it moves every frame.
-##
-## [b]Nothing on a networked client drew anybody else until 2026-09-24,[/b] and two things
-## were missing at once: there was no body to draw (a runner is first person and a driver is
-## a bus, so no person had ever been on screen), and `DotNetManager.interpolate_frame` was
-## never called — so even a body would have moved only when a snapshot landed, a third of
-## the ticks here. Every section above passed throughout, because every one of them reads
-## the simulation and none reads the screen.
-##
-## Driven through `BfhClient.present_frame`, the function the real client's `_process`
-## calls, so a client that stops interpolating or stops building bodies fails here rather
-## than in a screenshot.
-## Who somebody is reaches every client: the face they were seated with, and a new name and
-## face when the server learns them — which is what dot-platform's admission, a wardrobe
-## change and an operator's rename all end in.
-##
-## [b]Asserted on the drawn figure, not on the field.[/b] A client that stored the avatar
-## and drew the hash anyway would pass every check about the document; the atlas the figure
-## was BUILT with is the thing a player sees. A runner, because a driver wears the uniform
-## whatever their face.
 func _test_who_somebody_is_crosses() -> void:
 	_section("who somebody is crosses, and is what is drawn")
 
@@ -1636,10 +1543,9 @@ func _test_somebody_else_is_drawn() -> void:
 	)
 	_check(shown == 1, "so exactly one body is drawn on this client", "%d" % shown)
 
-	# [b]The bot drivers out of their buses for the run, and back in after it.[/b] The bot
-	# floors it at the nearest runner, and a runner thrown part-way through is a corner in the
-	# path that drawing a snapshot apart rounds off: this measures a steady run, so nothing
-	# drives at it.
+	# [b]The bot drivers out of their buses for the run, and back in after it.[/b] The bot floors it at
+	# the nearest runner, and a runner thrown part-way through is a corner in the path that drawing a
+	# snapshot apart rounds off: this measures a steady run, so nothing drives at it.
 	var parked: Array = []
 	for bus in _server_game.vehicles.all_vehicles():
 		var sitting := _server_game.driver_of(bus.instance_id)
@@ -1648,16 +1554,9 @@ func _test_somebody_else_is_drawn() -> void:
 			_server_game.ride.exit(bus, sitting, true)
 			parked.append([bus, sitting, driver])
 
-	# Somewhere a person can run in a straight line: the most open floor in the bowl, asked of
-	# the arena, with the run's 6.4 m inside the clear circle (yaw 90 runs toward -x, so the
-	# start is 3 m to +x of its middle). Placed on the server, as a respawn would be; the
-	# client learns it from snapshots.
-	#
-	# [b]Not "2 m beside this client's own runner", which is where it started until
-	# 2026-10-08[/b]: wherever that runner happened to stand, which on three runs in four was
-	# beside the ramp's slab, so the run went off its edge and FELL — 21.65 m of path in 60
-	# ticks, an accelerating curve that drawing between snapshots rounds by 0.25 m, and a
-	# failure of the tracking check below that had nothing to do with tracking.
+	# Somewhere a person can run in a straight line: the most open floor in the bowl, asked of the
+	# arena, with the run's 6.4 m inside the clear circle (yaw 90 runs toward -x, so the start is 3 m
+	# to +x of its middle).
 	var open_at := Vector3.ZERO
 	var open_clear := -INF
 	var reach := _server_game.arena.radius - 4.0
@@ -1702,14 +1601,9 @@ func _test_somebody_else_is_drawn() -> void:
 	_check(moved > owed * 0.95, "the server runs them across the bowl, at runner_speed",
 		"%.2f of %.2f m" % [moved, owed])
 
-	# Tracking: every frame's body is within a hand of the path the server really ran them
-	# along. Not the latest position, because a remote player is drawn an interpolation delay
-	# in the past on purpose.
-	#
-	# [b]The path, as the segments between ticks, and not the tick positions alone.[/b] A
-	# frame drawn between two ticks lies between two of them, and its distance from the nearer
-	# one is up to half a tick's travel, which at anything faster than a run (a throw, a fall)
-	# is most of the tolerance.
+	# Tracking: every frame's body is within a hand of the path the server really ran them along. Not
+	# the latest position, because a remote player is drawn an interpolation delay in the past on
+	# purpose.
 	var worst := 0.0
 	for at in drawn:
 		var nearest := INF
@@ -1738,10 +1632,8 @@ func _test_somebody_else_is_drawn() -> void:
 		]
 	)
 
-	# Smoothness: at a steady running speed each frame should advance the body by about the
-	# same distance. A client that draws only at snapshot arrivals moves it on one frame in
-	# twelve and not at all on the other eleven, which is the jitter the family measured as a
-	# 47% change in apparent speed.
+	# Smoothness: at a steady running speed each frame should advance the body by about the same
+	# distance.
 	var steps := PackedFloat32Array()
 	for j in range(1, drawn.size()):
 		steps.append(drawn[j].distance_to(drawn[j - 1]))
@@ -1778,13 +1670,11 @@ func _test_somebody_else_is_drawn() -> void:
 	_done()
 
 
-# --- Leaving ---------------------------------------------------------------
+# --- Leaving
 
-## The players voted for another bowl: the server rebuilds its own at the next round's start
-## and the client rebuilds to match, from a BOWL sent between the last round's PROP_GONEs and
-## this round's PROPs. Without it the client keeps the bowl it joined on, with the wall where
-## the server has floor, which is the bug the HELLO's radius exists to prevent on joining.
-## Late in the run, because every section after it would be in a different bowl.
+## The players voted for another bowl: the server rebuilds its own at the next round's start and the
+## client rebuilds to match, from a BOWL sent between the last round's PROP_GONEs and this round's
+## PROPs.
 func _test_a_voted_bowl_crosses() -> void:
 	_section("a voted bowl crosses the wire")
 	var before := _client_game.arena.radius
@@ -1976,10 +1866,9 @@ func _test_the_remote_workbench() -> void:
 func _test_leaving() -> void:
 	_section("leaving")
 
-	# [b]Somebody else first, because that is the half a client is told about.[/b] A peer
-	# that disconnects is not sent its own LEAVE — it has gone — so removing this client
-	# proves nothing about whether the message works. The bot has no socket and leaves the
-	# same way a second player would.
+	# [b]Somebody else first, because that is the half a client is told about.[/b] A peer that
+	# disconnects is not sent its own LEAVE — it has gone — so removing this client proves nothing
+	# about whether the message works.
 	var bot_session := BfhNetBridge.FIRST_BOT_SESSION
 	_check(
 		_client_game.players.has(BfhNetBridge.player_key(bot_session)),
@@ -2016,16 +1905,10 @@ func _test_leaving() -> void:
 	_done()
 
 
-# --- A runner who is out, over the wire --------------------------------------------
+# --- A runner who is out, over the wire
 
-## Run down on the server, the client's camera goes where the server says, and every noise
-## and cue on the way reaches the client's world as the same signal an offline one emits.
-##
-## [b]The server decides and the client draws.[/b] What crosses is the view as per-player,
-## owner-only state (`net_watch`, `net_watch_target`) and each click as a request; the
-## camera itself is computed on the client from the positions it is already drawing. So the
-## checks are that the client's mirror is in the view the server chose, that its camera is
-## on the client's OWN copy of the bus, and that a click is answered by the server's list.
+## Run down on the server, the client's camera goes where the server says, and every noise and cue
+## on the way reaches the client's world as the same signal an offline one emits.
 func _test_a_runner_who_is_out() -> void:
 	_section("a runner who is out: where the server says to look, and what the client hears")
 
@@ -2090,11 +1973,8 @@ func _test_a_runner_who_is_out() -> void:
 	client_side.add_child(eye)
 	var client_bus := _client_bridge.body_of_net_id(_server_bridge.net_id_of_node(bot.ridden))
 	var drew := BfhClient.present_spectator_camera(_client_game, mine, eye)
-	# At the client's copy's CAB, which is where `BfhSpectate.pose_of` puts a bus's eyes and
-	# so what a death camera looks at — not at the hull's centre. Measured to the centre
-	# this held only at range: once the runner was flattened 6.5 m from the bus, the cab
-	# 3.8 m up and 1.2 m forward of it read as 0.88 of the way there, with the camera
-	# exactly right. What makes it the client's OWN copy is `client_bus`, not the point.
+	# At the client's copy's CAB, which is where `BfhSpectate.pose_of` puts a bus's eyes and so what a
+	# death camera looks at — not at the hull's centre.
 	var toward := (
 		((client_bus.global_transform * BfhSpectate.CAB_EYE) - eye.global_position).normalized()
 		if client_bus != null else Vector3.ZERO
@@ -2223,15 +2103,10 @@ func _test_a_runner_who_is_out() -> void:
 	_done()
 
 
-# --- What a client draws: a barrel ------------------------------------------
+# --- What a client draws: a barrel
 
-## The server sets a barrel off; the client draws it, where it went off and as far as it
-## reached, from the BLAST alone.
-##
-## Through [BfhFx] listening to the client's world, which the bridge makes emit
-## `barrel_exploded` from the BLAST — the path [BfhClient] builds. Armed by not connecting
-## that signal in `BfhFx.setup` (the drawing checks fail) and by not calling `configure`
-## on the spawned node (the radius and the drawn reach fail).
+## The server sets a barrel off; the client draws it, where it went off and as far as it reached,
+## from the BLAST alone.
 func _test_a_barrel_is_drawn() -> void:
 	_section("a barrel the server sets off is drawn on the client, where and as far as it went off")
 
@@ -2313,15 +2188,11 @@ func _test_a_barrel_is_drawn() -> void:
 	_done()
 
 
-# --- The scoreboard ----------------------------------------------------------
+# --- The scoreboard
 
-## The client's scoreboard over the real match: both sides from the roster the server sent,
-## the tallies dot-match kept on the server, up on its own at a round's end with that
-## round already counted, and on Tab.
-##
-## Armed: with the CLOCK sent after the ROUND in `_on_round_over`, "already counted" fails;
-## with the tables' `custom_minimum_size` removed, the size check fails; with the teams put
-## back at the end of `_build_progress`, or without `teams.reindex()`, the sides check fails.
+## The client's scoreboard over the real match: both sides from the roster the server sent, the
+## tallies dot-match kept on the server, up on its own at a round's end with that round already
+## counted, and on Tab.
 func _test_the_scoreboard() -> void:
 	_section("the scoreboard: both sides, and the score dot-match kept on the server")
 

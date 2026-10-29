@@ -4,17 +4,6 @@ const BfhNetBridge := preload("net/bfh_net_bridge.gd")
 const BfhServices := preload("bfh_services.gd")
 
 ## The client's half of chat and voice: a box to type in and a key to talk with.
-##
-## [b]Everything here draws or captures, and nothing here decides.[/b] What a line may
-## contain, who may hear it, whether somebody is gagged and whether they are talking too
-## fast are all the server's, and this client's local copy of the rules exists only so a
-## message that is going to be refused can be refused without a round trip. The server's
-## answer is the one that counts, and when the two disagree the server wins — which is the
-## right way round for a disagreement to fail.
-##
-## [b]The one thing it does decide is that typing is not moving.[/b] A chat box open over a
-## first-person game whose keys are still driving the player is a player who walks into a
-## bus while saying so, and every game in this family has had to learn it separately.
 
 const CHANNEL := "bfh.chat"
 
@@ -43,10 +32,6 @@ var _talking: bool = false
 
 
 ## Builds the box, the client and the microphone over an attached bridge.
-##
-## [param p_bridge] may be null, which is the offline case: the box is still drawn and
-## still echoes what the local player types, because a chat box that does nothing at all
-## reads as broken rather than as absent.
 func attach(p_bridge: BfhNetBridge) -> DotResult:
 	bridge = p_bridge
 
@@ -81,10 +66,9 @@ func _build_window() -> void:
 	window.margin_left = 30.0
 	window.margin_bottom = 120.0
 	window.max_length = 140
-	# [b]An outline, because this map is pale sand in bright light.[/b] Three lines in three
-	# colours over that floor are three lines nobody can read — measured in a screenshot,
-	# with every property of every line correct. `BfhHud` had already reached the same
-	# answer for its own labels; dot-ui's feed grew the option so both can say it once.
+	# [b]An outline, because this map is pale sand in bright light.[/b] Three lines in three colours
+	# over that floor are three lines nobody can read — measured in a screenshot, with every property
+	# of every line correct.
 	window.outline_size = 5
 	window.channels = [
 		{"id": BfhServices.CH_ALL, "label": "Say", "colour": Color(0.88, 0.90, 0.94)},
@@ -120,16 +104,8 @@ func _build_chat() -> void:
 
 
 ## The microphone, which is allowed to be absent.
-##
-## [b]A machine with no input device is the normal case on a server and a common one on a
-## desktop, and it must not be an error.[/b] `DotVoiceManager` reports it, listening still
-## works, and what a player gets is a game where they can hear everybody and say nothing —
-## which is exactly what somebody with no microphone should get.
 func _build_voice() -> DotResult:
-	# Typed explicitly rather than inferred. Inside a mounted pack a script whose base
-	# class lives in the HOST build cannot hand its return type to a script in the mount,
-	# and `:=` here is a client scene that fails to compile on a real server and works
-	# perfectly in the project it was written in.
+	# Typed explicitly rather than inferred.
 	var config: DotVoiceConfig = BfhServices.voice_format()
 	# [b]The CLIENT captures, so the client's copy turns capture on.[/b] The same object on
 	# the server has it off: a dedicated server with a microphone open is a dedicated
@@ -157,10 +133,6 @@ func _build_voice() -> DotResult:
 
 
 ## Binds V, unless the player has already bound it to something.
-##
-## The same rule dot-ui's chat window follows for Y and U: an action that already exists is
-## an action somebody configured, and overwriting it is a game taking a key back off a
-## player who chose it.
 func _register_talk_action() -> void:
 	if InputMap.has_action(TALK_ACTION):
 		return
@@ -173,11 +145,6 @@ func _register_talk_action() -> void:
 
 
 ## Push to talk, polled rather than driven by events.
-##
-## [b]A key that is HELD is a state, and an event queue is sampled per frame.[/b] Reading
-## the press and the release as events works until a frame drops one, and what that leaves
-## is a microphone that stays open after the key is up — which is the one failure mode of
-## voice chat that nobody forgives.
 func _process(_delta: float) -> void:
 	if voice == null or not InputMap.has_action(TALK_ACTION):
 		return
@@ -216,11 +183,8 @@ func _on_submitted(text: String, channel: StringName) -> void:
 
 
 ## [b]The server's own lines arrive on the shell's client link, not on the bridge.[/b] A vote
-## between games, "Ada joined the game." and an admin's `say` are dot-server's chat manager,
-## sent as `chat.line` on `DotClientLink`; this box read only the bridge and never showed one.
-## Only those kinds are drawn (dot-game's `DotGameChatClient.draw_server_line`): what players
-## say comes over the bridge, and drawing it from both would be every line twice. A method
-## callable, so the connection goes with this node when a game switch frees it.
+## between games, "Ada joined the game." and an admin's `say` are dot-server's chat manager, sent as
+## `chat.line` on `DotClientLink`; this box read only the bridge and never showed one.
 func _watch_link() -> void:
 	var link := DotRegistry.get_service(&"dot_client_link")
 
@@ -259,11 +223,6 @@ func _on_message(message: DotChatMessage, _channel_id: StringName) -> void:
 
 ## Something the server said to this player alone: a refusal, a rate limit, the reply to a
 ## `!command`.
-##
-## [b]Drawn in the chat log, because that is where the player was looking.[/b] A notice
-## that arrives and is not drawn is the server explaining itself to nobody — which is
-## exactly what "I pressed Enter and nothing happened" is, and it is the commonest thing a
-## chat server ever has to say.
 func notice(text: String) -> void:
 	if window != null and text.strip_edges() != "":
 		window.add_text(text, Color(0.98, 0.72, 0.35))

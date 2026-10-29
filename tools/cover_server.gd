@@ -3,12 +3,8 @@ extends Node
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhGame := preload("../game/bfh_game.gd")
 
-## A headless dedicated bowl for tools/render_cover.gd to join: the boot examples/dedicated.gd
-## does (DotServer, the world, the module), left running.
-##
-## [codeblock]
-## godot --headless --path . res://tools/cover_server.tscn -- --port 27399
-## [/codeblock]
+## A headless dedicated bowl for tools/render_cover.gd to join: the boot examples/dedicated.gd does
+## (DotServer, the world, the module), left running.
 
 var server: DotServer = null
 var game: BfhGame = null
