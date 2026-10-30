@@ -702,7 +702,7 @@ func _cmd_say(ctx: DotCmdContext) -> void:
 
 
 ## Who somebody is reaches the world: a face as they are seated, the real name and face once dot-
-## platform has them, and the key what they keep is filed under.
+## platform has them, and the key (dot-game's stable one) what they keep is filed under.
 func _wire_identity(world: BfhGame) -> void:
 	var link := bridge as BfhNetBridge
 
@@ -714,8 +714,9 @@ func _wire_identity(world: BfhGame) -> void:
 
 	if world.progress != null:
 		world.progress.durable_key_fn = func(id: StringName) -> String:
-			var held: Object = _platform_player(BfhNetBridge.session_of(id))
-			return str(held.call("key")) if held != null else ""
+			var session := server.session_by_userid(BfhNetBridge.session_of(id)) \
+				if server != null else null
+			return String(stats_feed.key_for(session)) if session != null and stats_feed != null else ""
 
 
 ## dot-platform's state for a session, through its module, or null.

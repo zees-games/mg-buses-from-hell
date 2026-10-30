@@ -15,7 +15,7 @@ const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 ## Boots a real [DotServer], loads this game into it as a module, and runs the commands an operator
 ## would actually type.
 
-const CHECKS := 173
+const CHECKS := 174
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 const SERVER_DIR := "user://bfh_dedicated"
@@ -204,7 +204,7 @@ func _test_who_they_are() -> void:
 		late_key
 	)
 	_check(
-		game.progress == null or game.progress.key_of(&"u717") == "bfh-u717",
+		game.progress == null or game.progress.key_of(&"u717") == String(module.stats_feed.key_for(late)),
 		"and what they keep stays under their seat's key for this session, not split in two",
 		game.progress.key_of(&"u717") if game.progress != null else "-"
 	)
@@ -244,8 +244,9 @@ func _test_who_they_are() -> void:
 		signed_in.display_name if signed_in != null else "-"
 	)
 	_check(
-		game.progress == null or (early_key != "" and game.progress.key_of(&"u718") == early_key
-			and game.progress.stats.has_player(StringName(early_key))),
+		game.progress == null or (early_key != ""
+			and game.progress.key_of(&"u718") == String(module.stats_feed.key_for(early))
+			and game.progress.stats.has_player(StringName(game.progress.key_of(&"u718")))),
 		"and what they keep is filed under the key that outlives the connection",
 		game.progress.key_of(&"u718") if game.progress != null else "-"
 	)
@@ -441,6 +442,8 @@ func _test_the_module_loads() -> void:
 	)
 
 	var module := _module()
+	_check(game != null and game.progress != null and game.progress.durable_key_fn.is_valid(),
+		"progress is filed under dot-game's stable stats key")
 	_check(module != null, "and the host has it under its name")
 
 	if module == null:
