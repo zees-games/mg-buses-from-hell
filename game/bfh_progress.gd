@@ -26,6 +26,9 @@ var _report_timer: Timer
 signal unlocked(player_id: StringName, achievement: DotAchievement)
 
 var stats: DotStatsTracker = null
+
+## Flattenings for the head-to-head table, through dot-stats' event feed; ids are player ids.
+var feed: DotStatsEventFeed = null
 var achievements: DotAchievementTracker = null
 
 ## The differencer between the two. See the class note.
@@ -94,6 +97,12 @@ func attach(world: Node3D) -> DotResult:
 	# Off, and see the class note: nothing here has a key the backbone could file under.
 	stats.report_to_backbone = false
 	add_child(stats)
+
+	feed = DotStatsEventFeed.new(stats)
+	feed.key_of = func(id: Variant) -> StringName: return StringName(key_of(StringName(str(id))))
+	feed.name_of = func(id: Variant) -> String:
+		var body := _player(StringName(str(id)))
+		return body.display_name if body != null else ""
 
 	var counted := stats.start()
 	if not counted.ok:
@@ -255,7 +264,10 @@ func _on_run_over(_player_id: StringName, by: StringName, lethal: bool) -> void:
 
 
 ## A runner is out: the seconds they stood this round go on their total.
-func _on_player_died(player_id: StringName, _by: StringName) -> void:
+func _on_player_died(player_id: StringName, by: StringName) -> void:
+	if feed != null and by != &"":
+		var _filed := feed.report_kill(by, player_id, "bus")
+
 	_seconds_up(player_id)
 
 

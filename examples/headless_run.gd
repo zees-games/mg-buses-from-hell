@@ -22,7 +22,7 @@ const BfhStats := preload("../game/bfh_stats.gd")
 
 ## Proves the bowl, the crates, the hammer, the barrels and the buses all actually work.
 
-const CHECKS := 362
+const CHECKS := 364
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -4490,6 +4490,14 @@ func _test_progress() -> void:
 			stood,
 		]
 	)
+
+	_check(progress.feed != null and progress.feed.tracker == progress.stats,
+		"kills go through dot-stats' event feed over the progress tracker")
+	var was_reporting := progress.stats.report_to_backbone
+	progress.stats.report_to_backbone = true
+	_check(progress.feed.report_kill(&"d", &"v", "bus") and not progress.feed.report_kill(&"d", &"d", "bus"),
+		"the feed files a flattening and refuses a suicide")
+	progress.stats.report_to_backbone = was_reporting
 
 	# The clock runs out with the runner on their feet. Ticked without awaiting physics:
 	# nothing below is about a body moving, and a real-time clock for ten simulated seconds
