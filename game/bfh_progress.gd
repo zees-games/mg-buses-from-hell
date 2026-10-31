@@ -15,6 +15,10 @@ const CHANNEL := "bfh.progress"
 ## that a crate shoved in the first minute and hit in the third was not put there for the bus.
 const SHOVE_CREDIT_SEC := 3.0
 
+const REPORT_INTERVAL := 60.0
+
+var _report_timer: Timer
+
 ## Somebody earned something. What the bridge tells them, and what an offline HUD shows.
 signal unlocked(player_id: StringName, achievement: DotAchievement)
 
@@ -43,6 +47,34 @@ var durable_key_fn: Callable = Callable()
 
 ## Player id -> the key fixed for them this session. See [method key_of].
 var _fixed: Dictionary = {}
+
+
+## Turns the backbone report on or off at run time (the family cvar `stats_report`); the cvar is registered after this tracker is built, so attach() alone cannot see it.
+func set_reporting(on: bool) -> DotResult:
+	if stats == null:
+		return DotResult.fail(DotError.CODE_STATE, "There is no stats tracker.")
+
+	if not on:
+		stats.report_to_backbone = false
+		return DotResult.success(false)
+
+	stats.report_to_backbone = true
+	stats.define_on_start = true
+
+	if not stats.reporter.is_available():
+		stats.report_to_backbone = false
+		DotLog.warn(CHANNEL, "stats reporting needs a backbone client with STATS_WRITE; staying off")
+		return DotResult.fail(DotError.CODE_STATE, "No backbone client to report stats through.")
+
+	if _report_timer == null:
+		_report_timer = Timer.new()
+		_report_timer.name = DotGameStatsReport.TIMER_NAME
+		_report_timer.wait_time = REPORT_INTERVAL
+		_report_timer.autostart = true
+		_report_timer.timeout.connect(func() -> void: stats.flush())
+		stats.add_child(_report_timer)
+
+	return DotResult.success(true)
 
 
 ## Builds both trackers and listens to [param world]. Call once, after this is in the tree

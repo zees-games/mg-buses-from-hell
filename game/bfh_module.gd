@@ -713,6 +713,7 @@ func _wire_identity(world: BfhGame) -> void:
 		hook_post("player_renamed", _on_profile)
 
 	if world.progress != null:
+		var _report := bind_stats_report(world.progress.set_reporting)
 		world.progress.durable_key_fn = func(id: StringName) -> String:
 			var session := server.session_by_userid(BfhNetBridge.session_of(id)) \
 				if server != null else null

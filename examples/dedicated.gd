@@ -15,7 +15,7 @@ const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 ## Boots a real [DotServer], loads this game into it as a module, and runs the commands an operator
 ## would actually type.
 
-const CHECKS := 174
+const CHECKS := 180
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 const SERVER_DIR := "user://bfh_dedicated"
@@ -90,6 +90,7 @@ func _run() -> void:
 		_test_the_services()
 		await _test_the_live_tools()
 		await _test_progress_and_spectating()
+		_test_stats_report()
 		await _test_who_they_are()
 		await _test_loading_cover()
 		_test_the_bowl_vote()
@@ -1756,6 +1757,34 @@ func _test_loading_cover() -> void:
 
 
 ## A module-built world has stats, achievements and the death camera, and the operator can read them.
+func _test_stats_report() -> void:
+	print("stats_report")
+	var cv: DotConVar = server.console.find_cvar("stats_report")
+	var progress: Object = game.progress
+	_check(cv != null and cv.get_string() == "0", "stats_report is registered and off by default")
+	_check(progress != null and progress.stats != null and not progress.stats.report_to_backbone,
+		"and the tracker does not report at boot")
+	if cv == null or progress == null:
+		return
+	var _off := cv.set_value("1")
+	_check(not progress.stats.report_to_backbone, "on with no backbone client stays off, not a crash")
+
+	var client := Node.new()
+	var script := GDScript.new()
+	script.source_code = "extends Node\nfunc post_integration(_a = null, _b = null, _c = null): return null\n"
+	var _reloaded := script.reload()
+	client.set_script(script)
+	DotRegistry.register(&"dot_backbone_client", client)
+	var _r0 := cv.set_value("0")
+	var _r1 := cv.set_value("1")
+	_check(progress.stats.report_to_backbone, "on with a backbone client makes the tracker report")
+	_check(progress.stats.get_node_or_null(DotGameStatsReport.TIMER_NAME) != null, "and adds the flush timer")
+	var _r2 := cv.set_value("0")
+	_check(not progress.stats.report_to_backbone, "off stops it again")
+	DotRegistry.unregister_instance(&"dot_backbone_client", client)
+	client.free()
+
+
 func _test_progress_and_spectating() -> void:
 	print("statistics, achievements and where the out look")
 

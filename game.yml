@@ -29,3 +29,4 @@ cvars:
   bfh_drivers: "4"
   bfh_bots: "1"
   bfh_round_seconds: "180"
+  stats_report: "0"
