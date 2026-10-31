@@ -17,6 +17,9 @@ const SHOVE_CREDIT_SEC := 3.0
 
 const REPORT_INTERVAL := 60.0
 
+## Same name as the addon's default timer; spelled here because naming DotGameStatsReport from this script closes a script reference cycle that leaks at exit.
+const REPORT_TIMER_NAME := "StatsReportTimer"
+
 var _report_timer: Timer
 
 ## Somebody earned something. What the bridge tells them, and what an offline HUD shows.
@@ -68,7 +71,7 @@ func set_reporting(on: bool) -> DotResult:
 
 	if _report_timer == null:
 		_report_timer = Timer.new()
-		_report_timer.name = DotGameStatsReport.TIMER_NAME
+		_report_timer.name = REPORT_TIMER_NAME
 		_report_timer.wait_time = REPORT_INTERVAL
 		_report_timer.autostart = true
 		_report_timer.timeout.connect(func() -> void: stats.flush())
