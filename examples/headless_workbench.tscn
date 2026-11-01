@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://examples/headless_workbench.gd" id="1_wb"]
+
+[node name="HeadlessWorkbench" type="Node"]
+script = ExtResource("1_wb")
