@@ -1,0 +1,8 @@
+{
+  "defaults": {"client": "res://game/bfh_client.gd", "client_props": {"force_offline": true}, "ready_property": "player", "warmup": 3.0},
+  "clips": [
+    {"name": "forward", "duration": 3.0, "steps": [{"t": 0.0, "move": [0.0, 0.0]}, {"t": 0.5, "move": [0.0, -1.0]}]},
+    {"name": "strafe", "duration": 3.0, "steps": [{"t": 0.0, "move": [0.0, 0.0]}, {"t": 0.5, "move": [1.0, -0.5]}, {"t": 2.0, "move": [-1.0, -0.5]}]},
+    {"name": "jump", "duration": 3.0, "steps": [{"t": 0.0, "move": [0.0, -1.0]}, {"t": 0.8, "buttons": ["dot_fps_jump"]}, {"t": 1.0, "buttons": []}, {"t": 2.0, "buttons": ["dot_fps_jump"]}, {"t": 2.2, "buttons": []}]}
+  ]
+}
