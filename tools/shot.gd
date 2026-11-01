@@ -515,6 +515,7 @@ func _run() -> void:
 	var image := get_viewport().get_texture().get_image()
 	image.save_png(ProjectSettings.globalize_path(out))
 	print("wrote ", out, " after %.1f s" % elapsed)
+	await DotShotSeq.new().record(get_tree(), ProjectSettings.globalize_path(out))
 
 	var world: BfhGame = client.get("game")
 	if world != null:
