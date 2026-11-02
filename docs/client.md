@@ -10,7 +10,7 @@ Everything here is built only by `BfhClient`; a dedicated server draws and plays
 
 ## Where a runner who is out looks
 
-Out is out until the next round, so the part of the game a runner spends dead is most of a round on a bad one. `bfh_spectate.gd` is dot-spectate's `DotSpectatorManager` with this game's policy and this game's idea of where a bus's eyes are.
+Out is out until the next round, so the part of the game a runner spends dead is most of a round on a bad one. `bfh_spectate.gd` is dot-spectate's `DotSpectatorHost` (the shared wrapper around `DotSpectatorManager`) with this game's policy and this game's idea of where a bus's eyes are.
 
 **The chain**: a death camera for a second from where they fell, looking at the bus; a freeze for two seconds from that bus's CAB (who got you, where they go next); then first person on somebody still up, sorted by key so "next" is stable. Left click next, right click back, space or middle button swaps eyes and a chase camera seven metres behind. `BfhHud.watching_line` says whose eyes; the crosshair goes.
 

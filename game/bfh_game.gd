@@ -449,7 +449,7 @@ func _build_spectate() -> void:
 	spectate.name = "Spectate"
 	add_child(spectate)
 
-	var built: DotResult = spectate.setup(self, authoritative, tick_rate)
+	var built: DotResult = spectate.setup_world(self, authoritative, tick_rate)
 
 	if not built.ok:
 		DotLog.warn(CHANNEL, "spectating is off", {"why": built.error.message})

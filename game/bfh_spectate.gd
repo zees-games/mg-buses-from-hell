@@ -1,8 +1,8 @@
-extends Node
+extends DotSpectatorHost
 
 const BfhPlayer := preload("bfh_player.gd")
 
-## Where a runner who has been run down looks until the next round.
+## Where a runner who has been run down looks until the next round: [DotSpectatorHost] with this game's numbers and a bus's cab for a driver's eyes.
 
 const CHANNEL := "bfh.spectate"
 
@@ -13,8 +13,7 @@ const ASK_VIEW := 2
 ## The free-camera key: into one, or back onto a player. The fourth value of the two bits.
 const ASK_ROAM := 3
 
-## Where a driver's view is, in their bus's own frame: over the cab roof, behind the container its
-## forks carry out front.
+## Where a driver's view is, in their bus's own frame: over the cab roof, behind the container its forks carry out front.
 const CAB_EYE := Vector3(0.0, 3.8, -1.2)
 
 ## And pitched down the road rather than at the horizon, which is where the runners are.
@@ -23,34 +22,34 @@ const CAB_PITCH_DEG := -14.0
 ## Seconds of death camera: from where they fell, looking at the bus that did it.
 const DEATH_CAM_SEC := 1.0
 
-## Seconds of freeze camera: from the cab of the bus that did it. Who got you, and where
-## they are going next.
+## Seconds of freeze camera: from the cab of the bus that did it.
 const FREEZE_CAM_SEC := 2.0
-
-var manager: DotSpectatorManager = null
 
 var _world: Node3D = null
 
 
-## Builds the manager. [param authoritative] false builds a mirror.
-func setup(world: Node3D, authoritative: bool, tick_rate: int) -> DotResult:
+func _init() -> void:
+	death_cam_seconds = DEATH_CAM_SEC
+	freeze_cam_seconds = FREEZE_CAM_SEC
+	# Far enough back that a runner is a figure in a scene and a bus, nine metres in front of its own cab, is behind the camera's subject.
+	chase_distance = 7.0
+	chase_height = 2.5
+	history_seconds = 0.0
+	eye_height = BfhPlayer.EYE_HEIGHT
+	guard_roam = true
+
+
+## Builds the manager. [param is_authority] false builds a mirror.
+func setup_world(world: Node3D, is_authority: bool, rate: int) -> DotResult:
 	_world = world
+	authoritative = is_authority
+	tick_rate = rate
 
-	manager = DotSpectatorManager.new()
-	manager.name = "Manager"
-	manager.authoritative = authoritative
-	manager.rules = rules_for(tick_rate)
-	manager.participants_fn = _participants
-	manager.alive_fn = _alive
-	manager.team_fn = _team
-	manager.pose_fn = pose_of
-	add_child(manager)
-
-	var built := manager.setup()
+	var built := setup()
 	if not built.ok:
 		return built.wrap("spectating")
 
-	# Once per world. INFO because it is the policy an admin is asked about.
+	# INFO because it is the policy an admin is asked about.
 	if authoritative:
 		DotLog.info(CHANNEL, "spectating is set up", {
 			"watch_anybody": manager.rules.force_camera == 0,
@@ -62,35 +61,27 @@ func setup(world: Node3D, authoritative: bool, tick_rate: int) -> DotResult:
 	return DotResult.success(self)
 
 
-## The policy, as a document. See the class note for each line.
-static func rules_for(tick_rate: int) -> DotSpectatorRules:
-	var rules := DotSpectatorRules.new()
-	rules.force_camera = 0
-	rules.allow_while_alive = false
-	rules.allow_while_dead = true
-	rules.allow_unassigned = true
-	# allow_roaming stays at the family default (true) and follows `mp_freeroam`. Hardcoding it
-	# off here would be overwritten by the cvar's default the moment the module bound it.
-	rules.cycle_includes_dead = false
-	rules.auto_retarget = true
-	rules.delay_ticks = 0
-	rules.death_cam_ticks = int(DEATH_CAM_SEC * float(tick_rate))
-	rules.freeze_cam_ticks = int(FREEZE_CAM_SEC * float(tick_rate))
-	# Far enough back that a runner is a figure in a scene rather than a back of a head,
-	# and that a bus — nine metres of it in front of its own cab — is behind the camera's
-	# subject rather than over it.
-	rules.chase_distance = 7.0
-	rules.chase_height = 2.5
-	return rules
+func _channel() -> String:
+	return CHANNEL
 
 
-# --- Callables the manager asks
+func _tune_rules(r: DotSpectatorRules) -> DotSpectatorRules:
+	r.force_camera = 0
+	r.allow_while_alive = false
+	r.allow_while_dead = true
+	r.allow_unassigned = true
+	# allow_roaming stays at the family default and follows `mp_freeroam`; hardcoding it here would be overwritten when the module binds the cvar.
+	r.cycle_includes_dead = false
+	r.auto_retarget = true
+	r.delay_ticks = 0
+	return r
+
 
 func _players() -> Dictionary:
 	return _world.get("players") as Dictionary if _world != null else {}
 
 
-## Everybody who could be watched: every player, sorted by key so "next" is stable.
+## Every player, sorted by key so "next" is stable.
 func _participants() -> PackedStringArray:
 	var out := PackedStringArray()
 	var ids: Array = _players().keys()
@@ -100,14 +91,17 @@ func _participants() -> PackedStringArray:
 	return out
 
 
-func _alive(key: String) -> bool:
+func _is_alive(key: String) -> bool:
 	var player: BfhPlayer = _players().get(StringName(key))
 	return player != null and (player.health == null or player.health.alive)
 
 
-## The side, as dot-spectate's team number. Zero is "no side".
-func _team(key: String) -> int:
+func _team_of(key: String) -> int:
 	return int((_world.get("sides") as Dictionary).get(StringName(key), 0)) if _world != null else 0
+
+
+func _pose_of(key: String) -> Transform3D:
+	return pose_of(key)
 
 
 ## Where somebody's eyes are: a runner's, or a driver's bus's cab.
@@ -124,8 +118,7 @@ func pose_of(key: String) -> Transform3D:
 		return Transform3D(cab, bus * CAB_EYE)
 
 	var state := player.controller.state
-	var basis := Basis.from_euler(Vector3(deg_to_rad(state.pitch), deg_to_rad(state.yaw), 0.0))
-	return Transform3D(basis, state.position + Vector3(0.0, BfhPlayer.EYE_HEIGHT, 0.0))
+	return eye_pose(state.position, state.pitch, state.yaw)
 
 
 # --- What the world reports
@@ -133,16 +126,15 @@ func pose_of(key: String) -> Transform3D:
 ## The world ticked. Runs the death camera's hand-overs and moves anybody whose target
 ## went away. A mirror's is a no-op inside dot-spectate.
 func tick(tick_number: int) -> void:
-	if manager != null:
-		manager.advance(tick_number)
+	advance(tick_number)
 
 
 ## Somebody is out. The chain starts: where they fell, then who did it, then somebody.
 func on_death(player_id: StringName, at: Vector3, by: StringName, tick_number: int) -> void:
-	if manager == null or not manager.authoritative:
+	if manager == null or not authoritative:
 		return
 
-	manager.on_death(String(player_id), at, String(by), tick_number)
+	death(String(player_id), at, String(by), tick_number)
 
 	# DEBUG: a transition. "My camera went somewhere odd when I was run over" is answered by
 	# who it was put on.
@@ -153,19 +145,18 @@ func on_death(player_id: StringName, at: Vector3, by: StringName, tick_number: i
 
 ## A round began: everybody has a new body, so nobody is watching.
 func on_round_began() -> void:
-	if manager == null or not manager.authoritative:
+	if manager == null or not authoritative:
 		return
 
 	for key in manager.viewers():
-		manager.on_spawn(key)
+		spawned(key)
 
 
 ## Somebody left. Call AFTER the world has dropped them, so a spectator who was watching
 ## them is moved to somebody who is still there — dot-spectate chooses the replacement from
 ## the participants, and a world that reported first would have it pick the leaver.
 func on_leave(player_id: StringName) -> void:
-	if manager != null:
-		manager.on_leave(String(player_id))
+	left(String(player_id))
 
 
 # --- What a spectator asks
@@ -174,7 +165,7 @@ func on_leave(player_id: StringName) -> void:
 func request(player_id: StringName, ask: int) -> DotResult:
 	if manager == null:
 		return DotResult.fail(DotError.CODE_STATE, "Spectating is not set up.")
-	if not manager.authoritative:
+	if not authoritative:
 		return DotResult.fail(DotError.CODE_FORBIDDEN, "A client asks the server; it does not decide.")
 
 	var key := String(player_id)
@@ -197,34 +188,9 @@ func request(player_id: StringName, ask: int) -> DotResult:
 			return manager.set_mode(key, wanted)
 
 		ASK_ROAM:
-			return manager.toggle_roam(key)
+			return toggle_roam(key)
 
 	return DotResult.fail(DotError.CODE_INVALID, "Unknown spectator request %d." % ask)
-
-
-# --- Reading, and the mirror
-
-func is_spectating(player_id: StringName) -> bool:
-	return manager != null and manager.is_spectating(String(player_id))
-
-
-## Where [param player_id]'s camera is, or identity when they are not watching.
-func camera_for(player_id: StringName) -> Transform3D:
-	return manager.camera_of(String(player_id)) if manager != null else Transform3D.IDENTITY
-
-
-func is_roaming(player_id: StringName) -> bool:
-	return manager != null and manager.view(String(player_id)).mode == DotSpectatorView.Mode.ROAMING
-
-
-## Whether the free-camera key should be offered to this viewer now (`mp_freeroam`,
-## `mp_forcecamera`).
-func can_roam(player_id: StringName) -> bool:
-	return manager != null and manager.can_roam(String(player_id))
-
-
-func mode_of(player_id: StringName) -> int:
-	return int(manager.view(String(player_id)).mode) if is_spectating(player_id) else 0
 
 
 ## Who they are looking at: the target, or on a death camera the killer it looks at.
@@ -242,7 +208,7 @@ func target_of(player_id: StringName) -> StringName:
 
 ## A mirror is told its own view. [param target] is who [method target_of] would answer.
 func adopt(player_id: StringName, mode: int, target: StringName) -> void:
-	if manager == null or manager.authoritative:
+	if manager == null or authoritative:
 		return
 
 	var key := String(player_id)
@@ -280,13 +246,3 @@ func describe_view(player_id: StringName) -> String:
 	return "%s %s" % [
 		DotSpectatorView.Mode.keys()[mode_of(player_id)], String(target_of(player_id))
 	]
-
-
-func describe() -> Dictionary:
-	return manager.describe() if manager != null else {}
-
-
-func describe_lines() -> PackedStringArray:
-	if manager == null:
-		return PackedStringArray(["spectate: not set up"])
-	return manager.describe_lines()
