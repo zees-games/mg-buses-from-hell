@@ -3,11 +3,11 @@ extends "headless_net_harness.gd"
 ## game-buses-from-hell over the wire: a real server, a real client, and a lossy loopback between
 ## them.
 
-const CHECKS := 219
+const CHECKS := 225
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 25
+const SECTIONS := 26
 
 
 func _ready() -> void:
@@ -43,6 +43,7 @@ func _run() -> void:
 		await _test_who_somebody_is_crosses()
 		await _test_a_runner_who_is_out()
 		await _test_a_barrel_is_drawn()
+		await _test_a_crate_breaks_in_splinters()
 		await _test_the_scoreboard()
 		await _test_a_voted_bowl_crosses()
 		await _test_the_toys_reach_the_client()
@@ -2186,6 +2187,53 @@ func _test_a_barrel_is_drawn() -> void:
 	client_side.remove_child(fx)
 	fx.free()
 	_done()
+
+
+# --- What a client draws: a crate
+
+## A crate the server breaks throws splinters on the client (its crack stays BfhAudio's), and nothing
+## when effects are off.
+func _test_a_crate_breaks_in_splinters() -> void:
+	_section("a crate the server breaks throws splinters on the client, none with effects off")
+
+	var client_side := _client_game.get_parent()
+	var fx := BfhFx.new()
+	client_side.add_child(fx)
+	var built := fx.setup(_client_game)
+	_check(built.ok and fx.break_fx != null, "the client's effects include the break effect")
+	fx.break_fx.config.headless = true
+	var spot := Vector3(-9.0, 0.0, 15.0)
+	var crate := _server_game.props.spawn(BfhContent.CRATE, &"world", spot + Vector3(0.0, 0.6, 0.0))
+	await _steps(4)
+	_server_game.prop_damage.break_now(crate.instance_id, &"")
+	_exchange()
+	await _steps(3)
+	_check(fx.break_fx.spawned == 1, "one broken crate is one burst of splinters", "spawned %d" % fx.break_fx.spawned)
+	var root := fx.break_fx.get_child(fx.break_fx.get_child_count() - 1) as Node3D
+	_check(root != null and root.name.begins_with("Break_wood") and root.get_node_or_null("Pieces") != null,
+		"wood pieces are drawn")
+	_check(root != null and root.global_position.distance_to(spot) < 2.0, "where the crate was")
+	_check(root != null and not _has_audio(root),
+		"no second crack: the crate's own sound is BfhAudio's")
+
+	fx.break_fx.config.enabled = false
+	var crate2 := _server_game.props.spawn(BfhContent.CRATE, &"world", spot + Vector3(2.0, 0.6, 0.0))
+	await _steps(4)
+	_server_game.prop_damage.break_now(crate2.instance_id, &"")
+	_exchange()
+	await _steps(3)
+	_check(fx.break_fx.spawned == 1 and fx.break_fx.last_refusal == "disabled",
+		"with effects off nothing is drawn", "spawned %d, %s" % [fx.break_fx.spawned, fx.break_fx.last_refusal])
+	client_side.remove_child(fx)
+	fx.free()
+	_done()
+
+
+func _has_audio(n: Node) -> bool:
+	for c in n.get_children():
+		if c is AudioStreamPlayer3D or c is AudioStreamPlayer:
+			return true
+	return false
 
 
 # --- The scoreboard

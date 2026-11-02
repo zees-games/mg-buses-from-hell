@@ -31,6 +31,7 @@ func _run() -> void:
 	var maps := false
 	var watch := ""
 	var blast := false
+	var crate_break := false
 	var scoreboard := false
 	var ballot := false
 	var cover := false
@@ -85,6 +86,8 @@ func _run() -> void:
 			maps = true
 		elif arg == "--blast":
 			blast = true
+		elif arg == "--crate":
+			crate_break = true
 		elif arg == "--scoreboard":
 			scoreboard = true
 		elif arg == "--ballot":
@@ -430,6 +433,21 @@ func _run() -> void:
 		if drawn != null:
 			print("blast at %s, radius %.2f, ring drawn to %.2f m" % [
 				str(drawn.global_position), float(drawn.get("radius")), float(drawn.call("drawn_reach"))])
+
+	# A crate breaking five metres ahead: splinters from dot-fx's break effect.
+	if crate_break and world_for_blast != null and eye_for_blast != null:
+		var fwd := -eye_for_blast.global_basis.z
+		fwd.y = 0.0
+		fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.FORWARD
+		var spot := eye_for_blast.global_position + fwd * 5.0
+		spot.y = 0.0
+		var crate := world_for_blast.props.spawn(BfhContent.CRATE, &"world", spot + Vector3(0.0, 0.6, 0.0))
+		await get_tree().process_frame
+		world_for_blast.prop_damage.break_now(crate.instance_id, &"local")
+		var splintering := 0.0
+		while splintering < 0.18:
+			splintering += get_process_delta_time()
+			await get_tree().process_frame
 
 	# The scoreboard from real match state: three more runners, a round the buses win
 	# (which puts it up on its own), then the next round with one runner out and Tab held.

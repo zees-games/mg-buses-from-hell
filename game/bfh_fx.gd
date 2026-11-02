@@ -1,6 +1,7 @@
 extends Node
 
 const BfhPaths := preload("bfh_paths.gd")
+const BfhSounds := preload("bfh_sounds.gd")
 
 ## What a client draws that nothing simulates: today, a barrel going off.
 
@@ -17,6 +18,9 @@ static var BLAST_SCENE := BfhPaths.rebase("res://fx/bfh_blast.tscn")
 const BLAST_MS := 1400
 
 var fx: DotFxManager = null
+
+## Splinters where a crate breaks. The crate's crack is already BfhAudio's, so this draws only.
+var break_fx: DotFxBreak = null
 
 ## The last blast this client drew, or null. For a check and for `describe`.
 var last_blast: Node3D = null
@@ -72,7 +76,13 @@ func setup(world: Node) -> DotResult:
 			"paths": ", ".join(missing),
 		})
 
+	break_fx = DotFxBreak.new()
+	break_fx.name = "Break"
+	break_fx.config.sounds = false
+	add_child(break_fx)
+
 	world.connect("barrel_exploded", _on_blast)
+	world.connect("noise", _on_noise)
 	return DotResult.success(self)
 
 
@@ -99,8 +109,14 @@ func _on_blast(at: Vector3, radius: float) -> void:
 		node.call("configure", radius)
 
 
+func _on_noise(id: StringName, at: Vector3) -> void:
+	if id == BfhSounds.CRATE_BREAK and break_fx != null:
+		var _b := break_fx.burst("wood", at, Vector3.UP, 1.0)
+
+
 func describe() -> Dictionary:
 	return {
+		"breaks": break_fx.spawned if break_fx != null else 0,
 		"heard": heard,
 		"drawn": drawn,
 		"live": fx.live_count() if fx != null else 0,

@@ -25,6 +25,7 @@
 #   tools/shot.sh 8 swing.png --swing         # the runner's hammer mid-swing (without the flag: at rest)
 #   tools/shot.sh 5 settings.png --settings   # the settings screen Escape opens
 #   tools/shot.sh 5 blast.png --blast         # a barrel going off 12 m ahead, as the client draws it
+#   tools/shot.sh 5 crate.png --crate         # a crate breaking 5 m ahead, as splinters
 #   tools/shot.sh 12 board.png --scoreboard   # the scoreboard, Tab held, after a round the buses won
 #   tools/shot.sh 8 ballot.png --ballot       # the bowl vote's ballot, mid-vote, as the client shell draws it
 #   tools/shot.sh 6 net.png --net             # a CONNECTED client watching another runner:

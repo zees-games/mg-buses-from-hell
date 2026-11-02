@@ -506,6 +506,8 @@ func _build_settings() -> void:
 
 	if fx != null and fx.fx != null:
 		settings.bind_fx(fx.fx)
+		if fx.break_fx != null:
+			fx.break_fx.follow(settings.settings)
 
 	if settings.menu != null:
 		# The HUD in the menu's theme and at the player's HUD size, live.
