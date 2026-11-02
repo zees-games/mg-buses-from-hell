@@ -273,4 +273,4 @@ case "$cmd" in
         usage
         exit 2
         ;;
-esac
+esac; exit $?  # parsed with the case: bash re-reads the file after a long run, and an edited game.sh gave "unexpected EOF"
