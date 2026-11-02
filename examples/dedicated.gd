@@ -164,7 +164,6 @@ func _test_who_they_are() -> void:
 	net.send_fn = func(_peer: int, _payload: PackedByteArray, _delivery: int) -> void:
 		pass
 	var platform := server.modules.get_module("platform")
-
 	# Late: seated with no identity, then given one and announced.
 	var late := DotClientSession.new()
 	late.peer_id = 7171

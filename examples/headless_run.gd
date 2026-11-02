@@ -4445,9 +4445,7 @@ func _test_progress() -> void:
 		]
 	)
 
-	# A crate shoved out ahead of the bus, and then the bus arriving on it. The bus is not
-	# driven there — nothing about physics is under test — the crate is put where the bus's
-	# own impact rule looks, which is what a bus arriving at it amounts to.
+	# A crate shoved ahead of the bus, put where the bus's impact rule looks (no driving).
 	var body := driver.ridden
 	var shoved := game.props.spawn(
 		BfhContent.CRATE, &"world", body.global_transform * Vector3(0.0, -0.4, -6.0)
@@ -4499,9 +4497,7 @@ func _test_progress() -> void:
 		"the feed files a flattening and refuses a suicide")
 	progress.stats.report_to_backbone = was_reporting
 
-	# The clock runs out with the runner on their feet. Ticked without awaiting physics:
-	# nothing below is about a body moving, and a real-time clock for ten simulated seconds
-	# would be ten seconds of this suite doing nothing.
+	# Ticked without awaiting physics: nothing here is about a body moving.
 	var round_was := game.round_number
 	for _i in range(int(10.5 * 60.0)):
 		game.simulate(TICK)

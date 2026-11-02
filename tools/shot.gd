@@ -257,9 +257,7 @@ func _run() -> void:
 		cam.current = true
 		await get_tree().process_frame
 
-	# Or stand over the stacks and look down the lane. A first-person camera dropped somewhere random
-	# on a 46 m disc shows the stacks only by luck, and "is this a map or a grey box" is a question
-	# about the whole cluster rather than about whichever pillar the spawn happened to face.
+	# Stand over the stacks and look down the lane: a random spawn shows them only by luck.
 	var world_for_stacks: BfhGame = client.get("game")
 	if look_at_stacks and world_for_stacks != null and world_for_stacks.arena != null:
 		var pillars := world_for_stacks.arena.pillars()
@@ -271,9 +269,7 @@ func _run() -> void:
 
 			var cam := Camera3D.new()
 			add_child(cam)
-			# Low and off the end of the lane, which is a driver's view of it rather
-			# than a plan: what is being judged is whether a person can read a route
-			# through it at eye height, not whether the layout is tidy from above.
+			# Low and off the end of the lane: can a route be read at eye height.
 			cam.global_position = middle + Vector3(-26.0, 11.0, -22.0)
 			cam.look_at(middle + Vector3(0.0, 2.0, 0.0), Vector3.UP)
 			cam.current = true
