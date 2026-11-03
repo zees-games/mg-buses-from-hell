@@ -57,9 +57,9 @@ func _net_config() -> DotNetConfig:
 	# [b]Off, and this is the one game in the family where that is obviously right.[/b] Lag
 	# compensation exists to resolve one player's shot against where they saw somebody.
 	config.enable_lag_compensation = false
-	# A bowl holds thirty-odd crates, nine barrels, a handful of blocks and two buses, and
-	# they are all always relevant — see [BfhNetBridge] on why nothing here is culled.
-	config.max_entities_per_snapshot = 96
+	# Everything in a bowl is always relevant (see [BfhNetBridge] on why nothing is culled), so
+	# no cap: 0.
+	config.max_entities_per_snapshot = 0
 	return config
 
 
