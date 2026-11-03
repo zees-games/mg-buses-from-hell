@@ -116,6 +116,15 @@ run_suite() {
     timeout "$TIMEOUT" "$GODOT" --headless --path . "res://examples/$scene.tscn" >"$log" 2>&1
     status=$?
     summary="$(grep -Eo '[0-9]+ (passed|checks), [0-9]+ failed' "$log" | tail -1)"
+    # Section accounting: "N sections entered, M finished" from DotGameCheckSuite._report_sections.
+    local acct entered finished
+    acct="$(grep -Eo '^[0-9]+ sections entered, [0-9]+ finished' "$log" | tail -1)"
+    if [ -n "$acct" ]; then
+        entered="${acct%% *}"; finished="$(sed -E 's/.*, ([0-9]+) finished/\1/' <<< "$acct")"
+        summary="$summary  [$acct]"
+    else
+        summary="$summary  [no section accounting]"
+    fi
     if [ "$status" -eq 124 ]; then
         out="did not finish within ${TIMEOUT}s"
     elif [ "$status" -ne 0 ]; then
@@ -126,6 +135,10 @@ run_suite() {
     elif grep -qE 'resources still in use at exit|ObjectDB instances? ((were|was) )?leaked|RID allocations? of type .* (were|was) leaked' "$log"; then
         # Exit 0 and "0 failed" with objects left alive: a suite that does not free what it built.
         out="leaked objects at exit (run the scene with --verbose to name them)"
+    elif [ -n "$acct" ] && [ "$entered" != "$finished" ]; then
+        out="$((entered - finished)) of $entered sections aborted"
+    elif grep -qE '^ERROR: [0-9]+ (of [0-9]+ sections finished|checks ran)' "$log"; then
+        out="section or check count does not match the declared total"
     else
         printf '%s  %sok%s   %s  %s\n' "$CR" "$GRN" "$OFF" "$scene" "$summary"
         return 0
