@@ -28,6 +28,9 @@ func _init() -> void:
 	schema = schema_for()
 	config = DotMenuConfig.new()
 	config.brand_name = "Buses from Hell"
+	# By name: an older dot-menu has no such property, and assigning it would stop this function.
+	if &"menu_button_corner" in config:
+		config.set(&"menu_button_corner", &"top_left")
 	# Help and Leave are dot-menu's stock: H opens help, Leave leaves the server or quits a
 	# solo game. Every game in the family has both (the first play test found this one with
 	# neither). The keys are a table now ([BfhBindings]), so the help screen lists them.
