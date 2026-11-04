@@ -1,43 +1,15 @@
-extends DotGameModule
-
-const BfhNetBridge := preload("net/bfh_net_bridge.gd")
-const BfhServices := preload("bfh_services.gd")
-const BfhPlayer := preload("bfh_player.gd")
-
-const BfhGame := preload("bfh_game.gd")
-const BfhStats := preload("bfh_stats.gd")
-const BfhAvatars := preload("bfh_avatars.gd")
-const BfhBowls := preload("bfh_bowls.gd")
-const BfhMapConfig := preload("bfh_map_config.gd")
-const BfhVote := preload("bfh_vote.gd")
-const BfhAmbience := preload("bfh_ambience.gd")
-## The workbench kind of the ambience cvar set (saved to cfg/.../ambience/server.yml).
-const AMBIENT_KIND := "ambience"
-
-## Where the services keep punishments. Empty is [DotGameServices]'s own default,
-## `user://buses_punishments.json` — the store a real server enforces.
-static var punishments_file: String = ""
-
-## The players' vote for the next bowl; null when it could not be built.
-var vote: BfhVote = null
-
-## The drawn ballot's notice topic. The client shell draws one menu per topic.
-const BOWL_BALLOT_TOPIC := &"map_ballot"
-
+extends "bfh_module_chat.gd"
 ## This game, as a module a dedicated server loads.
 
 # [b]No `const CHANNEL` here, and its absence is the point.[/b] [DotGameModule] already declares one
 # and GDScript refuses to let a subclass redeclare it — which is the right refusal: a module logs
 # through [method DotModule.log_info], which stamps the module's own name, so a second.
 
-
 func _module_name() -> String:
 	return "buses"
 
-
 func _game_service() -> StringName:
 	return BfhGame.SERVICE
-
 
 func _game_missing_hint() -> String:
 	return (
@@ -45,7 +17,6 @@ func _game_missing_hint() -> String:
 		+ "'%s' — a module cannot build the world, because the world outlives it"
 		% String(BfhGame.SERVICE)
 	)
-
 
 ## The netcode's numbers, which are the game's and not the addon's.
 func _net_config() -> DotNetConfig:
@@ -62,10 +33,8 @@ func _net_config() -> DotNetConfig:
 	config.max_entities_per_snapshot = 0
 	return config
 
-
 func _make_bridge() -> Node:
 	return BfhNetBridge.new()
-
 
 ## Chat, voice and moderation, over [DotGameServices].
 func _make_services() -> Node:
@@ -73,7 +42,6 @@ func _make_services() -> Node:
 	services.bridge = bridge
 	services.punishments_file = punishments_file
 	return services
-
 
 ## Profiles, avatars and admission: dot-platform's [DotPlatformIdentity] over this game's one-slot
 ## schema. [DotGameModule] builds it before the services and loads dot-platform's own module beside
@@ -84,7 +52,6 @@ func _make_identity() -> Node:
 	identity_layer.stock_avatar_fn = BfhAvatars.stock_avatar
 	identity_layer.avatar_translate_fn = BfhAvatars.from_site
 	return identity_layer
-
 
 func _game_load() -> DotResult:
 	var world := game as BfhGame
@@ -182,19 +149,15 @@ func _game_load() -> DotResult:
 	log_info("the bowl is open", world.describe())
 	return DotResult.success(null)
 
-
 ## A bowl's file (`cfg/game/mg-buses-from-hell/dot_map/map/`) may set only [constant BfhMapConfig.KEYS].
 func _map_config_keys() -> Dictionary:
 	return BfhMapConfig.KEYS
 
-
 func _map_config_game() -> String:
 	return BfhMapConfig.GAME_ID
 
-
 ## The numbers an operator is actually going to want to change, as cvars.
 var _spectate_cvars: Array = []
-
 
 func _add_tunables(world: BfhGame) -> void:
 	var config := world.config
@@ -247,7 +210,6 @@ func _add_tunables(world: BfhGame) -> void:
 		"Seconds a stuck bus is given before it is put back on its start line",
 		func(value: float) -> void: config.bus_stuck_reset_seconds = maxf(value, 0.1))
 
-
 ## Config fields whose hand-written cvar is not `bfh_<field>`.
 const HAND_RENAMES := {
 	"crate_count": "bfh_crates", "barrel_count": "bfh_barrels", "driver_count": "bfh_drivers",
@@ -258,12 +220,10 @@ const HAND_RENAMES := {
 ## The workbench: the F9 panel off a dedicated server, the HTTP page only with `workbench.enabled` in cfg/server.yml.
 var workbench: DotGameWorkbench = null
 
-
 ## The hand-written cvar of a config field, or "" when the binder makes its own.
 func _hand_cvar(key: String) -> String:
 	var name: String = HAND_RENAMES.get(key, "bfh_%s" % key)
 	return name if console.has_name(name) else ""
-
 
 ## Every config field as a `bfh_<field>` cvar (the hand-written ones keep their handlers and follow workbench edits), the cfg/ diff commands, the workbench and dot-team's block rules.
 func _bind_config(world: BfhGame) -> DotResult:
@@ -302,16 +262,13 @@ func _bind_config(world: BfhGame) -> DotResult:
 			var _applied := DotGameWorkbench.bind_cvar_set(ambient_set, runtime, console)
 	return DotResult.success(null)
 
-
 ## Drivers and runners are the two sides dot-team's block rules compare.
 func _noblock_side(id: Variant) -> Variant:
 	return game.call(&"team_of_side", id) if game != null else ""
 
-
 ## The workbench's runtime, so its "noblock" kind is listed beside the config.
 func _noblock_runtime() -> Object:
 	return workbench.api.runtime if workbench != null and workbench.api != null else null
-
 
 ## The block commands are keyed by the player ids the world uses (`u<userid>`), not the bare userid.
 func _build_noblock() -> DotResult:
@@ -321,7 +278,6 @@ func _build_noblock() -> DotResult:
 			var session: Variant = ctx.get("session")
 			return BfhNetBridge.player_key(int(session.get("userid"))) if session is Object else null)
 	return built
-
 
 ## A workbench or file edit of a field: pushed through its hand-written cvar so the handler runs; the bus feel is put back on the catalogue.
 func _on_config_field(key: String, _value: Variant, source: String) -> void:
@@ -337,11 +293,9 @@ func _on_config_field(key: String, _value: Variant, source: String) -> void:
 		text = "1" if text else "0"
 	console.set_cvar(hand, _number(text) if text is float else str(text))
 
-
 ## A number as an operator would type it: `34`, not `34.000000`.
 static func _number(value: float) -> String:
 	return "%d" % int(round(value)) if is_equal_approx(value, round(value)) else "%.2f" % value
-
 
 ## maps.yml: `sv_map_rotation_file`, `bfh_rotation` (switch or list) and `bfh_maps_reload`.
 func _add_rotation(world: BfhGame) -> void:
@@ -355,7 +309,6 @@ func _add_rotation(world: BfhGame) -> void:
 		var _read := world.load_rotation()
 		if vote != null:
 			vote.refresh_bowls())
-
 
 func _cmd_rotation(ctx: DotCmdContext) -> void:
 	var world := game as BfhGame
@@ -381,7 +334,6 @@ func _cmd_rotation(ctx: DotCmdContext) -> void:
 
 	ctx.reply("Rotation: %s" % ctx.arg(0))
 
-
 func _cmd_maps_reload(ctx: DotCmdContext) -> void:
 	var world := game as BfhGame
 	var read := world.load_rotation()
@@ -390,7 +342,6 @@ func _cmd_maps_reload(ctx: DotCmdContext) -> void:
 		vote.refresh_bowls()
 
 	ctx.reply("maps.yml read." if read.ok else read.error.message)
-
 
 ## One cvar, its default taken from the configuration rather than written twice.
 func _tunable(
@@ -406,7 +357,6 @@ func _tunable(
 		apply.call(new_value.to_float())
 		log_info("a tunable changed", {"cvar": cvar_name, "now": new_value})
 	)
-
 
 ## [b]Nothing to undo.[/b] The commands are the module's own and [DotModule] removes them; the
 ## netcode, the bridge and the roster are [DotGameModule]'s and it tears them down in the reverse
@@ -428,13 +378,11 @@ func _game_unload() -> void:
 		vote.queue_free()
 		vote = null
 
-
 ## The server slept or woke. The vote's director follows it on its own (DotGameModule finds
 ## it); the bowl ballot's timer is this game's, so it starts again here on waking.
 func _game_hibernation(hibernating: bool) -> void:
 	if not hibernating and vote != null:
 		vote.note_woke()
-
 
 ## Seconds between checks of who is driving. See [method _keep_the_seats_full].
 const BOT_INTERVAL := 2.0
@@ -446,7 +394,6 @@ var _bots: DotConVar = null
 var _quota: DotBotQuota = null
 
 var _since_bot_check: float = 0.0
-
 
 ## [b]A server with nobody in the buses is a server with no game in it, and that is specific to this
 ## game rather than a general nicety.[/b] Every other game in this family degrades gracefully when
@@ -462,7 +409,6 @@ func _game_tick(_tick: int, delta: float) -> void:
 
 	_since_bot_check = 0.0
 	_keep_the_seats_full()
-
 
 func _keep_the_seats_full() -> void:
 	var world := game as BfhGame
@@ -520,7 +466,6 @@ func _keep_the_seats_full() -> void:
 		var leaving: BfhPlayer = bots.pop_back()
 		bridge.call("remove_player", BfhNetBridge.session_of(leaving.player_id))
 
-
 ## A bot's name from dot-bot's pool that nobody in [param world] has (it was "Bus driver"
 ## for every bot, so a board of three read as one name three times).
 static func _bot_name(world: BfhGame) -> String:
@@ -528,7 +473,6 @@ static func _bot_name(world: BfhGame) -> String:
 	for player in world.runners() + world.drivers():
 		taken.append(player.display_name)
 	return DotBotNames.pick(taken, taken.size())
-
 
 ## Joins the bridge's two chat seams to the services layer's router.
 func _build_vote(world: BfhGame) -> void:
@@ -640,179 +584,6 @@ func _build_vote(world: BfhGame) -> void:
 			if vote != null:
 				vote.forget_voter(StringName(str(session.userid)))
 		)
-
-
-func _wire_chat() -> void:
-	if bridge == null or services == null:
-		return
-
-	bridge.connect("say_requested", _on_say_requested)
-
-	# What a client that has gone quiet is told, and what an admin's own commands echo
-	# through. A refusal reaches the one person who asked; a refusal broadcast would be
-	# a rate limit announced to the server.
-	services.connect("command_entered", _on_chat_command)
-
-
-func _on_say_requested(peer_id: int, channel_id: StringName, text: String) -> void:
-	var said: DotResult = services.call("say", peer_id, channel_id, text)
-
-	if said.ok:
-		return
-
-	# Back to the one person who asked. See [method BfhNetBridge.notice].
-	bridge.call("notice", peer_id, said.error.message)
-
-
-## A `!command` typed into chat. Run through the console as the person who typed it.
-func _on_chat_command(peer_id: int, command: String, args: PackedStringArray) -> void:
-	if server == null:
-		return
-
-	var session := server.session_of(peer_id)
-
-	if session == null:
-		return
-
-	for reply in server.run_command_as_uid(
-		session.uid(), command, args, DotCmdContext.Source.CHAT
-	):
-		bridge.call("notice", peer_id, reply)
-
-
-## The operator's own voice in the room. `bfh_say the server is restarting in a minute`.
-func _cmd_say(ctx: DotCmdContext) -> void:
-	var text := ctx.rest()
-
-	if text.strip_edges() == "":
-		ctx.reply("Say what?")
-		return
-
-	if services == null or services.get("chat") == null:
-		ctx.reply("This server has no chat.")
-		return
-
-	var announced: Variant = services.get("chat").call("announce", text, BfhServices.CH_ALL)
-
-	if announced is DotResult and not (announced as DotResult).ok:
-		ctx.reply_error(announced)
-		return
-
-	ctx.reply("Said: %s" % text)
-
-
-## Who somebody is reaches the world: a face as they are seated, the real name and face once dot-
-## platform has them, and the key (dot-game's stable one) what they keep is filed under.
-func _wire_identity(world: BfhGame) -> void:
-	var link := bridge as BfhNetBridge
-
-	if link != null:
-		link.avatar_fn = _avatar_for
-		hook_post("player_admitted", _on_profile)
-		hook_post("player_avatar_changed", _on_profile)
-		hook_post("player_renamed", _on_profile)
-
-	if world.progress != null:
-		var _report := bind_stats_report(world.progress.set_reporting)
-		world.progress.durable_key_fn = func(id: StringName) -> String:
-			var session := server.session_by_userid(BfhNetBridge.session_of(id)) \
-				if server != null else null
-			return String(stats_feed.key_for(session)) if session != null and stats_feed != null else ""
-
-
-## dot-platform's state for a session, through its module, or null.
-func _platform_player(session_id: int) -> Object:
-	var session := server.session_by_userid(session_id) if server != null else null
-	var platform: Object = server.modules.get_module("platform") \
-		if server != null and server.modules != null else null
-
-	if session == null or platform == null or not platform.has_method("player_for"):
-		return null
-
-	var held: Variant = platform.call("player_for", session)
-	return held as Object if held is Object else null
-
-
-## What a session looks like: what dot-platform resolved for them, or the stock person.
-func _avatar_for(session_id: int) -> DotAvatar:
-	var held := _platform_player(session_id)
-
-	if held != null and held.get("avatar") is DotAvatar:
-		return held.get("avatar") as DotAvatar
-
-	if identity != null and identity.has_method("avatar_for"):
-		return identity.call("avatar_for", String(BfhNetBridge.player_key(session_id)))
-
-	return null
-
-
-func _on_profile(event: DotEvent) -> void:
-	var session_id := event.get_int("userid")
-	var session := server.session_by_userid(session_id) if server != null else null
-	var link := bridge as BfhNetBridge
-
-	if session == null or link == null:
-		return
-
-	link.refresh_player(session_id, session.display_name, _avatar_for(session_id))
-
-
-## One player's session: the five numbers and what they have earned. With no argument, everybody
-## counted, one line each.
-func _cmd_stats(ctx: DotCmdContext) -> void:
-	var world := game as BfhGame
-
-	if world == null or world.progress == null:
-		ctx.reply("This server is not counting anything.")
-		return
-
-	var wanted := ctx.rest().strip_edges()
-
-	if wanted != "":
-		ctx.reply_lines(world.progress.player_lines(BfhNetBridge.player_key(wanted.to_int())))
-		return
-
-	var any := false
-
-	for id: StringName in world.players:
-		if world.progress.key_of(id) == "":
-			continue
-		any = true
-		var values: DotStatsValues = world.progress.session_values(id)
-		ctx.reply("%-8s %-20s flattened %d  survived %d  broken %d  in the way %d  %d s" % [
-			String(id).trim_prefix("u"),
-			(world.players[id] as BfhPlayer).display_name,
-			int(values.get_value(BfhStats.RUNNERS_FLATTENED)),
-			int(values.get_value(BfhStats.ROUNDS_SURVIVED)),
-			int(values.get_value(BfhStats.CRATES_BROKEN)),
-			int(values.get_value(BfhStats.CRATES_INTO_PATH)),
-			int(values.get_value(BfhStats.SECONDS_SURVIVED)),
-		])
-
-	if not any:
-		ctx.reply("Nobody is being counted. Bots are not.")
-
-
-func _cmd_status(ctx: DotCmdContext) -> void:
-	var world := game as BfhGame
-
-	if world == null:
-		ctx.reply("No world.")
-		return
-
-	ctx.reply_lines(world.describe_lines())
-
-
-func _cmd_net(ctx: DotCmdContext) -> void:
-	if bridge == null:
-		ctx.reply("No bridge; this server is not replicating anything.")
-		return
-
-	ctx.reply_lines(bridge.call("describe_lines"))
-
-	if services != null:
-		ctx.reply_lines(services.call("describe_lines"))
-
 
 func describe() -> Dictionary:
 	var out := super.describe()
