@@ -1,0 +1,29 @@
+[
+  {
+    "paths": [
+      ""
+    ],
+    "licence": "MIT",
+    "author": "TMC",
+    "url": "https://github.com/zees-games/mg-buses-from-hell",
+    "title": "mg-buses-from-hell (original content; bundled addons carry their own licences in their repositories)"
+  },
+  {
+    "paths": [
+      "assets/kenney/"
+    ],
+    "licence": "CC0-1.0",
+    "author": "Kenney",
+    "url": "https://kenney.nl",
+    "title": "Kenney kits"
+  },
+  {
+    "paths": [
+      "assets/models/"
+    ],
+    "licence": "CC0-1.0",
+    "author": "Kenney",
+    "url": "https://kenney.nl",
+    "title": "Kenney Car Kit buses, modified (see CREDITS.md)"
+  }
+]

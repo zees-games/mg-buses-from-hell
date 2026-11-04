@@ -1,0 +1,15 @@
+{
+	"format": 1,
+	"mirrors": [],
+	"origin": "https://dev.dotgames.org/content",
+	"packs": [
+		{
+			"id": "gamemann/mg-buses-from-hell",
+			"into": "",
+			"kind": "pack",
+			"manifest_sha256": "c3ee86beda0fee5220722df35f56043e44aae978b0dbc3592705354b192f8f11",
+			"optional": false,
+			"version": "1.0.0"
+		}
+	]
+}
