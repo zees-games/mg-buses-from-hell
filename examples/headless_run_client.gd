@@ -665,3 +665,36 @@ func _test_progress() -> void:
 
 
 # --- A player's settings
+
+
+func _test_spectate_tap() -> void:
+	print("out, one tap or left click asks for the next target once")
+	var next := BfhSpectate.ASK_NEXT
+
+	var touch := InputEventScreenTouch.new()
+	touch.pressed = true
+	_check(BfhClient.spectator_ask(touch) == next, "a real touch asks for the next target")
+
+	var emulated := InputEventMouseButton.new()
+	emulated.button_index = MOUSE_BUTTON_LEFT
+	emulated.pressed = true
+	emulated.device = InputEvent.DEVICE_ID_EMULATION
+	_check(BfhClient.spectator_ask(emulated) == -1, "the mouse press the engine emulates from it asks nothing more")
+
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	_check(BfhClient.spectator_ask(click) == next, "a real left click asks once")
+
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	_check(BfhClient.spectator_ask(release) == -1, "and a release asks nothing")
+
+	var right := InputEventMouseButton.new()
+	right.button_index = MOUSE_BUTTON_RIGHT
+	right.pressed = true
+	_check(BfhClient.spectator_ask(right) == BfhSpectate.ASK_PREVIOUS, "the right button still steps back")
+
+	var lift := InputEventScreenTouch.new()
+	_check(BfhClient.spectator_ask(lift) == -1, "a lifted finger asks nothing")
+	_done()

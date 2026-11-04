@@ -62,6 +62,7 @@ func _run() -> void:
 	await _test_help_and_menu()
 	await _test_the_map_menu()
 	await _test_wheel_jump()
+	_test_spectate_tap()
 
 	# Anything a section did not take down itself, before the counts are printed: a world
 	# freed after `quit()` is a world the engine reports as a leak.
