@@ -148,6 +148,11 @@ func _test_spectating() -> void:
 	)
 
 	await _step(game, int(BfhSpectate.FREEZE_CAM_SEC * 60.0) + 2)
+	await _spectate_follow(game, spectate, out)
+
+
+## Following somebody up: the first target, the list, a click and the chase camera.
+func _spectate_follow(game: BfhGame, spectate: BfhSpectate, out: BfhPlayer) -> void:
 	var first := spectate.target_of(&"r1")
 	_check(
 		spectate.mode_of(&"r1") == DotSpectatorView.Mode.FIRST_PERSON
@@ -187,6 +192,11 @@ func _test_spectating() -> void:
 		line
 	)
 
+	await _spectate_roam(game, spectate, out)
+
+
+## Free roam: on by default, entered by the ask, flown at the cvar's speed, left by the same ask.
+func _spectate_roam(game: BfhGame, spectate: BfhSpectate, out: BfhPlayer) -> void:
 	# --- Free roam: on by default, the server's call, the restriction wins silently.
 	var rules := spectate.manager.rules
 	_check(
@@ -233,6 +243,12 @@ func _test_spectating() -> void:
 		spectate.describe_view(&"r1")
 	)
 
+	await _spectate_roam_refused(game, spectate, out)
+
+
+## The server's cvars against the free camera: off refuses, forcecamera wins, off mid-roam returns.
+func _spectate_roam_refused(game: BfhGame, spectate: BfhSpectate, out: BfhPlayer) -> void:
+	var rules := spectate.manager.rules
 	var _off := rules.set_cvar("mp_freeroam", "0")
 	var refused_off := spectate.request(&"r1", BfhSpectate.ASK_ROAM)
 	_check(
@@ -261,6 +277,14 @@ func _test_spectating() -> void:
 	)
 	var _restored := rules.set_cvar("mp_freeroam", "1")
 
+	await _spectate_leaves(game, spectate, out)
+
+	await _dispose(game)
+	_done()
+
+
+## A target who leaves, and the new round that follows when nobody on the side is up.
+func _spectate_leaves(game: BfhGame, spectate: BfhSpectate, out: BfhPlayer) -> void:
 	# The target leaves. dot-spectate picks the replacement from the participants, so the
 	# world has to have dropped them first or the leaver is picked again.
 	game.remove_player(&"r2")
@@ -278,16 +302,59 @@ func _test_spectating() -> void:
 		spectate.describe_view(&"r1")
 	)
 
-	await _dispose(game)
-	_done()
-
 
 # --- What the bowl sounds like
 
 ## The catalogue, the stand-ins, and every noise reaching a client's ears.
 func _test_the_sounds() -> void:
 	print("what the bowl sounds like")
+	_sounds_catalogue_checks()
 
+	# The world, and a client's ears on it.
+	var game := _world(func(c: BfhConfig) -> void:
+		c.round_seconds = 120.0
+		c.crate_count = 0
+		c.barrel_count = 0)
+	var driver := game.add_player(&"d", "Dee", BfhGame.TEAM_DRIVERS)
+	var runner := game.add_player(&"r", "Arr", BfhGame.TEAM_RUNNERS)
+	game.start()
+	await _step(game, 10)
+
+	var audio := BfhAudio.new()
+	add_child(audio)
+	var built := audio.setup(game, func() -> BfhPlayer: return runner)
+	var sink := audio.audio.sink as DotAudioSinkNull if audio.audio != null else null
+	_check(
+		built.ok and sink != null,
+		"headless, a client's audio builds on the sink that writes down what it would play",
+		str(built.error) if not built.ok else ""
+	)
+
+	if sink == null:
+		for _i in range(8):
+			_check(false, "(no sink to listen on)")
+		remove_child(audio)
+		audio.free()
+		await _dispose(game)
+		_done()
+		return
+
+	var heard: Array[StringName] = []
+	game.noise.connect(func(id: StringName, _at: Vector3) -> void: heard.append(id))
+
+	await _sounds_hammer(game, runner, audio, heard)
+	_sounds_horn_and_bump(game, driver, runner, heard)
+	await _sounds_reached_the_ears(game, sink)
+	_sounds_engine(game, driver, audio, sink)
+
+	remove_child(audio)
+	audio.free()
+	await _dispose(game)
+	_done()
+
+
+## The catalogue, the stand-in voices and the pack paths: no world needed.
+func _sounds_catalogue_checks() -> void:
 	var catalogue := BfhSounds.catalogue()
 	var recipes := BfhSounds.sound_recipes()
 	_check(catalogue.validate().ok, "the catalogue is a document dot-audio accepts")
@@ -337,38 +404,9 @@ func _test_the_sounds() -> void:
 			unbaked.append(String(id))
 	_check(unbaked.is_empty(), "the synthesiser bakes a stand-in for every one", str(unbaked))
 
-	# The world, and a client's ears on it.
-	var game := _world(func(c: BfhConfig) -> void:
-		c.round_seconds = 120.0
-		c.crate_count = 0
-		c.barrel_count = 0)
-	var driver := game.add_player(&"d", "Dee", BfhGame.TEAM_DRIVERS)
-	var runner := game.add_player(&"r", "Arr", BfhGame.TEAM_RUNNERS)
-	game.start()
-	await _step(game, 10)
 
-	var audio := BfhAudio.new()
-	add_child(audio)
-	var built := audio.setup(game, func() -> BfhPlayer: return runner)
-	var sink := audio.audio.sink as DotAudioSinkNull if audio.audio != null else null
-	_check(
-		built.ok and sink != null,
-		"headless, a client's audio builds on the sink that writes down what it would play",
-		str(built.error) if not built.ok else ""
-	)
-
-	if sink == null:
-		for _i in range(8):
-			_check(false, "(no sink to listen on)")
-		remove_child(audio)
-		audio.free()
-		await _dispose(game)
-		_done()
-		return
-
-	var heard: Array[StringName] = []
-	game.noise.connect(func(id: StringName, _at: Vector3) -> void: heard.append(id))
-
+## Hammer blows on nothing, a crate and a concrete block, and what each sounds like.
+func _sounds_hammer(game: BfhGame, runner: BfhPlayer, audio: BfhAudio, heard: Array[StringName]) -> void:
 	var origin := Vector3(0.0, 0.5, 2.0)
 	var forward := Vector3(0.0, 0.0, 1.0)
 	var mask := 0xFFFFFFF
@@ -411,6 +449,10 @@ func _test_the_sounds() -> void:
 		str(heard)
 	)
 
+
+
+## The horn, and a bump against a flattening.
+func _sounds_horn_and_bump(game: BfhGame, driver: BfhPlayer, runner: BfhPlayer, heard: Array[StringName]) -> void:
 	heard.clear()
 	var sounded := game.sound_horn(driver)
 	var again := game.sound_horn(driver)
@@ -429,6 +471,10 @@ func _test_the_sounds() -> void:
 		str(heard)
 	)
 
+
+
+## Every one of those reached the client's ears, plus the round's flat cues.
+func _sounds_reached_the_ears(game: BfhGame, sink: DotAudioSinkNull) -> void:
 	# And every one of those reached the client's ears, plus the flat cues of a round that
 	# ended with the drivers' win — this client is a runner, so it is a loss.
 	await _step(game, 30)
@@ -447,6 +493,10 @@ func _test_the_sounds() -> void:
 		"missing %s of %s" % [str(missing), str(played)]
 	)
 
+
+
+## The engine, from the bus as drawn, and an empty bus.
+func _sounds_engine(game: BfhGame, driver: BfhPlayer, audio: BfhAudio, sink: DotAudioSinkNull) -> void:
 	# The engine, from the bus as drawn. Still, it idles; moved at 18 m/s it pulses faster and the
 	# client hears the speed it is being drawn at.
 	var bus := driver.ridden
@@ -482,11 +532,6 @@ func _test_the_sounds() -> void:
 		"and an empty bus is silent",
 		"%d pulses" % sink.count_of(BfhSounds.BUS_ENGINE)
 	)
-
-	remove_child(audio)
-	audio.free()
-	await _dispose(game)
-	_done()
 
 
 # --- A player's numbers
