@@ -784,9 +784,9 @@ func client_tick(tick: int, command: DotFpsCommand) -> void:
 	if _client_ticked_for != tick:
 		_client_ticked_for = tick
 
-		for identity in net.registry.predicted():
-			for behaviour in identity.behaviours:
-				behaviour._net_simulate(tick, net.clock.tick_duration())
+		# Through the predictor, which remembers each tick: a snapshot can only skip its replay when the
+		# tick it describes was remembered.
+		net.predict_tick(tick, packet)
 
 		# The clock a client shows, advanced between the twice-a-second messages that
 		# correct it. Without this the round timer on a client ticks in half-second steps.

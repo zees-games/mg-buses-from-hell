@@ -60,19 +60,20 @@ func _register_net_vars() -> void:
 		if spec["property"] == &"net_crouch":
 			declaration.range_of(0.0, 1.0)
 
-	replicate(&"net_health", DotNetVar.Type.FLOAT_RANGE).range_of(0.0, 1000.0).bits(12)
-	replicate(&"net_riding", DotNetVar.Type.BOOL)
+	# Server-driven: only the game writes these, never the owner's prediction, so a change is not a misprediction.
+	replicate(&"net_health", DotNetVar.Type.FLOAT_RANGE).range_of(0.0, 1000.0).bits(12).server_driven()
+	replicate(&"net_riding", DotNetVar.Type.BOOL).server_driven()
 
 	# [b]Per-player state rather than an event, and that is what makes both of these survive what an
 	# event does not.[/b] A client that joins after the admin typed `beacon`, a snapshot lost on the
 	# way, a round re-laying the bowl: each is a baseline the next snapshot corrects, where an event.
-	replicate(&"net_blind", DotNetVar.Type.BOOL).to_owner_only()
-	replicate(&"net_beacon", DotNetVar.Type.BOOL)
-	replicate(&"net_bus", DotNetVar.Type.VARINT)
+	replicate(&"net_blind", DotNetVar.Type.BOOL).to_owner_only().server_driven()
+	replicate(&"net_beacon", DotNetVar.Type.BOOL).server_driven()
+	replicate(&"net_bus", DotNetVar.Type.VARINT).server_driven()
 
 	# Seven modes fit in three bits. The owner's alone: see [member net_watch].
-	replicate(&"net_watch", DotNetVar.Type.UINT).bits(3).to_owner_only()
-	replicate(&"net_watch_target", DotNetVar.Type.VARINT).to_owner_only()
+	replicate(&"net_watch", DotNetVar.Type.UINT).bits(3).to_owner_only().server_driven()
+	replicate(&"net_watch_target", DotNetVar.Type.VARINT).to_owner_only().server_driven()
 
 
 func _net_apply_input(input: DotNetInput, _tick: int) -> void:
