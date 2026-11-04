@@ -45,9 +45,7 @@ examples/headless_run.gd::_test_up_onto_the_deck	85
 game/bfh_arena.gd	1836
 game/bfh_client.gd	1090
 game/bfh_client.gd::_build_netcode	87
-game/bfh_game.gd	2530
-game/bfh_game.gd::_autopilot	105
-game/bfh_game.gd::_turn_round_for_the_ramp	204
+game/bfh_game.gd	1860
 game/bfh_game.gd::_unstick	83
 game/bfh_module.gd	824
 game/bfh_module.gd::_build_vote	109
