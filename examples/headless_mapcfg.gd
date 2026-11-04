@@ -69,4 +69,4 @@ func _run() -> void:
 	_check(not BfhMapConfig.client_set(world, "bfh_exec", "x"), "the client setter refuses an unknown key")
 
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(DIR.path_join(FILE)))
-	_report(CHECKS)
+	_report_sections(1, 1, 1, CHECKS)
