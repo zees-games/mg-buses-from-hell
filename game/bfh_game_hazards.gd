@@ -176,6 +176,22 @@ var _bus_hopped: Dictionary = {}
 ## Instance id -> `{at, held}`: where a bus asking for throttle was last clear of, and for how long.
 var _bus_pinned: Dictionary = {}
 
+## Breaks whatever lies under the bus's footprint.
+func _clear_props_under(bus: DotVehicleInstance, by: StringName) -> void:
+	if prop_damage == null:
+		return
+	var into_bus := bus.body().global_transform.affine_inverse()
+	for prop in props.all_props():
+		if not prop.is_alive() or prop.body() == null:
+			continue
+		var local := into_bus * prop.body().global_position
+		if absf(local.x) > BUS_HALF_WIDTH or absf(local.z) > BUS_HALF_LENGTH:
+			continue
+		if absf(local.y) > 2.5:
+			continue
+		bus_struck.emit(prop.instance_id, by)
+		prop_damage.break_now(prop.instance_id, by)
+
 ## A bus that is throttling and going nowhere, and what to do about it.
 func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
 	var asking := bus.command != null and absf(bus.command.throttle) > 0.3
@@ -210,18 +226,7 @@ func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
 
 	# Whatever is under it, at any speed. This is the one place the closing-speed rule
 	# is deliberately not applied: the bus is not hitting the crate, it is sitting on it.
-	if prop_damage != null:
-		var into_bus := bus.body().global_transform.affine_inverse()
-		for prop in props.all_props():
-			if not prop.is_alive() or prop.body() == null:
-				continue
-			var local := into_bus * prop.body().global_position
-			if absf(local.x) > BUS_HALF_WIDTH or absf(local.z) > BUS_HALF_LENGTH:
-				continue
-			if absf(local.y) > 2.5:
-				continue
-			bus_struck.emit(prop.instance_id, by)
-			prop_damage.break_now(prop.instance_id, by)
+	_clear_props_under(bus, by)
 
 	# [b]Before the start line, a short hop back the way it came.[/b] A bus sitting on a concrete block
 	# (it cannot be broken or pushed, so the rule above has nothing to remove) is high-centred in both

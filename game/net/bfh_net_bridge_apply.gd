@@ -110,36 +110,9 @@ func _on_event(message: DotNetMessage) -> void:
 		BfhEvents.Kind.CLOCK:
 			_apply_clock(reader)
 		BfhEvents.Kind.ROUND:
-			var round_info := BfhEvents.read_round(reader)
-			if bool(round_info["ok"]):
-				game.round_number = int(round_info["round"])
-				if bool(round_info["began"]):
-					game.round_elapsed = 0.0
-				round_changed.emit(
-					int(round_info["round"]),
-					bool(round_info["began"]),
-					int(round_info["winner"])
-				)
-				# And as the world's own signal. See [method _heard_a_swap] for why a client
-				# world says what the server's said.
-				if bool(round_info["began"]):
-					game.round_began.emit(int(round_info["round"]))
-				else:
-					game.round_over.emit(int(round_info["round"]), int(round_info["winner"]))
+			_apply_round(reader)
 		BfhEvents.Kind.DEATH:
-			var death := BfhEvents.read_death(reader)
-			if bool(death["ok"]):
-				# The fall goes on the player before anybody hears of the death, so the client
-				# that draws it reads the server's pick.
-				var fell: BfhPlayer = game.players.get(player_key(int(death["player_id"]))) \
-					if game != null else null
-				if fell != null and death.has("death"):
-					fell.death = death["death"]
-				death_received.emit(int(death["player_id"]), int(death["by"]))
-				game.player_died.emit(
-					player_key(int(death["player_id"])),
-					player_key(int(death["by"])) if int(death["by"]) > 0 else &""
-				)
+			_apply_death(reader)
 		BfhEvents.Kind.BLAST:
 			var blast := BfhEvents.read_blast(reader)
 			if bool(blast["ok"]):
@@ -165,6 +138,41 @@ func _on_event(message: DotNetMessage) -> void:
 			var notice := BfhEvents.read_notice(reader)
 			if bool(notice["ok"]):
 				notice_received.emit(str(notice["text"]))
+
+## A round began or ended, on a client.
+func _apply_round(reader: DotNetReader) -> void:
+	var round_info := BfhEvents.read_round(reader)
+	if bool(round_info["ok"]):
+		game.round_number = int(round_info["round"])
+		if bool(round_info["began"]):
+			game.round_elapsed = 0.0
+		round_changed.emit(
+			int(round_info["round"]),
+			bool(round_info["began"]),
+			int(round_info["winner"])
+		)
+		# And as the world's own signal. See [method _heard_a_swap] for why a client
+		# world says what the server's said.
+		if bool(round_info["began"]):
+			game.round_began.emit(int(round_info["round"]))
+		else:
+			game.round_over.emit(int(round_info["round"]), int(round_info["winner"]))
+
+## A death, on a client.
+func _apply_death(reader: DotNetReader) -> void:
+	var death := BfhEvents.read_death(reader)
+	if bool(death["ok"]):
+		# The fall goes on the player before anybody hears of the death, so the client
+		# that draws it reads the server's pick.
+		var fell: BfhPlayer = game.players.get(player_key(int(death["player_id"]))) \
+			if game != null else null
+		if fell != null and death.has("death"):
+			fell.death = death["death"]
+		death_received.emit(int(death["player_id"]), int(death["by"]))
+		game.player_died.emit(
+			player_key(int(death["player_id"])),
+			player_key(int(death["by"])) if int(death["by"]) > 0 else &""
+		)
 
 ## The round a side swap was last announced for, on a client. See [method _heard_a_swap].
 var _swap_heard_for: int = -1
