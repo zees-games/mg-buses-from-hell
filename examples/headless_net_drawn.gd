@@ -124,6 +124,57 @@ func _test_somebody_else_is_drawn() -> void:
 	var theirs: BfhPlayer = _client_game.players.get(key)
 	var shown := BfhClient.present_frame(_client_net, _client_game, mine, 1.0 / 60.0, 0.0)
 
+	_check_other_is_drawn(mine, theirs, other, shown)
+
+	# [b]The bot drivers out of their buses for the run, and back in after it.[/b] The bot floors it at
+	# the nearest runner, and a runner thrown part-way through is a corner in the path that drawing a
+	# snapshot apart rounds off: this measures a steady run, so nothing drives at it.
+	var parked := _park_the_bot_drivers()
+
+	# Somewhere a person can run in a straight line: the most open floor in the bowl, asked of the
+	# arena, with the run's 6.4 m inside the clear circle (yaw 90 runs toward -x, so the start is 3 m
+	# to +x of its middle).
+	var start := _start_the_run(other)
+
+	# Running, with the client drawing FRAMES_PER_TICK frames between ticks.
+	var server_track: Array[Vector3] = []
+	var drawn: Array[Vector3] = []
+	await _run_the_other_runner(other, mine, theirs, server_track, drawn)
+
+	_check_the_server_ran_them(other, server_track)
+
+	# Tracking: every frame's body is within a hand of the path the server really ran them along. Not
+	# the latest position, because a remote player is drawn an interpolation delay in the past on
+	# purpose.
+	_check_drawn_on_the_path(drawn, server_track)
+
+	for entry: Array in parked:
+		_server_game.ride.enter(entry[0], entry[1], entry[2], &"driver")
+	_check_the_body_followed(drawn, start)
+
+	# Smoothness: at a steady running speed each frame should advance the body by about the same
+	# distance.
+	_check_even_step(drawn)
+
+	_check(
+		theirs != null and theirs.figure != null
+		and absf(wrapf(theirs.figure.rotation.y - deg_to_rad(90.0), -PI, PI)) < 0.05,
+		"and faces the way the server says they are looking",
+		"%.1f deg" % (rad_to_deg(theirs.figure.rotation.y) if theirs != null and theirs.figure != null else 0.0)
+	)
+
+	_server_bridge.remove_player(session)
+	_exchange()
+	await _steps(2)
+	_check(
+		not _client_game.players.has(key),
+		"and leaves again, so the section after this one sees the bot and this client"
+	)
+	_done()
+
+
+## What the client draws of the other runner, and of the bot drivers and itself.
+func _check_other_is_drawn(mine: BfhPlayer, theirs: BfhPlayer, other: BfhPlayer, shown: int) -> void:
 	# Your own runner is drawn at the clock's render alpha (dot-player-controller's
 	# `render_clock`), so a clock slip does not stall or double the eye.
 	_check(
@@ -170,9 +221,10 @@ func _test_somebody_else_is_drawn() -> void:
 	)
 	_check(shown == 1, "so exactly one body is drawn on this client", "%d" % shown)
 
-	# [b]The bot drivers out of their buses for the run, and back in after it.[/b] The bot floors it at
-	# the nearest runner, and a runner thrown part-way through is a corner in the path that drawing a
-	# snapshot apart rounds off: this measures a steady run, so nothing drives at it.
+
+
+## Bot drivers out of their buses; the entries put them back.
+func _park_the_bot_drivers() -> Array:
 	var parked: Array = []
 	for bus in _server_game.vehicles.all_vehicles():
 		var sitting := _server_game.driver_of(bus.instance_id)
@@ -180,10 +232,11 @@ func _test_somebody_else_is_drawn() -> void:
 		if driver != null and driver.is_bot:
 			_server_game.ride.exit(bus, sitting, true)
 			parked.append([bus, sitting, driver])
+	return parked
 
-	# Somewhere a person can run in a straight line: the most open floor in the bowl, asked of the
-	# arena, with the run's 6.4 m inside the clear circle (yaw 90 runs toward -x, so the start is 3 m
-	# to +x of its middle).
+
+## The most open floor in the bowl: where it is and how clear all round it.
+func _most_open_floor() -> Dictionary:
 	var open_at := Vector3.ZERO
 	var open_clear := -INF
 	var reach := _server_game.arena.radius - 4.0
@@ -194,15 +247,12 @@ func _test_somebody_else_is_drawn() -> void:
 			if clear > open_clear:
 				open_clear = clear
 				open_at = at
-	var start := open_at + Vector3(3.0, _server_player().controller.state.position.y, 0.0)
-	print("  ..    the run starts on open floor, %.1f m clear all round its middle" % open_clear)
-	other.controller.state.position = start
-	other.controller.state.velocity = Vector3.ZERO
-	other.global_position = start
+	return {"at": open_at, "clear": open_clear}
 
-	# Running, with the client drawing FRAMES_PER_TICK frames between ticks.
-	var server_track: Array[Vector3] = []
-	var drawn: Array[Vector3] = []
+
+## Runs [param other] forward for 60 ticks, drawing frames between them, and records both tracks.
+func _run_the_other_runner(other: BfhPlayer, mine: BfhPlayer, theirs: BfhPlayer,
+		server_track: Array[Vector3], drawn: Array[Vector3]) -> void:
 	var run := DotFpsCommand.new()
 	run.move = Vector2(0.0, 1.0)
 	run.yaw = 90.0
@@ -219,18 +269,9 @@ func _test_somebody_else_is_drawn() -> void:
 			if theirs != null and theirs.figure != null and i >= 20:
 				drawn.append(theirs.figure.global_position)
 
-	# Held to what 59 ticks at `runner_speed` covers rather than to "more than 3 m", which
-	# a runner at half their speed passes. Printed, always.
-	var moved := server_track[server_track.size() - 1].distance_to(server_track[0])
-	var owed := other.controller.tunables.max_speed * 59.0 / float(SERVER_TICK_RATE)
-	print("  ..    the other runner, 60 ticks of forward on the server: %.2f m of %.2f at max_speed"
-		% [moved, owed])
-	_check(moved > owed * 0.95, "the server runs them across the bowl, at runner_speed",
-		"%.2f of %.2f m" % [moved, owed])
 
-	# Tracking: every frame's body is within a hand of the path the server really ran them along. Not
-	# the latest position, because a remote player is drawn an interpolation delay in the past on
-	# purpose.
+## Every frame's body is within a hand of the path the server ran them along.
+func _check_drawn_on_the_path(drawn: Array[Vector3], server_track: Array[Vector3]) -> void:
 	var worst := 0.0
 	for at in drawn:
 		var nearest := INF
@@ -248,19 +289,9 @@ func _test_somebody_else_is_drawn() -> void:
 		"worst %.3f m off it, over %d frames" % [worst, drawn.size()]
 	)
 
-	for entry: Array in parked:
-		_server_game.ride.enter(entry[0], entry[1], entry[2], &"driver")
-	_check(
-		not drawn.is_empty() and drawn[drawn.size() - 1].distance_to(start) > 2.0
-		and drawn[drawn.size() - 1].distance_to(Vector3.ZERO) > 1.0,
-		"so the body followed them and is nowhere near the world origin",
-		"last drawn %s, start %s" % [
-			str(drawn[drawn.size() - 1]) if not drawn.is_empty() else "-", str(start)
-		]
-	)
 
-	# Smoothness: at a steady running speed each frame should advance the body by about the same
-	# distance.
+## At a steady running speed each frame advances the body by about the same distance.
+func _check_even_step(drawn: Array[Vector3]) -> void:
 	var steps := PackedFloat32Array()
 	for j in range(1, drawn.size()):
 		steps.append(drawn[j].distance_to(drawn[j - 1]))
@@ -280,21 +311,41 @@ func _test_somebody_else_is_drawn() -> void:
 		"per frame %.4f m mean, %.4f..%.4f" % [mean, smallest, largest]
 	)
 
-	_check(
-		theirs != null and theirs.figure != null
-		and absf(wrapf(theirs.figure.rotation.y - deg_to_rad(90.0), -PI, PI)) < 0.05,
-		"and faces the way the server says they are looking",
-		"%.1f deg" % (rad_to_deg(theirs.figure.rotation.y) if theirs != null and theirs.figure != null else 0.0)
-	)
 
-	_server_bridge.remove_player(session)
-	_exchange()
-	await _steps(2)
+## Puts [param other] on the most open floor, 3 m to +x of its middle, standing; returns where.
+func _start_the_run(other: BfhPlayer) -> Vector3:
+	var open := _most_open_floor()
+	var open_at: Vector3 = open["at"]
+	var open_clear: float = open["clear"]
+	var start := open_at + Vector3(3.0, _server_player().controller.state.position.y, 0.0)
+	print("  ..    the run starts on open floor, %.1f m clear all round its middle" % open_clear)
+	other.controller.state.position = start
+	other.controller.state.velocity = Vector3.ZERO
+	other.global_position = start
+	return start
+
+
+## Held to what 59 ticks at `runner_speed` covers rather than to "more than 3 m", which a runner
+## at half their speed passes. Printed, always.
+func _check_the_server_ran_them(other: BfhPlayer, server_track: Array[Vector3]) -> void:
+	var moved := server_track[server_track.size() - 1].distance_to(server_track[0])
+	var owed := other.controller.tunables.max_speed * 59.0 / float(SERVER_TICK_RATE)
+	print("  ..    the other runner, 60 ticks of forward on the server: %.2f m of %.2f at max_speed"
+		% [moved, owed])
+	_check(moved > owed * 0.95, "the server runs them across the bowl, at runner_speed",
+		"%.2f of %.2f m" % [moved, owed])
+
+
+## The body followed them and is nowhere near the world origin.
+func _check_the_body_followed(drawn: Array[Vector3], start: Vector3) -> void:
 	_check(
-		not _client_game.players.has(key),
-		"and leaves again, so the section after this one sees the bot and this client"
+		not drawn.is_empty() and drawn[drawn.size() - 1].distance_to(start) > 2.0
+		and drawn[drawn.size() - 1].distance_to(Vector3.ZERO) > 1.0,
+		"so the body followed them and is nowhere near the world origin",
+		"last drawn %s, start %s" % [
+			str(drawn[drawn.size() - 1]) if not drawn.is_empty() else "-", str(start)
+		]
 	)
-	_done()
 
 
 
