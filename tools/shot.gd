@@ -106,6 +106,8 @@ func _parse_args() -> void:
 			_o_seconds = float(arg.substr(10))
 		elif arg.begins_with("--out="):
 			_o_out = arg.substr(6)
+		elif arg == "--touch":
+			DotPlatform.touch_override = 1
 		elif arg == "--swing":
 			_o_swing = true
 		elif arg == "--bus":
