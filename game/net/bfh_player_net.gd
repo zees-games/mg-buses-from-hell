@@ -110,6 +110,10 @@ func pull() -> void:
 
 	DotFpsNetSync.pull(player.controller.state, self)
 
+	# Server-owned fields: a predicting client writing them from its own copy would disagree with the next snapshot and replay.
+	if identity != null and not identity.is_authoritative:
+		return
+
 	if player.health != null:
 		net_health = player.health.health
 
