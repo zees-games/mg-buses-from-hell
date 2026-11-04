@@ -173,10 +173,8 @@ var _started: bool = false
 ## Every world object this game has an id for. See [DotEntityTable].
 var entities := DotEntityTable.new()
 
-## What a dead body does, and which death reactions the server allows: dot-player-char's
-## `sv_ragdoll*` cvars, bound by the module (REPLICATED) and followed by a client through its
-## link, because the client draws the bodies. Exaggerated by default: a bus throws what it hits, and
-## the addon's plain drop would make that a limp fall (sv_ragdoll_exaggerate 0 turns it back).
+## Death reactions: dot-player-char's `sv_ragdoll*` cvars, bound by the module and followed by the client.
+## Exaggerated by default so a bus throws what it hits; sv_ragdoll_exaggerate 0 turns it back.
 var ragdoll_rules: DotPlayerRagdollRules = _throwing_rules()
 
 ## dot-props' `sv_toys*`, bound by the module (REPLICATED) and followed by a client.

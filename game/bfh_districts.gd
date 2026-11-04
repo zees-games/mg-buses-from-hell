@@ -114,12 +114,9 @@ static func _downtown(out: Dictionary, ctx: Dictionary) -> void:
 	_downtown_north(out, ctx, pitch, z0)
 
 
-## The north quarter: the grid carried north of the middle, beside the buses' start lanes, where
-## the first build left only the avenues' paint. A cross street at `NORTH_STREET_ROW` (in pitches)
-## turns the avenues into blocks, and the two north corner cells at `NORTH_SHOP_COLS` hold low shops
-## of `SHOP` radius. Both go through `_building`, so the start lanes and the wall still refuse what
-## does not fit. Keep the cells between the cross street and the middle row open: towers there
-## (and shops on the east and west edges) cut the bot's pace in `_test_bot_pace` by a third.
+## The north quarter: a cross street at `NORTH_STREET_ROW` turns the avenues into blocks, and two corner cells
+## at `NORTH_SHOP_COLS` hold low shops. Keep the cells between the cross street and the middle row open:
+## towers there cut the bot's pace in `_test_bot_pace` by a third.
 const NORTH_STREET_ROW := -1.5
 const NORTH_SHOP_ROW := -2.0
 const NORTH_SHOP_COLS: Array[float] = [-1.5, 1.5]
