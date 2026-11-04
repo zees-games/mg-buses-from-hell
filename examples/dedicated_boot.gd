@@ -26,11 +26,9 @@ const SERVER_DIR := "user://bfh_dedicated"
 ## every early return.
 const SECTIONS := 18
 
-## The port this test listens on. Nothing else on a developer's machine is likely to be
-## holding it, and a boot that failed on a busy 27015 would look like the module being
-## broken.
-const PORT := 28871
-const QUERY_PORT := 28872
+## The ports this run listens on, probed free so two suites never collide.
+var PORT := BfhTestPorts.free_port(2)
+var QUERY_PORT := PORT + 1
 
 ## What the config file asks for. Deliberately not the project's own default: the point of
 ## the chain below is that the SERVER decides, so a test using the same number on both
