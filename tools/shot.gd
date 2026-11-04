@@ -48,6 +48,8 @@ func _run() -> void:
 			seconds = float(arg.substr(10))
 		elif arg.begins_with("--out="):
 			out = arg.substr(6)
+		elif arg == "--touch":
+			DotPlatform.touch_override = 1
 		elif arg == "--swing":
 			swing = true
 		elif arg == "--bus":

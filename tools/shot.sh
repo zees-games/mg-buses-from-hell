@@ -22,6 +22,7 @@
 #                                             # death, cab, follow or chase
 #   tools/shot.sh 2 kill.png --view=killcam   # the round's last moment replayed (7.5: the winner reveal)
 #   tools/shot.sh 3 maps.png --maps           # M: the solo bowl list with a Workshop fixture bowl (Name [Pack])
+#   tools/shot.sh 5 phone.png --watch=follow --touch --resolution=844x390   # a phone: touch buttons, no key hints
 #   tools/shot.sh 8 swing.png --swing         # the runner's hammer mid-swing (without the flag: at rest)
 #   tools/shot.sh 5 settings.png --settings   # the settings screen Escape opens
 #   tools/shot.sh 5 blast.png --blast         # a barrel going off 12 m ahead, as the client draws it
@@ -54,5 +55,10 @@ scene=res://tools/shot.tscn
 for arg in "$@"; do
   [ "$arg" = "--net" ] && scene=res://tools/net_shot.tscn
 done
-exec xvfb-run -a "${GODOT:-godot}" --path . --resolution 1280x720 \
-    "$scene" -- "--seconds=$seconds" "--out=res://screenshots/$out" "$@"
+res=1280x720
+args=()
+for arg in "$@"; do
+  case "$arg" in --resolution=*) res="${arg#--resolution=}" ;; *) args+=("$arg") ;; esac
+done
+exec xvfb-run -a "${GODOT:-godot}" --path . --resolution "$res" --rendering-driver opengl3 \
+    "$scene" -- "--seconds=$seconds" "--out=res://screenshots/$out" "${args[@]}"

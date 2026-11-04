@@ -224,7 +224,11 @@ static func watching_line(p_game: BfhGame, own: BfhPlayer) -> String:
 
 	var roam_key: String = BfhBindings.key_name(BfhBindings.ROAM)
 
+	var touch := DotPlatform.has_touch()
+
 	if p_game.spectate.is_roaming(own.player_id):
+		if touch:
+			return "down — free camera"
 		return "down — free camera (WASD · space/ctrl: up/down · shift: fast · %s: back to the players)" % roam_key
 
 	var target := p_game.spectate.target_of(own.player_id)
@@ -243,4 +247,7 @@ static func watching_line(p_game: BfhGame, own: BfhPlayer) -> String:
 			return "down — next round"
 
 	var roam_hint := (" · %s: free camera" % roam_key) if p_game.spectate.can_roam(own.player_id) else ""
+	if touch:
+		return "down — watching %s" % name
+
 	return "down — watching %s   (click: next · right-click: back · space: view%s)" % [name, roam_hint]
