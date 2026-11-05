@@ -602,6 +602,15 @@ func _test_the_local_runner_is_predicted() -> void:
 		"%d predicted of %d players" % [predicted.size(), _client_game.players.size()]
 	)
 
+	await _predicted_a_key_moves(server_player)
+	await _predicted_straight_then_stopped(server_player)
+	await _predicted_a_teleport_converges(server_player, client_player)
+	await _predicted_a_crate_and_an_early_join(server_player, mine)
+	_done()
+
+
+## One tick by hand moves the runner on the client before the server has simulated it.
+func _predicted_a_key_moves(server_player: BfhPlayer) -> void:
 	# Stand still first, so the next tick starts from agreement.
 	await _steps(30)
 
@@ -634,6 +643,9 @@ func _test_the_local_runner_is_predicted() -> void:
 	_flush()
 	await get_tree().physics_frame
 
+
+## Corrections per second running straight, and the two ends agreeing once stopped.
+func _predicted_straight_then_stopped(server_player: BfhPlayer) -> void:
 	# A straight line: the two ends run the same controller from the same commands, so a
 	# healthy predictor is corrected rarely. Printed, because it is the number to watch.
 	var straight := await _corrections_per_second(120, _forward())
@@ -652,6 +664,10 @@ func _test_the_local_runner_is_predicted() -> void:
 		"%.3f m apart" % _client_shown().distance_to(server_player.controller.state.position)
 	)
 
+
+
+## A move the client did not predict is corrected, converges and then stays converged.
+func _predicted_a_teleport_converges(server_player: BfhPlayer, client_player: BfhPlayer) -> void:
 	# [b]A disagreement the client cannot know about[/b]: an admin moves the runner on the server.
 	var corrections_before := _corrections()
 	var moved_to := server_player.controller.state.position + Vector3(1.2, 0.0, 0.0)
@@ -683,6 +699,10 @@ func _test_the_local_runner_is_predicted() -> void:
 		"%d more" % (_corrections() - settled)
 	)
 
+
+
+## Running into a crate, then a local runner mirrored before its HELLO.
+func _predicted_a_crate_and_an_early_join(server_player: BfhPlayer, mine: DotNetIdentity) -> void:
 	# Into a crate: a body the server simulates and the client only mirrors, frozen, at the
 	# snapshot's position. The one place the two ends are computing against different
 	# geometry, so the one place corrections are expected. Measured, not asserted.
@@ -720,6 +740,5 @@ func _test_the_local_runner_is_predicted() -> void:
 		"a local runner mirrored before HELLO is claimed when HELLO arrives",
 		"owner %d, predicted %s" % [mine.owner_peer_id, mine.is_predicted()]
 	)
-	_done()
 
 
