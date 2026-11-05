@@ -1,0 +1,15 @@
+{
+  "format": "tmc-game-listing",
+  "version": 1,
+  "listing": {
+    "name": "Buses From Hell",
+    "description": "One or two players drive buses and try to run over everyone else on foot in a walled bowl of crates and barrels. Runners can only break and shove crates to survive until the clock runs out.",
+    "tags": ["3D", "Multiplayer", "Minigame"],
+    "platforms": ["PLATFORM_WEB"],
+    "graphicsType": "THREE_D",
+    "tmcKind": "MINIGAME"
+  },
+  "pack": {
+    "id": "gamemann/mg-buses-from-hell"
+  }
+}
