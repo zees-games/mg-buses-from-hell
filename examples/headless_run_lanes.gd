@@ -13,6 +13,16 @@ func _scaffold_drift(game: BfhGame, cells: Array[AABB]) -> float:
 	return worst
 
 
+var _sc_game: BfhGame
+var _sc_driver: BfhPlayer
+var _sc_runner: BfhPlayer
+var _sc_cells: Array[AABB]
+var _sc_footprint: AABB
+var _by_game: BfhGame
+var _by_driver: BfhPlayer
+var _by_runner: BfhPlayer
+
+
 ## The height a runner can climb and a bus can take away, which is the whole level.
 func _test_the_scaffold() -> void:
 	print("the scaffold")
@@ -26,9 +36,25 @@ func _test_the_scaffold() -> void:
 	game.start()
 	await _step(game, 60)
 
+	_sc_game = game
+	_sc_driver = driver
+	_sc_runner = runner
+	_sc_cells = game.arena.scaffold_cells()
+	_sc_footprint = game.arena.scaffold_footprint()
+
+	_scaffold_stands()
+	await _scaffold_climbs()
+	await _scaffold_bus_brings_them_down()
+	await _dispose(game)
+	_done()
+
+
+## The scaffold is built, settled, clear of the obstacles and free of strays.
+func _scaffold_stands() -> void:
+	var game := _sc_game
 	var arena := game.arena
-	var cells := arena.scaffold_cells()
-	var footprint := arena.scaffold_footprint()
+	var cells := _sc_cells
+	var footprint := _sc_footprint
 
 	_check(arena.has_scaffold() and game.scaffold_ids.size() == cells.size(),
 		"the scaffold is built, one crate to a cell",
@@ -73,6 +99,15 @@ func _test_the_scaffold() -> void:
 			strays += 1
 	_check(strays == 0, "and nothing scattered was dropped into it", "%d" % strays)
 
+
+
+## A runner climbs it from each end, at a climber's pace, moving no crate.
+func _scaffold_climbs() -> void:
+	var game := _sc_game
+	var runner := _sc_runner
+	var arena := game.arena
+	var cells := _sc_cells
+	var footprint := _sc_footprint
 	# --- A runner climbs it, from each end. The route is the steps' own tops, low end
 	# first. The east end first, because the west climb ends where the bus section wants
 	# the runner, and the east one is the one the saddle added.
@@ -126,6 +161,17 @@ func _test_the_scaffold() -> void:
 	_check(climb_west >= CLIMB_PACE, "and from the west, at a climber's pace",
 		"%.0f%% of max_speed" % (climb_west * 100.0))
 
+
+
+## A bus brings the runner down off the peak, going through the scaffold.
+func _scaffold_bus_brings_them_down() -> void:
+	var game := _sc_game
+	var driver := _sc_driver
+	var runner := _sc_runner
+	var arena := game.arena
+	var cells := _sc_cells
+	var footprint := _sc_footprint
+	var top: AABB = arena.scaffold_steps()[arena.scaffold_peak()]
 	# --- And a bus brings them down. The bot, pointed at them from 24 m off the low end.
 	var bus := game.vehicles.get_vehicle(game._bus_ids[0])
 	var body := bus.body()
@@ -182,9 +228,6 @@ func _test_the_scaffold() -> void:
 		"by going through the scaffold: a quarter of it is no longer where it stood",
 		"%d of %d cells vacated" % [vacated, cells.size()])
 
-	await _dispose(game)
-	_done()
-
 
 # --- The tank farm's back yard
 
@@ -210,7 +253,19 @@ func _test_the_back_yard() -> void:
 			game.props.remove(prop.instance_id)
 	await _step(game, 2)
 
-	var arena := game.arena
+	_by_game = game
+	_by_driver = driver
+	_by_runner = runner
+	_yard_is_a_room()
+	var south := await _yard_runner_goes_through()
+	await _yard_bus_comes_in(south)
+	await _dispose(game)
+	_done()
+
+
+## Four lanes a bus can use, and a middle that is open floor.
+func _yard_is_a_room() -> void:
+	var arena := _by_game.arena
 	var yard := arena.yard_middle(1)
 	var lanes := arena.yard_lanes(1)
 	var tightest := INF
@@ -233,6 +288,14 @@ func _test_the_back_yard() -> void:
 	_check(room >= BfhArena.BUS_GAP, "and its middle is open floor, not a pinch between drums",
 		"%.2f m to the nearest drum" % room)
 
+
+
+## From the courtyard through the yard to the scaffold's east end and up it; returns the south lane.
+func _yard_runner_goes_through() -> int:
+	var game := _by_game
+	var runner := _by_runner
+	var arena := game.arena
+	var yard := arena.yard_middle(1)
 	# --- A runner goes through it: from the middle of the courtyard, through the lane the
 	# two rooms share, across the yard, out of its south lane to the scaffold's east end,
 	# and up it. The flat half is held to a runner's pace and the climb to a climber's.
@@ -278,7 +341,16 @@ func _test_the_back_yard() -> void:
 		"feet at %.2f, top %.2f" % [runner.global_position.y, top.end.y])
 	_check(climb >= CLIMB_PACE, "at a climber's pace",
 		"%.0f%% of max_speed" % (climb * 100.0))
+	return south
 
+
+## The autopilot comes into the yard by the south lane and runs down somebody standing in its middle.
+func _yard_bus_comes_in(south: int) -> void:
+	var game := _by_game
+	var driver := _by_driver
+	var runner := _by_runner
+	var arena := game.arena
+	var yard := arena.yard_middle(1)
 	# --- And a bus comes into it. The autopilot, from 14 m out beyond the south lane --
 	# the one that faces the scaffold, and the tightest of the four -- pointed at a runner
 	# standing in the middle of the yard.
@@ -326,10 +398,6 @@ func _test_the_back_yard() -> void:
 		"%.1f s, the bus at (%.1f, %.1f), %.1f m from them"
 		% [float(took) * TICK, last.x, last.z,
 			Vector2(last.x - hide.x, last.z - hide.z).length()])
-
-	await _dispose(game)
-	_done()
-
 
 
 ## The third row and the lane it makes, and the three claims a lane is: it is a bus's width and a

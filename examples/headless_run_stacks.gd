@@ -274,12 +274,16 @@ func _test_driving_the_stacks() -> void:
 	await _step(game, 8)
 
 
-	var arena := game.arena
-	var pillar := arena.pillars()[5]
-
 	var bus := game.vehicles.get_vehicle(game._bus_ids[0])
-	var body := bus.body()
+	_stacks_bot_difficulty(game, bus)
+	var quarry := game.runners()[0]
+	await _stacks_round_the_pillar(game, bus, quarry)
+	await _stacks_through_the_hook(game, bus, quarry)
+	await _dispose(game)
 
+
+## How far ahead of a running target a bot bus aims, by difficulty.
+func _stacks_bot_difficulty(game: BfhGame, bus: DotVehicleInstance) -> void:
 	# bot_difficulty at the wheel: how far ahead of a running target a bus aims, relative to
 	# medium (which aims where this game always did) -- ahead of the run at nightmare, behind
 	# it at easy -- and how fast it drives.
@@ -299,6 +303,12 @@ func _test_driving_the_stacks() -> void:
 	if running != null and running.controller != null:
 		running.controller.state.velocity = Vector3.ZERO
 
+
+## A bus lined up on a pillar with the quarry behind it comes round at a speed that kills.
+func _stacks_round_the_pillar(game: BfhGame, bus: DotVehicleInstance, quarry: BfhPlayer) -> void:
+	var arena := game.arena
+	var pillar := arena.pillars()[5]
+	var body := bus.body()
 	# Lined up on the pillar with the quarry directly behind it, which is the geometry
 	# a runner using one for cover creates and the one the bot has no answer to.
 	var start := pillar + Vector3(0.0, 1.4, -26.0)
@@ -312,7 +322,6 @@ func _test_driving_the_stacks() -> void:
 	# [b]Put, not moved: `_put` writes the controller's state as well as the node.[/b] This set
 	# `global_position` alone, which the runner's next tick overwrites from its state, so the quarry
 	# was never behind the pillar at all: the bot chased wherever the round had scattered the runner.
-	var quarry := game.runners()[0]
 	_put(quarry, pillar + Vector3(0.0, 1.2, 14.0))
 
 	var last := bus.position()
@@ -359,6 +368,12 @@ func _test_driving_the_stacks() -> void:
 	_check(past, "and it comes round the pillar rather than wedging on it",
 		"%.1f m/s at the end" % bus.speed() if bus.is_alive() else "the bus was lost")
 
+
+
+## The same drive through the hook's pillars.
+func _stacks_through_the_hook(game: BfhGame, bus: DotVehicleInstance, quarry: BfhPlayer) -> void:
+	var arena := game.arena
+	var body := bus.body()
 	# --- Through the hook
 	var hook := arena.pillars()[BfhArena.HOOK_FIRST]
 	await _clear_round(game, hook + Vector3(0.0, 1.4, -26.0), 7.0)
@@ -410,8 +425,6 @@ func _test_driving_the_stacks() -> void:
 		"and it comes round the hook's pillars rather than wedging between two of them",
 		"%.1f m/s at the end" % bus.speed() if bus.is_alive() else "the bus was lost"
 	)
-
-	await _dispose(game)
 
 
 ## The tank farm, which is the east half of the bowl and a different question from the stacks.

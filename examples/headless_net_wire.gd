@@ -79,6 +79,15 @@ func _test_the_wire() -> void:
 			and bool(town_bowl["ok"]) and str(town_bowl["district"]) == "bfh_suburb",
 		"hello and bowl carry the district a client must build", "%s, %s" % [town_hello["district"], town_bowl["district"]])
 
+	_wire_join_and_team()
+	_wire_props_and_seat()
+	_wire_clock_and_events()
+	_wire_truncated_and_asks()
+	_done()
+
+
+## Join, with and without a face, and a side change.
+func _wire_join_and_team() -> void:
 	var join := BfhEvents.read_join(DotNetReader.new(
 		BfhEvents.write_join(SESSION, 31, "Ada", BfhGame.TEAM_DRIVERS)
 	))
@@ -107,6 +116,10 @@ func _test_the_wire() -> void:
 		"a side change round-trips"
 	)
 
+
+
+## Props, a bus, a removal and a seat.
+func _wire_props_and_seat() -> void:
 	var at := Vector3(12.5, 1.25, -30.75)
 	var prop := BfhEvents.read_prop(DotNetReader.new(
 		BfhEvents.write_prop(17, BfhContent.BARREL, at, false)
@@ -145,6 +158,11 @@ func _test_the_wire() -> void:
 		"a seat round-trips"
 	)
 
+
+
+## The clock, a round result, a blast and a death.
+func _wire_clock_and_events() -> void:
+	var at := Vector3(12.5, 1.25, -30.75)
 	var clock := BfhEvents.read_clock(DotNetReader.new(
 		BfhEvents.write_clock(3, 42.5, 27, 4, true, 5, 2)
 	))
@@ -181,6 +199,11 @@ func _test_the_wire() -> void:
 		bool(death["ok"]) and int(death["by"]) == 9, "a death round-trips, with who did it"
 	)
 
+
+
+## Truncated packets, noises, the spectator's asks, and the kind fields.
+func _wire_truncated_and_asks() -> void:
+	var at := Vector3(12.5, 1.25, -30.75)
 	# [b]A truncated packet must NOT decode as a valid message about nothing.[/b] dot-net
 	# shipped with reader exhaustion that was not sticky, so a decoder that skipped the
 	# check got a believable value for the field after the overrun.
@@ -232,8 +255,6 @@ func _test_the_wire() -> void:
 		"%d kinds in %d bits" % [BfhEvents.Ask.size(), BfhRequest.KIND_BITS])
 	_check(BfhEvents.chat_kinds_fit(), "every chat kind fits the chat line's kind field",
 		"%d kinds in %d bits" % [DotChatMessage.KIND_NAMES.size(), BfhEvents.CHAT_KIND_BITS])
-	_done()
-
 
 
 func _test_a_client_joins() -> void:
@@ -581,6 +602,15 @@ func _test_the_local_runner_is_predicted() -> void:
 		"%d predicted of %d players" % [predicted.size(), _client_game.players.size()]
 	)
 
+	await _predicted_a_key_moves(server_player)
+	await _predicted_straight_then_stopped(server_player)
+	await _predicted_a_teleport_converges(server_player, client_player)
+	await _predicted_a_crate_and_an_early_join(server_player, mine)
+	_done()
+
+
+## One tick by hand moves the runner on the client before the server has simulated it.
+func _predicted_a_key_moves(server_player: BfhPlayer) -> void:
 	# Stand still first, so the next tick starts from agreement.
 	await _steps(30)
 
@@ -613,6 +643,9 @@ func _test_the_local_runner_is_predicted() -> void:
 	_flush()
 	await get_tree().physics_frame
 
+
+## Corrections per second running straight, and the two ends agreeing once stopped.
+func _predicted_straight_then_stopped(server_player: BfhPlayer) -> void:
 	# A straight line: the two ends run the same controller from the same commands, so a
 	# healthy predictor is corrected rarely. Printed, because it is the number to watch.
 	var straight := await _corrections_per_second(120, _forward())
@@ -631,6 +664,10 @@ func _test_the_local_runner_is_predicted() -> void:
 		"%.3f m apart" % _client_shown().distance_to(server_player.controller.state.position)
 	)
 
+
+
+## A move the client did not predict is corrected, converges and then stays converged.
+func _predicted_a_teleport_converges(server_player: BfhPlayer, client_player: BfhPlayer) -> void:
 	# [b]A disagreement the client cannot know about[/b]: an admin moves the runner on the server.
 	var corrections_before := _corrections()
 	var moved_to := server_player.controller.state.position + Vector3(1.2, 0.0, 0.0)
@@ -662,6 +699,10 @@ func _test_the_local_runner_is_predicted() -> void:
 		"%d more" % (_corrections() - settled)
 	)
 
+
+
+## Running into a crate, then a local runner mirrored before its HELLO.
+func _predicted_a_crate_and_an_early_join(server_player: BfhPlayer, mine: DotNetIdentity) -> void:
 	# Into a crate: a body the server simulates and the client only mirrors, frozen, at the
 	# snapshot's position. The one place the two ends are computing against different
 	# geometry, so the one place corrections are expected. Measured, not asserted.
@@ -699,6 +740,5 @@ func _test_the_local_runner_is_predicted() -> void:
 		"a local runner mirrored before HELLO is claimed when HELLO arrives",
 		"owner %d, predicted %s" % [mine.owner_peer_id, mine.is_predicted()]
 	)
-	_done()
 
 

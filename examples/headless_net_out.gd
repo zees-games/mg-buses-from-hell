@@ -2,6 +2,11 @@ extends "headless_net_drawn.gd"
 ## A runner who is out, a barrel, splinters and the scoreboard.
 
 
+var _out_ears: BfhAudio
+var _out_sink: DotAudioSinkNull
+var _out_eye: Camera3D
+
+
 ## Run down on the server, the client's camera goes where the server says, and every noise and cue
 ## on the way reaches the client's world as the same signal an offline one emits.
 func _test_a_runner_who_is_out() -> void:
@@ -28,11 +33,22 @@ func _test_a_runner_who_is_out() -> void:
 		_done()
 		return
 
+	await _out_death_camera(mine_on_server, bot, bot_key)
+	await _out_then_through_eyes()
+	await _out_free_roam()
+	await _out_achievement(mine_on_server)
+	await _out_round_turns_over(other)
+	_done()
+
+
+## The client's ears, the flattening it hears, and the camera on the bus that did it.
+func _out_death_camera(mine_on_server: BfhPlayer, bot: BfhPlayer, bot_key: StringName) -> void:
 	# The client's ears, on the client's world, with the null sink a headless run gets.
 	var ears := BfhAudio.new()
 	add_child(ears)
 	var _built := ears.setup(_client_game, func() -> BfhPlayer: return _client_player())
-	var sink := ears.audio.sink as DotAudioSinkNull
+	_out_ears = ears
+	_out_sink = ears.audio.sink as DotAudioSinkNull
 	var heard: Array = []
 	_client_game.noise.connect(func(id: StringName, at: Vector3) -> void:
 		heard.append({"id": id, "at": at}))
@@ -64,6 +80,7 @@ func _test_a_runner_who_is_out() -> void:
 	)
 
 	var eye := Camera3D.new()
+	_out_eye = eye
 	var client_side := _client_game.get_parent()
 	client_side.add_child(eye)
 	var client_bus := _client_bridge.body_of_net_id(_server_bridge.net_id_of_node(bot.ridden))
@@ -84,6 +101,13 @@ func _test_a_runner_who_is_out() -> void:
 		]
 	)
 
+
+
+## Past the death camera and the freeze, through somebody's eyes, then the next and the chase view.
+func _out_then_through_eyes() -> void:
+	var eye := _out_eye
+	var mine := _client_player()
+	var spectate := _client_game.spectate
 	# Past the death camera and the freeze on the cab, on the server's clock.
 	await _steps(int((BfhSpectate.DEATH_CAM_SEC + BfhSpectate.FREEZE_CAM_SEC) * 60.0) + 10)
 	var following := spectate.target_of(mine.player_id)
@@ -116,6 +140,12 @@ func _test_a_runner_who_is_out() -> void:
 		spectate.describe_view(mine.player_id)
 	)
 
+
+
+## Free roam is decided by the server, and a refused ask comes back as a notice.
+func _out_free_roam() -> void:
+	var mine := _client_player()
+	var spectate := _client_game.spectate
 	# Free roam: the ask goes to the server, which decides (toggle_roam), and ROAMING comes
 	# back with no target. An empty target must not read as "stop watching".
 	var server_rules := _server_game.spectate.manager.rules
@@ -153,6 +183,11 @@ func _test_a_runner_who_is_out() -> void:
 	)
 	var _roam_on := server_rules.set_cvar("mp_freeroam", "1")
 
+
+
+## An achievement told to the one player who earned it.
+func _out_achievement(mine_on_server: BfhPlayer) -> void:
+	var mine := _client_player()
 	# An achievement, from the server's tracker to the one person who earned it. Unlocked
 	# by hand rather than earned — earning is `headless_run`'s — so what is under test is
 	# everything after the tracker: the world's signal, the bridge, a notice, the client.
@@ -169,6 +204,16 @@ func _test_a_runner_who_is_out() -> void:
 		"%s, notices %s" % [str(awarded.value) if awarded.ok else str(awarded.error), str(notices)]
 	)
 
+
+
+## The last runner goes: the round turns over and the client hears it.
+func _out_round_turns_over(other: BfhPlayer) -> void:
+	var eye := _out_eye
+	var ears := _out_ears
+	var sink := _out_sink
+	var mine := _client_player()
+	var spectate := _client_game.spectate
+	var bot_key := BfhNetBridge.player_key(BfhNetBridge.FIRST_BOT_SESSION)
 	# The last runner goes; the round turns over on the server, and the client's world says
 	# so with the signals an offline world emits, and hears it.
 	var rounds: Array = []
@@ -195,8 +240,6 @@ func _test_a_runner_who_is_out() -> void:
 	_server_bridge.remove_player(BfhNetBridge.session_of(other.player_id))
 	_exchange()
 	await _steps(2)
-	_done()
-
 
 
 ## The server sets a barrel off; the client draws it, where it went off and as far as it reached,

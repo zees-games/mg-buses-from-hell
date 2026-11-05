@@ -10,102 +10,164 @@ const BfhVote := preload("../game/bfh_vote.gd")
 func _ready() -> void:
 	_run.call_deferred()
 
+var _o_seconds := 3.0
+var _o_out := "res://screenshots/bfh.png"
+var _o_look_at_bus := false
+var _o_look_at_stacks := false
+var _o_look_at_lane := false
+var _o_look_at_hook := false
+var _o_look_at_west_lane := false
+var _o_look_at_tanks := false
+var _o_look_at_yard := ""
+var _o_look_at_scaffold := false
+var _o_look_at_ramp := false
+var _o_on_deck := false
+var _o_plan := false
+var _o_show_chat := false
+var _o_beacon := false
+var _o_blind := false
+var _o_settings := false
+var _o_maps := false
+var _o_watch := ""
+var _o_blast := false
+var _o_crate_break := false
+var _o_scoreboard := false
+var _o_ballot := false
+var _o_cover := false
+var _o_swing := false
+var _o_killcam := false
+var _o_bowl_id := ""
+var _o_action: Array = []
+var _o_killcam_seconds := 0.0
+var _o_elapsed := 0.0
+
+
 func _run() -> void:
-	var seconds := 3.0
-	var out := "res://screenshots/bfh.png"
-	var look_at_bus := false
-	var look_at_stacks := false
-	var look_at_lane := false
-	var look_at_hook := false
-	var look_at_west_lane := false
-	var look_at_tanks := false
-	var look_at_yard := ""
-	var look_at_scaffold := false
-	var look_at_ramp := false
-	var on_deck := false
-	var plan := false
-	var show_chat := false
-	var beacon := false
-	var blind := false
-	var settings := false
-	var maps := false
-	var watch := ""
-	var blast := false
-	var crate_break := false
-	var scoreboard := false
-	var ballot := false
-	var cover := false
-	var swing := false
-	var killcam := false
-	var bowl_id := ""
-	var action: Array = []
+	_parse_args()
+	_shot_maps_fixture()
+	var client: Node = load("res://game/bfh.tscn").instantiate()
+	add_child(client)
+
+	if _o_cover:
+		await _shot_cover(client)
+		return
+	_shot_bowl(client)
+	_shot_chat(client)
+	_shot_deck(client)
+	await _shot_wait()
+	await _shot_swing(client)
+
+	if not _o_action.is_empty():
+		await _stage_action(client, _o_action[0], _o_action[1], _o_out)
+		get_tree().quit(0)
+		return
+
+	await _shot_marks(client)
+	await _shot_maps_menu(client)
+	await _shot_settings(client)
+	await _shot_watch(client)
+	await _shot_beacon(client)
+	await _shot_stacks(client)
+	await _shot_lane(client)
+	await _shot_hook(client)
+	await _shot_west(client)
+	await _shot_tanks(client)
+	await _shot_yard(client)
+	await _shot_scaffold(client)
+	await _shot_ramp(client)
+	await _shot_bus(client)
+	await _shot_blast(client)
+	await _shot_scoreboard(client)
+	await _shot_killcam(client)
+	await _shot_plan(client)
+	await _shot_ballot(client)
+
+	await RenderingServer.frame_post_draw
+	var image := get_viewport().get_texture().get_image()
+	image.save_png(ProjectSettings.globalize_path(_o_out))
+	print("wrote ", _o_out, " after %.1f s" % _o_elapsed)
+	await DotShotSeq.new().record(get_tree(), ProjectSettings.globalize_path(_o_out))
+
+	var world: BfhGame = client.get("game")
+	if world != null:
+		for line in world.describe_lines():
+			print(line)
+
+	get_tree().quit(0)
+
+
+func _parse_args() -> void:
 	var user_args := OS.get_cmdline_user_args()
 	var action_at := user_args.find("--action")
 	if action_at >= 0 and action_at + 2 < user_args.size():
-		action = [StringName(user_args[action_at + 1]), String(user_args[action_at + 2])]
+		_o_action = [StringName(user_args[action_at + 1]), String(user_args[action_at + 2])]
 	for arg in user_args:
 		if arg.begins_with("--seconds="):
-			seconds = float(arg.substr(10))
+			_o_seconds = float(arg.substr(10))
 		elif arg.begins_with("--out="):
-			out = arg.substr(6)
+			_o_out = arg.substr(6)
 		elif arg == "--touch":
 			DotPlatform.touch_override = 1
 		elif arg == "--swing":
-			swing = true
+			_o_swing = true
 		elif arg == "--bus":
-			look_at_bus = true
+			_o_look_at_bus = true
 		elif arg == "--stacks":
-			look_at_stacks = true
+			_o_look_at_stacks = true
 		elif arg == "--lane":
-			look_at_lane = true
+			_o_look_at_lane = true
 		elif arg == "--hook":
-			look_at_hook = true
+			_o_look_at_hook = true
 		elif arg == "--west-lane":
-			look_at_west_lane = true
+			_o_look_at_west_lane = true
 		elif arg == "--tanks":
-			look_at_tanks = true
+			_o_look_at_tanks = true
 		elif arg == "--yard":
-			look_at_yard = "peak"
+			_o_look_at_yard = "peak"
 		elif arg.begins_with("--yard="):
-			look_at_yard = arg.substr(7)
+			_o_look_at_yard = arg.substr(7)
 		elif arg == "--scaffold":
-			look_at_scaffold = true
+			_o_look_at_scaffold = true
 		elif arg == "--ramp":
-			look_at_ramp = true
+			_o_look_at_ramp = true
 		elif arg == "--plan":
-			plan = true
+			_o_plan = true
 		elif arg == "--deck":
-			on_deck = true
+			_o_on_deck = true
 		elif arg == "--chat":
-			show_chat = true
+			_o_show_chat = true
 		elif arg == "--beacon":
-			beacon = true
+			_o_beacon = true
 		elif arg == "--blind":
-			blind = true
+			_o_blind = true
 		elif arg == "--settings":
-			settings = true
+			_o_settings = true
 		elif arg == "--maps":
-			maps = true
+			_o_maps = true
 		elif arg == "--blast":
-			blast = true
+			_o_blast = true
 		elif arg == "--crate":
-			crate_break = true
+			_o_crate_break = true
 		elif arg == "--scoreboard":
-			scoreboard = true
+			_o_scoreboard = true
 		elif arg == "--ballot":
-			ballot = true
+			_o_ballot = true
 		elif arg == "--view=cover":
-			cover = true
+			_o_cover = true
 		elif arg == "--view=killcam":
-			killcam = true
+			_o_killcam = true
 		elif arg.begins_with("--bowl="):
-			bowl_id = arg.substr(7)
+			_o_bowl_id = arg.substr(7)
 		elif arg.begins_with("--watch="):
-			watch = arg.substr(8)
+			_o_watch = arg.substr(8)
 
+
+
+## A fixture bowl pack in the shared content index, for `--maps`.
+func _shot_maps_fixture() -> void:
 	# `--maps`: a fixture bowl pack in the shared DotContentIndex, as the solo shell leaves one
 	# after a subscribed pack mounts, and the M menu opened on it.
-	if maps:
+	if _o_maps:
 		var dir := "user://ws_shot_bfh/"
 		DirAccess.make_dir_recursive_absolute(dir)
 		var file := FileAccess.open(dir + "pit.json", FileAccess.WRITE)
@@ -121,32 +183,38 @@ func _run() -> void:
 			]},
 		})
 
-	var client: Node = load("res://game/bfh.tscn").instantiate()
-	add_child(client)
 
+## `--view=cover`: the loading cover, before it lifts.
+func _shot_cover(client: Node) -> void:
 	# --view=cover: the loading cover dot-game's DotGameClient puts up first, before it lifts.
-	if cover:
+	if _o_cover:
 		for _i in 2:
 			await RenderingServer.frame_post_draw
 		var platform: DotGameClient = client.get("platform")
 		print("cover %s" % ("lifted" if platform.is_shown() else "up"))
-		var cover_path := ProjectSettings.globalize_path(out)
+		var cover_path := ProjectSettings.globalize_path(_o_out)
 		DirAccess.make_dir_recursive_absolute(cover_path.get_base_dir())
-		print("saved %s: %s" % [out, error_string(get_viewport().get_texture().get_image().save_png(cover_path))])
+		print("saved %s: %s" % [_o_out, error_string(get_viewport().get_texture().get_image().save_png(cover_path))])
 		get_tree().quit(0)
 		return
 
+
+## `--bowl=`: play in one of the ballot's bowls.
+func _shot_bowl(client: Node) -> void:
 	# `--bowl=bfh_downtown`: play in one of the ballot's bowls (BfhBowls ids), through the
 	# map menu's own door, so the round that begins is laid out on that floor.
-	if bowl_id != "":
+	if _o_bowl_id != "":
 		var world_for_bowl: BfhGame = client.get("game")
 		if world_for_bowl != null:
-			print("bowl change: ", world_for_bowl.change_bowl_now(StringName(bowl_id)).ok)
+			print("bowl change: ", world_for_bowl.change_bowl_now(StringName(_o_bowl_id)).ok)
 
+
+## `--chat`: the chat box with something in it.
+func _shot_chat(client: Node) -> void:
 	# The chat box, with something in it. A box drawn empty says nothing about whether a
 	# line would be readable over a sand-coloured bowl in bright light, which is the only
 	# question a picture of it can answer.
-	if show_chat:
+	if _o_show_chat:
 		var chat: Node = client.get("chat")
 
 		if chat != null and chat.get("window") != null:
@@ -155,9 +223,12 @@ func _run() -> void:
 			window.add_said("Ada", "north ramp, north ramp", Color(0.88, 0.90, 0.94))
 			window.add_text("Bus driver 1 was run over by nobody", Color(0.98, 0.72, 0.35))
 
+
+## `--deck`: the runner on the deck, and a camera at the ramp's foot.
+func _shot_deck(client: Node) -> void:
 	var world_for_deck: BfhGame = client.get("game")
 	var runner_for_deck: Node3D = client.get("player")
-	if on_deck and world_for_deck != null and world_for_deck.arena != null and runner_for_deck != null:
+	if _o_on_deck and world_for_deck != null and world_for_deck.arena != null and runner_for_deck != null:
 		var stand := world_for_deck.arena.ledge_centre()
 		stand.y = world_for_deck.arena.deck_top() + 0.05
 		runner_for_deck.global_position = stand
@@ -169,44 +240,51 @@ func _run() -> void:
 		cam.look_at(foot + Vector3(0.0, 0.0, 4.0), Vector3.UP)
 		cam.current = true
 
+
+## Spend the requested seconds drawing.
+func _shot_wait() -> void:
 	# --view=killcam spends --seconds after the round ends, not before.
-	var killcam_seconds := seconds
-	if killcam:
-		seconds = 4.0
-	var elapsed := 0.0
-	while elapsed < seconds:
-		elapsed += get_process_delta_time()
+	_o_killcam_seconds = _o_seconds
+	if _o_killcam:
+		_o_seconds = 4.0
+	_o_elapsed = 0.0
+	while _o_elapsed < _o_seconds:
+		_o_elapsed += get_process_delta_time()
 		await get_tree().process_frame
 
+
+## `--swing`: the hammer a third of the way through its swing.
+func _shot_swing(client: Node) -> void:
 	# --swing: the hand's hammer a third of the way through its swing.
-	if swing and client.get("viewmodel") != null:
+	if _o_swing and client.get("viewmodel") != null:
 		client.get("viewmodel").call("swing")
 		var into := 0.0
 		while into < 0.1:
 			into += get_process_delta_time()
 			await get_tree().process_frame
 
-	if not action.is_empty():
-		await _stage_action(client, action[0], action[1], out)
-		get_tree().quit(0)
-		return
 
+## `--beacon` and `--blind`: an administrator's marks.
+func _shot_marks(client: Node) -> void:
 	# An administrator's marks, set the way the handlers set them and then given a few frames to draw.
 	var world_for_marks: BfhGame = client.get("game")
 	var local_player: Node3D = client.get("player")
-	if (beacon or blind) and world_for_marks != null:
+	if (_o_beacon or _o_blind) and world_for_marks != null:
 		for id in world_for_marks.players:
 			var someone: Node = world_for_marks.players[id]
-			if beacon:
+			if _o_beacon:
 				someone.set("beacon", true)
-			if blind and someone == local_player:
+			if _o_blind and someone == local_player:
 				someone.set("blinded", true)
 		var settle := 0.0
 		while settle < 0.6:
 			settle += get_process_delta_time()
 			await get_tree().process_frame
 
-	if maps and client.get("settings") != null:
+
+## `--maps`: the M menu opened on the fixture bowl.
+func _shot_maps_menu(client: Node) -> void:
+	if _o_maps and client.get("settings") != null:
 		await get_tree().create_timer(0.5).timeout
 		var menu: Variant = client.get("settings").get("menu")
 		menu.call(&"open_maps")
@@ -220,17 +298,25 @@ func _run() -> void:
 					picker.call(&"turn", i - rows.size() + 1)
 		await get_tree().create_timer(0.3).timeout
 
+
+## `--settings`: the screen Escape opens.
+func _shot_settings(client: Node) -> void:
 	# The settings screen, over the bowl, the way Escape opens it.
-	if settings and client.get("settings") != null:
+	if _o_settings and client.get("settings") != null:
 		client.get("settings").call("open")
 		var shown := 0.0
 		while shown < 0.3:
 			shown += get_process_delta_time()
 			await get_tree().process_frame
 
+
+## `--watch=`: run down, then where the camera goes.
+func _shot_watch(client: Node) -> void:
+	var world_for_marks: BfhGame = client.get("game")
+	var local_player: Node3D = client.get("player")
 	# Run down, and then where the camera goes: `--watch=death` is the death camera, `cab` the freeze
 	# on the bus's cab, `follow` the first person it hands over to and `chase` the view behind them.
-	if watch != "" and world_for_marks != null and local_player != null \
+	if _o_watch != "" and world_for_marks != null and local_player != null \
 			and not world_for_marks.drivers().is_empty():
 		var buddy: Node3D = world_for_marks.add_player(
 			&"buddy", "Bea", BfhGame.TEAM_RUNNERS, false, true
@@ -239,18 +325,22 @@ func _run() -> void:
 		buddy.get("controller").get("state").set("position", buddy.global_position)
 		var killer: StringName = world_for_marks.drivers()[0].player_id
 		world_for_marks.call("_bus_hit", local_player, killer, 30.0, Vector3(0.0, 0.0, 1.0))
-		var wait := {"death": 0.4, "cab": 1.8, "follow": 3.6, "chase": 3.6}.get(watch, 0.4) as float
+		var wait := {"death": 0.4, "cab": 1.8, "follow": 3.6, "chase": 3.6}.get(_o_watch, 0.4) as float
 		var waited := 0.0
 		var asked := false
-		while waited < wait + (0.6 if watch == "chase" else 0.0):
+		while waited < wait + (0.6 if _o_watch == "chase" else 0.0):
 			waited += get_process_delta_time()
-			if watch == "chase" and not asked and waited >= wait:
+			if _o_watch == "chase" and not asked and waited >= wait:
 				asked = true
 				var _v: Variant = world_for_marks.spectate.request(&"local", 2)
 			await get_tree().process_frame
 		print("watching: ", world_for_marks.spectate.describe_view(&"local"))
 
-	if beacon and not look_at_bus and local_player != null:
+
+## `--beacon`: a camera behind the runner.
+func _shot_beacon(client: Node) -> void:
+	var local_player: Node3D = client.get("player")
+	if _o_beacon and not _o_look_at_bus and local_player != null:
 		var cam := Camera3D.new()
 		add_child(cam)
 		var behind := local_player.global_basis.z.normalized()
@@ -259,9 +349,12 @@ func _run() -> void:
 		cam.current = true
 		await get_tree().process_frame
 
+
+## `--stacks`: over the stacks, looking down the lane.
+func _shot_stacks(client: Node) -> void:
 	# Stand over the stacks and look down the lane: a random spawn shows them only by luck.
 	var world_for_stacks: BfhGame = client.get("game")
-	if look_at_stacks and world_for_stacks != null and world_for_stacks.arena != null:
+	if _o_look_at_stacks and world_for_stacks != null and world_for_stacks.arena != null:
 		var pillars := world_for_stacks.arena.pillars()
 		if not pillars.is_empty():
 			var middle := Vector3.ZERO
@@ -277,11 +370,14 @@ func _run() -> void:
 			cam.current = true
 			await get_tree().process_frame
 
+
+## `--lane`: the stacks' second lane from its west mouth.
+func _shot_lane(client: Node) -> void:
 	# Or stand in the stacks' second lane's west mouth, at a runner's eyes, and look down
 	# it: the question is whether it reads as a second way through, with the hook's south
 	# pillar across its far end and the scaffold past that, rather than as more columns.
 	var world_for_lane: BfhGame = client.get("game")
-	if look_at_lane and world_for_lane != null and world_for_lane.arena != null \
+	if _o_look_at_lane and world_for_lane != null and world_for_lane.arena != null \
 			and not world_for_lane.arena.pillars().is_empty():
 		var arena = world_for_lane.arena
 		var lane_z: float = arena.STACK_LANES[1]
@@ -293,11 +389,14 @@ func _run() -> void:
 		cam.current = true
 		await get_tree().process_frame
 
+
+## `--hook`: outside the hook's south-middle gap.
+func _shot_hook(client: Node) -> void:
 	# Or stand outside the hook at a runner's eyes, square to its south-middle gap, and
 	# look in: whether its two gaps read as ways a bus comes through or as slots between
 	# columns. Pass --bfh-hook-layout=wide to see the other hook (`BfhArena.HOOK_LAYOUTS`).
 	var world_for_hook: BfhGame = client.get("game")
-	if look_at_hook and world_for_hook != null and world_for_hook.arena != null \
+	if _o_look_at_hook and world_for_hook != null and world_for_hook.arena != null \
 			and not world_for_hook.arena.pillars().is_empty():
 		var arena = world_for_hook.arena
 		var p: PackedVector3Array = arena.pillars()
@@ -313,8 +412,11 @@ func _run() -> void:
 		cam.current = true
 		await get_tree().process_frame
 
+
+## `--west-lane`: outside the courtyard's west lane.
+func _shot_west(client: Node) -> void:
 	var world_for_west: BfhGame = client.get("game")
-	if look_at_west_lane and world_for_west != null and world_for_west.arena != null \
+	if _o_look_at_west_lane and world_for_west != null and world_for_west.arena != null \
 			and not world_for_west.arena.tanks().is_empty():
 		var arena = world_for_west.arena
 		var middle: Vector3 = arena.yard_middle(0)
@@ -328,10 +430,13 @@ func _run() -> void:
 		cam.current = true
 		await get_tree().process_frame
 
+
+## `--tanks`: the tank farm's lane mouth at a runner's height.
+func _shot_tanks(client: Node) -> void:
 	# The mouth of one of the tank farm's lanes at a runner's height, the view the farm was designed
 	# around: do the tanks hide a bus, or read as bollards.
 	var world_for_tanks: BfhGame = client.get("game")
-	if look_at_tanks and world_for_tanks != null and world_for_tanks.arena != null:
+	if _o_look_at_tanks and world_for_tanks != null and world_for_tanks.arena != null:
 		var farm := world_for_tanks.arena.tanks()
 		if not farm.is_empty():
 			# The first courtyard's middle, not every tank's: since the back yard the
@@ -346,16 +451,19 @@ func _run() -> void:
 			cam.current = true
 			await get_tree().process_frame
 
+
+## `--yard`: the tank farm's back yard.
+func _shot_yard(client: Node) -> void:
 	# The tank farm's back yard. `--yard` (or `=peak`) is the scaffold's peak looking north down the
 	# covered way; `--yard=courtyard` stands in the first courtyard and looks through the shared lane.
 	var world_for_yard: BfhGame = client.get("game")
-	if look_at_yard != "" and world_for_yard != null and world_for_yard.arena != null \
+	if _o_look_at_yard != "" and world_for_yard != null and world_for_yard.arena != null \
 			and world_for_yard.arena.tanks().size() > 4:
 		var arena = world_for_yard.arena
 		var yard: Vector3 = arena.yard_middle(1)
 		var cam := Camera3D.new()
 		add_child(cam)
-		if look_at_yard == "courtyard":
+		if _o_look_at_yard == "courtyard":
 			var court: Vector3 = arena.yard_middle(0)
 			var away := (court - yard).normalized()
 			cam.global_position = court + away * 3.0 + Vector3(0.0, 1.6, 0.0)
@@ -368,10 +476,13 @@ func _run() -> void:
 		cam.current = true
 		await get_tree().process_frame
 
+
+## `--scaffold`: off the scaffold's low end, looking up.
+func _shot_scaffold(client: Node) -> void:
 	# Off the scaffold's low end, a little above a runner's eyes, looking up it: three steps should
 	# read as a way UP, and the top as higher than a bus.
 	var world_for_scaffold: BfhGame = client.get("game")
-	if look_at_scaffold and world_for_scaffold != null and world_for_scaffold.arena != null \
+	if _o_look_at_scaffold and world_for_scaffold != null and world_for_scaffold.arena != null \
 			and world_for_scaffold.arena.has_scaffold():
 		var box := world_for_scaffold.arena.scaffold_footprint()
 		var cam := Camera3D.new()
@@ -381,11 +492,14 @@ func _run() -> void:
 		cam.current = true
 		await get_tree().process_frame
 
+
+## `--ramp`: the ramp from its side.
+func _shot_ramp(client: Node) -> void:
 	# Or stand in the bowl west of the ramp and look along it to the ledge: the ramp was
 	# built backwards for nine days and a picture of it from the side is the one view
 	# where that is obvious at a glance.
 	var world_for_ramp: BfhGame = client.get("game")
-	if look_at_ramp and world_for_ramp != null and world_for_ramp.arena != null:
+	if _o_look_at_ramp and world_for_ramp != null and world_for_ramp.arena != null:
 		var foot := world_for_ramp.arena.ramp_foot()
 		var cam := Camera3D.new()
 		add_child(cam)
@@ -394,10 +508,13 @@ func _run() -> void:
 		cam.current = true
 		await get_tree().process_frame
 
+
+## `--bus`: stand off and look at the bus.
+func _shot_bus(client: Node) -> void:
 	# Optionally stand off and look at the bus instead of out of the player's eyes.
 	# The one thing a first-person camera cannot show is the vehicle chasing it.
 	var world_for_view: BfhGame = client.get("game")
-	if look_at_bus and world_for_view != null and not world_for_view._bus_ids.is_empty():
+	if _o_look_at_bus and world_for_view != null and not world_for_view._bus_ids.is_empty():
 		var bus := world_for_view.vehicles.get_vehicle(world_for_view._bus_ids[0])
 		if bus != null and bus.is_alive():
 			var cam := Camera3D.new()
@@ -407,11 +524,14 @@ func _run() -> void:
 			cam.current = true
 			await get_tree().process_frame
 
+
+## `--blast` and `--crate`: a barrel going off and a crate breaking ahead of the runner.
+func _shot_blast(client: Node) -> void:
 	# A barrel going off twelve metres in front of the local runner, drawn by the client's own effects
 	# from the world's `barrel_exploded` — the path a connected client takes from a BLAST.
 	var world_for_blast: BfhGame = client.get("game")
 	var eye_for_blast: Camera3D = client.get("camera")
-	if blast and world_for_blast != null and eye_for_blast != null:
+	if _o_blast and world_for_blast != null and eye_for_blast != null:
 		var ahead := -eye_for_blast.global_basis.z
 		ahead.y = 0.0
 		ahead = ahead.normalized() if ahead.length() > 0.01 else Vector3.FORWARD
@@ -433,7 +553,7 @@ func _run() -> void:
 				str(drawn.global_position), float(drawn.get("radius")), float(drawn.call("drawn_reach"))])
 
 	# A crate breaking five metres ahead: splinters from dot-fx's break effect.
-	if crate_break and world_for_blast != null and eye_for_blast != null:
+	if _o_crate_break and world_for_blast != null and eye_for_blast != null:
 		var fwd := -eye_for_blast.global_basis.z
 		fwd.y = 0.0
 		fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.FORWARD
@@ -447,10 +567,13 @@ func _run() -> void:
 			splintering += get_process_delta_time()
 			await get_tree().process_frame
 
+
+## `--scoreboard`: real match state, then Tab held.
+func _shot_scoreboard(client: Node) -> void:
 	# The scoreboard from real match state: three more runners, a round the buses win
 	# (which puts it up on its own), then the next round with one runner out and Tab held.
 	var world_for_board: BfhGame = client.get("game")
-	if scoreboard and world_for_board != null:
+	if _o_scoreboard and world_for_board != null:
 		for name in ["Ada", "Bea", "Cy"]:
 			var _r := world_for_board.add_player(StringName(name.to_lower()), name,
 				BfhGame.TEAM_RUNNERS, false, true)
@@ -482,9 +605,12 @@ func _run() -> void:
 			await get_tree().process_frame
 		print("held: ", client.get("scoreboard").call("describe"))
 
+
+## `--view=killcam`: the last runner flattened, the replay and the podium.
+func _shot_killcam(client: Node) -> void:
 	# The last runner flattened by a bus, the buses win: ~2 s later is the replay, ~7.5 the podium.
 	var world_for_cam: BfhGame = client.get("game")
-	if killcam and world_for_cam != null:
+	if _o_killcam and world_for_cam != null:
 		for name in ["Ada", "Bea"]:
 			var _r := world_for_cam.add_player(StringName(name.to_lower()), name,
 				BfhGame.TEAM_RUNNERS, false, true)
@@ -500,15 +626,18 @@ func _run() -> void:
 		for runner in world_for_cam.runners():
 			world_for_cam.call("_bus_hit", runner, by, 30.0, Vector3(0.0, 0.0, 1.0))
 		var after := 0.0
-		while after < killcam_seconds:
+		while after < _o_killcam_seconds:
 			after += get_process_delta_time()
 			await get_tree().process_frame
 
+
+## `--plan`: the whole bowl from straight above.
+func _shot_plan(client: Node) -> void:
 	# The whole bowl from straight above, north (the deck) at the top. The one view that shows where
 	# everything is against everything else -- which is the question when choosing where a new piece of
 	# the map goes, and the one a runner's-eye camera cannot answer.
 	var world_for_plan: BfhGame = client.get("game")
-	if plan and world_for_plan != null and world_for_plan.arena != null:
+	if _o_plan and world_for_plan != null and world_for_plan.arena != null:
 		var cam := Camera3D.new()
 		add_child(cam)
 		cam.projection = Camera3D.PROJECTION_ORTHOGONAL
@@ -519,26 +648,17 @@ func _run() -> void:
 		cam.current = true
 		await get_tree().process_frame
 
+
+## `--ballot`: the bowl vote's ballot over the frame.
+func _shot_ballot(client: Node) -> void:
 	# The bowl vote's ballot over the frame, as the client shell draws it.
 	var world_for_ballot: BfhGame = client.get("game")
-	if ballot and world_for_ballot != null:
+	if _o_ballot and world_for_ballot != null:
 		var list: Array = []
 		for bowl in BfhBowls.allowed(world_for_ballot.config):
 			list.append([bowl["id"], bowl["name"]])
 		await _show_ballot(list, world_for_ballot.bowl_id)
 
-	await RenderingServer.frame_post_draw
-	var image := get_viewport().get_texture().get_image()
-	image.save_png(ProjectSettings.globalize_path(out))
-	print("wrote ", out, " after %.1f s" % elapsed)
-	await DotShotSeq.new().record(get_tree(), ProjectSettings.globalize_path(out))
-
-	var world: BfhGame = client.get("game")
-	if world != null:
-		for line in world.describe_lines():
-			print(line)
-
-	get_tree().quit(0)
 
 
 ## A real ballot from this game's vote: every bowl this server offers there is, four voters, three
