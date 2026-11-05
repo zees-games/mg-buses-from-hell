@@ -1,0 +1,66 @@
+{
+	"format": "dot-stat-defs",
+	"version": 1,
+	"stats": [
+		{
+			"key": "bfh.runners_flattened",
+			"name": "Runners flattened",
+			"description": "",
+			"kind": "COUNTER",
+			"unit": "runners",
+			"format": "",
+			"decimals": 0,
+			"category": "",
+			"column": "OPTIONAL",
+			"better": null
+		},
+		{
+			"key": "bfh.rounds_survived",
+			"name": "Rounds survived",
+			"description": "",
+			"kind": "COUNTER",
+			"unit": "rounds",
+			"format": "",
+			"decimals": 0,
+			"category": "",
+			"column": "OPTIONAL",
+			"better": null
+		},
+		{
+			"key": "bfh.crates_broken",
+			"name": "Crates broken",
+			"description": "",
+			"kind": "COUNTER",
+			"unit": "crates",
+			"format": "",
+			"decimals": 0,
+			"category": "",
+			"column": "OPTIONAL",
+			"better": null
+		},
+		{
+			"key": "bfh.crates_into_path",
+			"name": "Crates put in a bus's path",
+			"description": "",
+			"kind": "COUNTER",
+			"unit": "crates",
+			"format": "",
+			"decimals": 0,
+			"category": "",
+			"column": "OPTIONAL",
+			"better": null
+		},
+		{
+			"key": "bfh.seconds_survived",
+			"name": "Time survived",
+			"description": "",
+			"kind": "COUNTER",
+			"unit": "s",
+			"format": "",
+			"decimals": 0,
+			"category": "",
+			"column": "OPTIONAL",
+			"better": null
+		}
+	]
+}
