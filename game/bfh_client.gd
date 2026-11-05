@@ -362,9 +362,7 @@ func _build_touch() -> void:
 	host.set_anchors_preset(Control.PRESET_FULL_RECT)
 	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(host)
-	var built := _touch.build(host, _active_sampler, _set_swing)
-	if platform != null:
-		platform.fit_touch_buttons(built, BfhTouch.layout())
+	_touch.build(host, _active_sampler, _set_swing, platform)
 
 
 ## After the world, because it listens to the world's round signals from the start: a

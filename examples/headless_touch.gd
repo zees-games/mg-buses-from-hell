@@ -13,9 +13,9 @@ func _ready() -> void:
 
 func _run() -> void:
 	print("mg-buses-from-hell: touch controls")
-	var list := BfhTouch.layout()
+	var list := BfhTouch.touch_layout().buttons()
 	var ids: Array = list.map(func(b: Dictionary) -> Variant: return b["id"])
-	for want: StringName in [BfhTouch.SWING, BfhTouch.JUMP, BfhTouch.BRAKE]:
+	for want: StringName in [BfhTouch.FIRE, BfhTouch.JUMP, BfhTouch.HANDBRAKE]:
 		_check(ids.has(want), "the layout has the %s button" % want)
 	var probe := DotTouchButtons.new()
 	var m := probe.margin
@@ -37,11 +37,11 @@ func _run() -> void:
 	var sampler := DotFpsTouchSampler.new(DotFpsTunables.new())
 	var sampler_fn := func() -> Variant: return sampler
 	var swing_fn := func(down: bool) -> void: swings.append(down)
-	BfhTouch.route(BfhTouch.SWING, true, sampler_fn, swing_fn)
-	BfhTouch.route(BfhTouch.SWING, false, sampler_fn, swing_fn)
+	BfhTouch.route(BfhTouch.FIRE, true, sampler_fn, swing_fn)
+	BfhTouch.route(BfhTouch.FIRE, false, sampler_fn, swing_fn)
 	_check(swings == [true, false], "a press and a release of HIT reach the swing", str(swings))
-	BfhTouch.route(BfhTouch.BRAKE, true, sampler_fn, swing_fn)
+	BfhTouch.route(BfhTouch.HANDBRAKE, true, sampler_fn, swing_fn)
 	_check((sampler.sample(0.016).buttons & DotFpsCommand.BUTTON_CROUCH) != 0, "BRAKE holds the handbrake bit the bus reads")
-	BfhTouch.route(BfhTouch.BRAKE, false, sampler_fn, swing_fn)
+	BfhTouch.route(BfhTouch.HANDBRAKE, false, sampler_fn, swing_fn)
 	_check((sampler.sample(0.016).buttons & DotFpsCommand.BUTTON_CROUCH) == 0, "and releasing lets it go")
 	_report_sections(1, 1, 1, CHECKS)

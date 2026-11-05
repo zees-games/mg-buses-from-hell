@@ -6,29 +6,33 @@ extends RefCounted
 
 const CHANNEL := "bfh.touch"
 
-const SWING := &"swing"
-const JUMP := &"jump"
-const BRAKE := &"brake"
+const FIRE := DotGameTouchLayout.FIRE
+const JUMP := DotGameTouchLayout.JUMP
+const HANDBRAKE := DotGameTouchLayout.HANDBRAKE
 
-## Offsets are from the bottom-right corner towards the middle; small enough for a 375 px tall screen.
-static func layout() -> Array[Dictionary]:
-	return [
-		{"id": SWING, "label": "HIT", "offset": Vector2(80, 84), "radius": 44.0},
-		{"id": JUMP, "label": "JUMP", "offset": Vector2(80, 172), "radius": 32.0},
-		{"id": BRAKE, "label": "BRAKE", "offset": Vector2(190, 60), "radius": 34.0},
-	]
+## dot-game's driving preset less what the steer pad covers (gas, brake, steering) and the buses lack; the hammer takes fire's home.
+static func touch_layout() -> DotGameTouchLayout:
+	var res := DotGameTouchLayout.build(DotGameTouchLayout.DRIVING, {
+		&"gas": null, &"brake": null, &"use": null, &"respawn": null, &"camera": null, &"board": null, &"chat": null,
+		FIRE: {"slot": &"primary", "label": "HIT"},
+		HANDBRAKE: {"slot": &"outer", "label": "BRAKE"},
+	})
+	if not res.ok:
+		push_error("mg-buses-from-hell touch layout refused: %s" % str(res.error))
+		return DotGameTouchLayout.custom()
+	return res.value
 
 var buttons: DotTouchButtons = null
 
 
 ## Builds the buttons under [param parent]: jump and the handbrake go to the sampler (read through the callable, the
-## active one changes when the player does), the swing to [param swing_fn], which takes `down: bool`.
-func build(parent: Control, sampler_fn: Callable, swing_fn: Callable) -> DotTouchButtons:
+## active one changes when the player does), the swing to [param swing_fn], which takes `down: bool`. [param client] fits them.
+func build(parent: Control, sampler_fn: Callable, swing_fn: Callable, client: Object = null) -> DotTouchButtons:
 	buttons = DotTouchButtons.new()
 	buttons.name = "TouchButtons"
 	buttons.set_anchors_preset(Control.PRESET_FULL_RECT)
 	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	buttons.set_buttons(layout())
+	touch_layout().apply(buttons, client)
 	parent.add_child(buttons)
 	buttons.button_down.connect(func(id: StringName) -> void: route(id, true, sampler_fn, swing_fn))
 	buttons.button_up.connect(func(id: StringName) -> void: route(id, false, sampler_fn, swing_fn))
@@ -36,7 +40,7 @@ func build(parent: Control, sampler_fn: Callable, swing_fn: Callable) -> DotTouc
 
 
 static func route(id: StringName, down: bool, sampler_fn: Callable, swing_fn: Callable) -> void:
-	if id == SWING:
+	if id == FIRE:
 		swing_fn.call(down)
 		return
 	var sampler: Variant = sampler_fn.call()
