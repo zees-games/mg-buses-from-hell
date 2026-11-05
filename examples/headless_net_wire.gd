@@ -79,6 +79,15 @@ func _test_the_wire() -> void:
 			and bool(town_bowl["ok"]) and str(town_bowl["district"]) == "bfh_suburb",
 		"hello and bowl carry the district a client must build", "%s, %s" % [town_hello["district"], town_bowl["district"]])
 
+	_wire_join_and_team()
+	_wire_props_and_seat()
+	_wire_clock_and_events()
+	_wire_truncated_and_asks()
+	_done()
+
+
+## Join, with and without a face, and a side change.
+func _wire_join_and_team() -> void:
 	var join := BfhEvents.read_join(DotNetReader.new(
 		BfhEvents.write_join(SESSION, 31, "Ada", BfhGame.TEAM_DRIVERS)
 	))
@@ -107,6 +116,10 @@ func _test_the_wire() -> void:
 		"a side change round-trips"
 	)
 
+
+
+## Props, a bus, a removal and a seat.
+func _wire_props_and_seat() -> void:
 	var at := Vector3(12.5, 1.25, -30.75)
 	var prop := BfhEvents.read_prop(DotNetReader.new(
 		BfhEvents.write_prop(17, BfhContent.BARREL, at, false)
@@ -145,6 +158,11 @@ func _test_the_wire() -> void:
 		"a seat round-trips"
 	)
 
+
+
+## The clock, a round result, a blast and a death.
+func _wire_clock_and_events() -> void:
+	var at := Vector3(12.5, 1.25, -30.75)
 	var clock := BfhEvents.read_clock(DotNetReader.new(
 		BfhEvents.write_clock(3, 42.5, 27, 4, true, 5, 2)
 	))
@@ -181,6 +199,11 @@ func _test_the_wire() -> void:
 		bool(death["ok"]) and int(death["by"]) == 9, "a death round-trips, with who did it"
 	)
 
+
+
+## Truncated packets, noises, the spectator's asks, and the kind fields.
+func _wire_truncated_and_asks() -> void:
+	var at := Vector3(12.5, 1.25, -30.75)
 	# [b]A truncated packet must NOT decode as a valid message about nothing.[/b] dot-net
 	# shipped with reader exhaustion that was not sticky, so a decoder that skipped the
 	# check got a believable value for the field after the overrun.
@@ -232,8 +255,6 @@ func _test_the_wire() -> void:
 		"%d kinds in %d bits" % [BfhEvents.Ask.size(), BfhRequest.KIND_BITS])
 	_check(BfhEvents.chat_kinds_fit(), "every chat kind fits the chat line's kind field",
 		"%d kinds in %d bits" % [DotChatMessage.KIND_NAMES.size(), BfhEvents.CHAT_KIND_BITS])
-	_done()
-
 
 
 func _test_a_client_joins() -> void:

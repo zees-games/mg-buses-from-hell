@@ -587,6 +587,22 @@ func _test_progress() -> void:
 	game.earned.connect(func(id: StringName, title: String, _points: int) -> void:
 		earned.append("%s:%s" % [id, title]))
 
+	await _progress_crates_broken(game, runner, bot)
+	await _progress_crate_shoved(game, driver, runner)
+	_progress_flattened(game, victim)
+	_progress_feed(game)
+	_progress_round_survived(game)
+	_progress_earned(game, earned)
+
+	await _dispose(game)
+	_done()
+
+
+## A crate a runner breaks is theirs, and one a bot breaks is nobody's.
+func _progress_crates_broken(
+	game: BfhGame, runner: BfhPlayer, bot: BfhPlayer
+) -> void:
+	var progress := game.progress
 	# A crate broken with a hammer.
 	var origin := Vector3(0.0, 0.5, 2.0)
 	var forward := Vector3(0.0, 0.0, 1.0)
@@ -617,6 +633,14 @@ func _test_progress() -> void:
 		]
 	)
 
+
+
+## A crate shoved ahead of a bus is in its path, once; the driver breaks it.
+func _progress_crate_shoved(
+	game: BfhGame, driver: BfhPlayer, runner: BfhPlayer
+) -> void:
+	var progress := game.progress
+	var mask := 0xFFFFFFF
 	# A crate shoved ahead of the bus, put where the bus's impact rule looks (no driving).
 	var body := driver.ridden
 	var shoved := game.props.spawn(
@@ -647,6 +671,11 @@ func _test_progress() -> void:
 		]
 	)
 
+
+
+## A runner run down is the driver's, and the seconds they stood are theirs.
+func _progress_flattened(game: BfhGame, victim: BfhPlayer) -> void:
+	var progress := game.progress
 	# A runner flattened, and the seconds they had stood.
 	var stood := game.round_elapsed
 	game._bus_hit(victim, &"d", 30.0, Vector3(0.0, 0.0, 1.0))
@@ -661,6 +690,11 @@ func _test_progress() -> void:
 		]
 	)
 
+
+
+## Kills go through dot-stats' event feed.
+func _progress_feed(game: BfhGame) -> void:
+	var progress := game.progress
 	_check(progress.feed != null and progress.feed.tracker == progress.stats,
 		"kills go through dot-stats' event feed over the progress tracker")
 	var was_reporting := progress.stats.report_to_backbone
@@ -669,6 +703,11 @@ func _test_progress() -> void:
 		"the feed files a flattening and refuses a suicide")
 	progress.stats.report_to_backbone = was_reporting
 
+
+
+## Standing when the clock runs out is a round survived.
+func _progress_round_survived(game: BfhGame) -> void:
+	var progress := game.progress
 	# Ticked without awaiting physics: nothing here is about a body moving.
 	var round_was := game.round_number
 	for _i in range(int(10.5 * 60.0)):
@@ -687,6 +726,11 @@ func _test_progress() -> void:
 		]
 	)
 
+
+
+## The first achievements, for people and never the bot, and a leaver forgotten.
+func _progress_earned(game: BfhGame, earned: Array) -> void:
+	var progress := game.progress
 	_check(
 		earned.has("d:Road Rage") and earned.has("r:Traffic Control")
 		and earned.has("r:Still Standing") and not earned.any(func(e: String) -> bool: return e.begins_with("b:")),
@@ -704,9 +748,6 @@ func _test_progress() -> void:
 		"and a player who leaves is forgotten by the counters",
 		str(progress.describe()["players"])
 	)
-
-	await _dispose(game)
-	_done()
 
 
 # --- A player's settings
