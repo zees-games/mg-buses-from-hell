@@ -54,7 +54,7 @@ func _run() -> void:
 	_shot_bowl(client)
 	_shot_chat(client)
 	_shot_deck(client)
-	await _shot_wait()
+	await _shot_wait(client)
 	await _shot_swing(client)
 
 	if not _o_action.is_empty():
@@ -242,12 +242,18 @@ func _shot_deck(client: Node) -> void:
 
 
 ## Spend the requested seconds drawing.
-func _shot_wait() -> void:
+func _shot_wait(client: Node) -> void:
 	# --view=killcam spends --seconds after the round ends, not before.
 	_o_killcam_seconds = _o_seconds
 	if _o_killcam:
 		_o_seconds = 4.0
 	_o_elapsed = 0.0
+	# The loading cover lifts a moment after the player exists; capturing early shows only the cover.
+	var platform: DotGameClient = client.get("platform")
+	var waited := 0
+	while platform != null and not platform.is_shown() and waited < 600:
+		await get_tree().process_frame
+		waited += 1
 	while _o_elapsed < _o_seconds:
 		_o_elapsed += get_process_delta_time()
 		await get_tree().process_frame
