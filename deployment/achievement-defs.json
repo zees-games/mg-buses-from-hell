@@ -1,0 +1,174 @@
+{
+	"format": "dot-achievement-defs",
+	"version": 1,
+	"achievements": [
+		{
+			"key": "bfh.road_rage",
+			"name": "Road Rage",
+			"description": "Run somebody down.",
+			"points": 5,
+			"category": "driving",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "bfh.flattening",
+			"tier": 1,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "bfh.runners_flattened",
+					"op": "at_least",
+					"value": 1.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "bfh.rush_hour",
+			"name": "Rush Hour",
+			"description": "Run twenty-five people down.",
+			"points": 20,
+			"category": "driving",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "bfh.flattening",
+			"tier": 2,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "bfh.runners_flattened",
+					"op": "at_least",
+					"value": 25.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "bfh.still_standing",
+			"name": "Still Standing",
+			"description": "Be on your feet when the clock runs out.",
+			"points": 10,
+			"category": "running",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "bfh.surviving",
+			"tier": 1,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "bfh.rounds_survived",
+					"op": "at_least",
+					"value": 1.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "bfh.unflattenable",
+			"name": "Unflattenable",
+			"description": "Outlast the buses ten times.",
+			"points": 30,
+			"category": "running",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "bfh.surviving",
+			"tier": 2,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "bfh.rounds_survived",
+					"op": "at_least",
+					"value": 10.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "bfh.marathon",
+			"name": "Marathon",
+			"description": "Spend ten minutes on your feet with a bus after you.",
+			"points": 20,
+			"category": "running",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "",
+			"tier": 0,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "bfh.seconds_survived",
+					"op": "at_least",
+					"value": 600.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "bfh.demolition",
+			"name": "Demolition",
+			"description": "Break fifty crates.",
+			"points": 15,
+			"category": "the_bowl",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "",
+			"tier": 0,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "bfh.crates_broken",
+					"op": "at_least",
+					"value": 50.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "bfh.traffic_control",
+			"name": "Traffic Control",
+			"description": "Put a crate in front of a bus.",
+			"points": 10,
+			"category": "the_bowl",
+			"icon": "",
+			"hidden": false,
+			"secret": true,
+			"series": "bfh.traffic",
+			"tier": 1,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "bfh.crates_into_path",
+					"op": "at_least",
+					"value": 1.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "bfh.roadworks",
+			"name": "Roadworks",
+			"description": "Put ten crates in front of a bus.",
+			"points": 25,
+			"category": "the_bowl",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "bfh.traffic",
+			"tier": 2,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "bfh.crates_into_path",
+					"op": "at_least",
+					"value": 10.0,
+					"merge": "sum"
+				}
+			]
+		}
+	]
+}
