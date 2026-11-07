@@ -121,11 +121,12 @@ func _build() -> void:
 	_root.add_child(vitals)
 
 	_cover = _label(font_size)
-	_cover.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	# Top right: the bottom right belongs to the touch buttons.
+	_cover.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	_cover.offset_left = -330.0
 	_cover.offset_right = -30.0
-	_cover.offset_top = -76.0
-	_cover.offset_bottom = -30.0
+	_cover.offset_top = 18.0
+	_cover.offset_bottom = 64.0
 	_cover.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 
 	# A dot rather than a cross: the hammer has a reach of two metres and no spread,
@@ -223,7 +224,11 @@ static func watching_line(p_game: BfhGame, own: BfhPlayer) -> String:
 
 	var roam_key: String = BfhBindings.key_name(BfhBindings.ROAM)
 
+	var touch := DotPlatform.has_touch()
+
 	if p_game.spectate.is_roaming(own.player_id):
+		if touch:
+			return "down — free camera"
 		return "down — free camera (WASD · space/ctrl: up/down · shift: fast · %s: back to the players)" % roam_key
 
 	var target := p_game.spectate.target_of(own.player_id)
@@ -242,4 +247,7 @@ static func watching_line(p_game: BfhGame, own: BfhPlayer) -> String:
 			return "down — next round"
 
 	var roam_hint := (" · %s: free camera" % roam_key) if p_game.spectate.can_roam(own.player_id) else ""
+	if touch:
+		return "down — watching %s" % name
+
 	return "down — watching %s   (click: next · right-click: back · space: view%s)" % [name, roam_hint]

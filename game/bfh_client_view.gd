@@ -8,6 +8,7 @@ const BfhNetCommand := preload("net/bfh_net_command.gd")
 
 const BfhConfig := preload("bfh_config.gd")
 const BfhMapConfig := preload("bfh_map_config.gd")
+const BfhTouch := preload("bfh_touch.gd")
 const BfhSpectate := preload("bfh_spectate.gd")
 const BfhViewmodel := preload("bfh_viewmodel.gd")
 
@@ -72,6 +73,9 @@ var workbench: DotGameWorkbench = null
 
 var _offline: bool = true
 var _sampler: DotFpsSampler = null
+
+## The phone's on-screen buttons; null off a touch device.
+var _touch: BfhTouch = null
 
 ## Which session this client is, once the server has said. -1 until then, so nothing
 ## matches before it does.
@@ -304,6 +308,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _covered():
 		return
 
+	# A finger on the steer pad or the look half; the buttons are DotTouchButtons' own.
+	if event is InputEventScreenTouch or event is InputEventScreenDrag:
+		var touch_sampler := _active_sampler()
+		if touch_sampler is DotFpsTouchSampler:
+			(touch_sampler as DotFpsTouchSampler).set_screen_width(get_viewport().get_visible_rect().size.x)
+		if touch_sampler != null:
+			touch_sampler.handle_event(event)
+		return
+
 	# A runner who is out: the mouse and the jump key are the spectator's, and nothing
 	# below — a swing, a turn — means anything for somebody who is not in the round.
 	if player != null and game.spectate != null and game.spectate.is_spectating(player.player_id):
@@ -332,16 +345,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var button := event as InputEventMouseButton
 
 		if button.button_index == MOUSE_BUTTON_LEFT:
-			_swinging = button.pressed
-
-			# Offline there is no command to carry the button: the world is right here and
-			# the swing is resolved against it directly. Connected, the flag above rides
-			# the next command and the SERVER swings.
-			if _offline and button.pressed:
-				_swing_locally()
-			elif button.pressed and viewmodel != null and player != null and not player.riding:
-				# Connected the server resolves the swing; the hand swings on the press.
-				viewmodel.swing()
+			_set_swing(button.pressed)
 
 	if player == null:
 		return
@@ -354,6 +358,27 @@ func _unhandled_input(event: InputEvent) -> void:
 			player.sampler.handle_event(event)
 		elif _sampler != null:
 			_sampler.handle_event(event)
+
+func _active_sampler() -> DotFpsSampler:
+	if _offline and player != null and player.sampler != null:
+		return player.sampler
+	return _sampler
+
+func _touch_ignores(position: Vector2) -> bool:
+	return _touch != null and _touch.buttons != null and _touch.buttons.contains_point(position)
+
+## The swing button, from the mouse or the screen.
+func _set_swing(pressed: bool) -> void:
+	_swinging = pressed
+
+	# Offline there is no command to carry the button: the world is right here and
+	# the swing is resolved against it directly. Connected, the flag rides the next
+	# command and the SERVER swings.
+	if _offline and pressed:
+		_swing_locally()
+	elif pressed and viewmodel != null and player != null and not player.riding:
+		# Connected the server resolves the swing; the hand swings on the press.
+		viewmodel.swing()
 
 ## Which spectator request an input event is, or -1. Left click is next, right click is
 ## back, and the jump key changes between their eyes and behind them.

@@ -45,10 +45,10 @@ func _ready() -> void:
 	# The sampler lives HERE and not on the player, because on a connected client the
 	# local player does not exist yet: they arrive in a JOIN, several frames after the
 	# keyboard does.
-	_sampler = DotFpsSampler.new(BfhPlayer.tunables_for(config))
-	DotFpsSampler.register_default_actions(_sampler)
+	_sampler = BfhTouch.make_sampler(BfhPlayer.tunables_for(config), _touch_ignores)
 
 	_build_hud()
+	_build_touch()
 	_build_chat()
 	_build_audio()
 	_build_fx()
@@ -292,6 +292,10 @@ func _adopt(candidate: BfhPlayer) -> void:
 	if platform != null:
 		_suspend_input(platform.is_input_blocked())
 
+	if DotPlatform.has_touch() and player.sampler != null and not player.sampler is DotFpsTouchSampler:
+		player.sampler = BfhTouch.make_sampler(player.sampler.tunables, _touch_ignores)
+		_suspend_input(platform.is_input_blocked() if platform != null else false)
+
 	if settings != null:
 		settings.bind_camera(camera)
 		# Offline the player samples for themselves, from their controller's own tunables.
@@ -346,6 +350,20 @@ func _build_hud() -> void:
 	hud = BfhHud.new()
 	hud.name = "Hud"
 	add_child(hud)
+
+## The phone's buttons over the HUD, on a touch device only.
+func _build_touch() -> void:
+	if not DotPlatform.has_touch() or hud == null:
+		return
+	_touch = BfhTouch.new()
+	# BfhHud is a CanvasLayer; the buttons need a Control to anchor to.
+	var host := Control.new()
+	host.name = "TouchHost"
+	host.set_anchors_preset(Control.PRESET_FULL_RECT)
+	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(host)
+	_touch.build(host, _active_sampler, _set_swing, platform)
+
 
 ## After the world, because it listens to the world's round signals from the start: a
 ## round that ends before anybody has pressed Tab still puts the score up. After the
