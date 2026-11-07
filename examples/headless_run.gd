@@ -79,7 +79,7 @@ func _run() -> void:
 func _test_settings() -> void:
 	print("a player's settings")
 
-	var schema := BfhSettings.schema_for()
+	var schema := BfhSettings.spec_for().make_schema()
 	# reduce_motion is read by the client when the winner reveal is presented, not pushed by the menu.
 	# ambient and ambient_volume are followed by the client's ambience director.
 	# LEFT_TO_THE_GAME keys are applied by DotGameClient (slide sounds, DotFxRenderQuality), as in dot-menu's selftest.
