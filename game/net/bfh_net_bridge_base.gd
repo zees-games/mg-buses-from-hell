@@ -1,4 +1,4 @@
-extends Node
+extends DotGameNetIo
 
 const BfhBusNet := preload("bfh_bus_net.gd")
 const BfhEvent := preload("bfh_event.gd")
@@ -61,14 +61,9 @@ signal chat_received(wire: Dictionary)
 signal voice_arrived(payload: PackedByteArray)
 
 var game: BfhGame = null
-var net: DotNetManager = null
-var link: BfhNetLink = null
 
 ## Which session this process is. Zero on a server.
 var local_player_id: int = 0
-
-## Where the clock learns how long the link is, in milliseconds.
-var rtt_source: Callable = Callable()
 
 ## Where a voice frame goes on the server. Assigned by [DotGameModule] to the services
 ## layer's `relay_voice`, because the bridge is the only thing that names both ends.
@@ -114,18 +109,6 @@ func _exit_tree() -> void:
 	if profile_link != null:
 		profile_link.release()
 		profile_link = null
-
-## How every dot-net message reaches a peer.
-func _send(peer_id: int, payload: PackedByteArray, delivery: int) -> void:
-	if link == null:
-		return
-
-	if delivery == DotNetMessage.Delivery.UNRELIABLE:
-		link.send_snapshot(peer_id, payload)
-	elif net.is_server:
-		link.send_event(peer_id, payload)
-	else:
-		link.send_request(payload)
 
 # --- Identity helpers
 

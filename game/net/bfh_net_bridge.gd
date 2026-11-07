@@ -238,15 +238,6 @@ func client_tick(tick: int, command: DotFpsCommand) -> void:
 
 # --- Receiving
 
-func receive_snapshot(payload: PackedByteArray) -> DotResult:
-	if net == null or net.is_server:
-		return DotResult.fail(DotError.CODE_FORBIDDEN, "Only a client receives these.")
-
-	if rtt_source.is_valid():
-		net.stats.note_rtt(float(rtt_source.call()))
-
-	return net.receive_snapshot(payload)
-
 ## [param packet] and the commands before it from the local replay history, oldest first,
 ## for one input packet. See [constant INPUT_COPIES].
 func _input_copies(packet: DotNetInput) -> Array:
@@ -313,16 +304,6 @@ func receive_voice(peer_id: int, payload: PackedByteArray) -> DotResult:
 
 	voice_arrived.emit(payload)
 	return DotResult.success(null)
-
-func receive_event(payload: PackedByteArray) -> DotResult:
-	if net == null:
-		return DotResult.fail(DotError.CODE_STATE, "No manager.")
-	return net.receive(payload, 1)
-
-func receive_request(peer_id: int, payload: PackedByteArray) -> DotResult:
-	if net == null:
-		return DotResult.fail(DotError.CODE_STATE, "No manager.")
-	return net.receive(payload, peer_id)
 
 # --- Server: what a joining peer is told
 
