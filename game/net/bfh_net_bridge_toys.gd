@@ -71,8 +71,8 @@ func _register_toys() -> void:
 ## A toy's behaviour and identity under [param parent], registered under [param net_id] (0
 ## allocates: the server); null when the registry refused it. The behaviour before the
 ## identity, which collects behaviours in its `_ready`.
-func _toy_entity(toy: DotPropToy, parent: Node, net_id: int) -> BfhToyNet:
-	var behaviour := BfhToyNet.new()
+func _toy_entity(toy: DotPropToy, parent: Node, net_id: int) -> DotGameToyNet:
+	var behaviour := DotGameToyNet.new()
 	behaviour.name = "Net"
 	behaviour.toy = toy
 	var holder := Node3D.new() if parent != toy else null
@@ -106,7 +106,7 @@ func _toy_entity(toy: DotPropToy, parent: Node, net_id: int) -> BfhToyNet:
 ## toy collects every behaviour under it in its `_ready`, and a freed one found there broke the
 ## next snapshot. The server's, on a map change or a new set.
 func _release_toys() -> void:
-	for behaviour: BfhToyNet in _toy_nets:
+	for behaviour: DotGameToyNet in _toy_nets:
 		if not is_instance_valid(behaviour):
 			continue
 		if behaviour.identity != null and net != null and net.registry.has(behaviour.identity.net_id):
@@ -147,19 +147,19 @@ func _pair_pending_toys() -> void:
 	if box != null and box.count() != _toy_nets.size():
 		DotLog.warn(CHANNEL, "the server's map has a different number of toys", {"server": _toy_nets.size(), "here": box.count()})
 	for i in range(_toy_nets.size()):
-		var behaviour: BfhToyNet = _toy_nets[i]
+		var behaviour: DotGameToyNet = _toy_nets[i]
 		behaviour.toy = box.toy(i) if box != null else null
 
 ## Client: the old bowl's toys are about to go; the mirrors stay registered, without them.
 func _unpair_toys() -> void:
-	for behaviour: BfhToyNet in _toy_nets:
+	for behaviour: DotGameToyNet in _toy_nets:
 		if is_instance_valid(behaviour):
 			behaviour.toy = null
 
 ## How many toys this end replicates (a client: mirrors paired with a toy). For a check.
 func toy_count() -> int:
 	var n := 0
-	for behaviour: BfhToyNet in _toy_nets:
+	for behaviour: DotGameToyNet in _toy_nets:
 		if is_instance_valid(behaviour) and (net.is_server or behaviour.toy != null):
 			n += 1
 	return n

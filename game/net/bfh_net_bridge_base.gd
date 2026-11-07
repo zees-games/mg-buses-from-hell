@@ -6,7 +6,6 @@ const BfhEvents := preload("bfh_events.gd")
 const BfhNetCommand := preload("bfh_net_command.gd")
 const BfhNetLink := preload("bfh_net_link.gd")
 const BfhPlayerNet := preload("bfh_player_net.gd")
-const BfhToyNet := preload("bfh_toy_net.gd")
 const BfhPropNet := preload("bfh_prop_net.gd")
 const BfhRequest := preload("bfh_request.gd")
 
