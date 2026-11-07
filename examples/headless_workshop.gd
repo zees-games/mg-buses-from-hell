@@ -55,7 +55,7 @@ func _index(session: StringName) -> DotContentIndex:
 func _vote(index: DotContentIndex) -> BfhVote:
 	var vote := BfhVote.new()
 	vote.content_index = index
-	vote.bowls_fn = func() -> Array: return [[&"bfh_bowl", "The Bowl"], [&"bfh_small_bowl", "The Small Bowl"]]
+	vote.maps_fn = func() -> Array: return [[&"bfh_bowl", "The Bowl"], [&"bfh_small_bowl", "The Small Bowl"]]
 	vote.apply_fn = func(id: StringName) -> DotResult: return DotResult.success(id)
 	add_child(vote)
 	var built := vote.setup()
@@ -147,7 +147,7 @@ func _test_ids() -> void:
 	print("")
 	print("the shared index")
 	var vote := BfhVote.new()
-	vote.bowls_fn = func() -> Array: return [[&"bfh_bowl", "The Bowl"]]
+	vote.maps_fn = func() -> Array: return [[&"bfh_bowl", "The Bowl"]]
 	add_child(vote)
 	var built := vote.setup()
 	_check(built.ok, "a vote with no fixture follows the process's shared index")

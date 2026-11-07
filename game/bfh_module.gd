@@ -308,7 +308,7 @@ func _add_rotation(world: BfhGame) -> void:
 		world.config.map_rotation_file = new_value.strip_edges()
 		var _read := world.load_rotation()
 		if vote != null:
-			vote.refresh_bowls())
+			vote.refresh_maps())
 
 func _cmd_rotation(ctx: DotCmdContext) -> void:
 	var world := game as BfhGame
@@ -330,7 +330,7 @@ func _cmd_rotation(ctx: DotCmdContext) -> void:
 		return
 
 	if vote != null:
-		vote.refresh_bowls()
+		vote.refresh_maps()
 
 	ctx.reply("Rotation: %s" % ctx.arg(0))
 
@@ -339,7 +339,7 @@ func _cmd_maps_reload(ctx: DotCmdContext) -> void:
 	var read := world.load_rotation()
 
 	if vote != null:
-		vote.refresh_bowls()
+		vote.refresh_maps()
 
 	ctx.reply("maps.yml read." if read.ok else read.error.message)
 
@@ -478,7 +478,7 @@ static func _bot_name(world: BfhGame) -> String:
 func _build_vote(world: BfhGame) -> void:
 	vote = BfhVote.new()
 	vote.name = "BowlVote"
-	vote.bowls_fn = func() -> Array:
+	vote.maps_fn = func() -> Array:
 		var out: Array = []
 
 		# Only the bowls maps.yml rotates; the map menu and an admin still load any.
@@ -572,7 +572,7 @@ func _build_vote(world: BfhGame) -> void:
 	# Every round is one play of its bowl, changed or not; the warmup is none.
 	world.round_began.connect(func(_number: int) -> void:
 		if vote != null:
-			vote.note_bowl(world.bowl_id)
+			vote.note_map(world.bowl_id)
 	)
 	world.match_node.round_ended.connect(func(_number: int, _winner: int, _outcome: int) -> void:
 		if vote != null:

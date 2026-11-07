@@ -31,4 +31,3 @@ game/bfh_client.gd::_build_netcode	87
 game/bfh_module.gd::_build_vote	109
 game/bfh_module.gd::_game_load	97
 game/bfh_sounds.gd::catalogue	118
-game/bfh_vote.gd::setup	84
