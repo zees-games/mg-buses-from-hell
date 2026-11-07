@@ -137,7 +137,7 @@ func ensure_game_ticked(tick: int) -> void:
 	game.tick_once(tick)
 
 	# The toys where the physics left them, before the snapshot.
-	for behaviour: BfhToyNet in _toy_nets:
+	for behaviour: DotGameToyNet in _toy_nets:
 		behaviour.pull()
 
 	# The hammer, from the button the command carried. AFTER the movement, because a
