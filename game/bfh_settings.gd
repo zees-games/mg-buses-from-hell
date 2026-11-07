@@ -1,4 +1,4 @@
-extends DotMenuSettings
+extends DotMenuGameSettings
 
 const BfhBindings := preload("bfh_bindings.gd")
 
@@ -22,50 +22,26 @@ const NOT_APPLIED: Array[StringName] = [&"chat_window"]
 
 
 func _init() -> void:
-	name = "Settings"
-	directory = SETTINGS_DIR
-	app_namespace = APP_NAMESPACE
-	schema = schema_for()
-	config = DotMenuConfig.new()
-	config.brand_name = "Buses from Hell"
-	# By name: an older dot-menu has no such property, and assigning it would stop this function.
-	if &"menu_button_corner" in config:
-		config.set(&"menu_button_corner", &"top_left")
-	# Help and Leave are dot-menu's stock: H opens help, Leave leaves the server or quits a
-	# solo game. Every game in the family has both (the first play test found this one with
-	# neither). The keys are a table now ([BfhBindings]), so the help screen lists them.
-	bindings = BfhBindings.make()
-	var _layered := config.load_layered()
+	super(spec_for())
 
 
-## The document: this game's field of view first, so it keeps its own default, then the
-## stock settings it applies.
-static func schema_for() -> DotSettingsSchema:
-	var s := DotSettingsSchema.new()
-	s.version = SCHEMA_VERSION
-	s.add(DotSettingsDef.integer(&"field_of_view", DEFAULT_FOV, 70, 120, &"video").with_scope(
-		DotSettingsDef.Scope.SERVER_CLAMPED
-	))
-	s.add(DotSettingsDef.boolean(&"reduce_motion", false, &"accessibility").with_scope(DotSettingsDef.Scope.ACCOUNT)
-		.with_description("The end-of-round announcement appears at once, with nothing sliding, rising or bursting."))
-	s.add(DotSettingsDef.boolean(&"ambient", true, &"audio").with_description("Quiet sounds under the bowl."))
-	s.add(DotSettingsDef.number(&"ambient_volume", 1.0, 0.0, 1.0, &"audio"))
-	return DotMenuStock.declare(s, DotMenuStock.DEFAULT_GROUPS, null, NOT_APPLIED)
-
-
-func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
-	var made := super.setup(store, with_menu)
-	if menu != null:
-		var general := menu.page(&"general")
-		if general != null:
-			general.section("Comfort").add(DotMenuRow.toggle(&"reduce_motion", "Reduce motion",
-				"The end-of-round announcement appears at once."))
-	return made
-
-
-## The help screen's goal and rules; the keys come from [BfhBindings].
-func _fill_help(help: DotMenuHelp) -> void:
-	help.about = "Two players drive buses; everybody else runs. Drivers win by flattening every runner before the clock runs out; runners win if anybody is still standing when it does."
-	help.add_text("Running", "Your hammer cannot hurt a bus. Use it to break and shove crates into cover and walls, and keep moving. Barrels explode when anything hits them, throwing runners into the air and crates across the bowl. Concrete blocks never move.")
-	help.add_text("Driving", "Steer with the movement keys and run the runners over. A crate breaks under one hit at speed, and the left mouse button sounds the horn. Sides swap every three rounds, so everybody gets a turn driving.")
-	help.add_section("Mouse", [["Left", "Swing the hammer, or the horn in a bus; watch the next player while out"], ["Right", "Watch the one before while out"], ["Middle", "Their eyes or behind them, while out"]], &"keys")
+## The game's settings as data: names, field of view, extra settings, keys and the help screen's goal and rules.
+static func spec_for() -> DotMenuGameSpec:
+	var s := DotMenuGameSpec.new()
+	s.schema_version = SCHEMA_VERSION
+	s.brand_name = "Buses from Hell"
+	s.settings_dir = SETTINGS_DIR
+	s.app_namespace = APP_NAMESPACE
+	s.default_fov = DEFAULT_FOV
+	s.reduce_motion_text = "The end-of-round announcement appears at once, with nothing sliding, rising or bursting."
+	s.comfort_row_text = "The end-of-round announcement appears at once."
+	s.ambient_text = "Quiet sounds under the bowl."
+	s.not_applied = NOT_APPLIED
+	s.bindings_maker = func() -> DotMenuBindings: return BfhBindings.make()
+	s.help_about = "Two players drive buses; everybody else runs. Drivers win by flattening every runner before the clock runs out; runners win if anybody is still standing when it does."
+	s.help_cards = [
+		["Running", "Your hammer cannot hurt a bus. Use it to break and shove crates into cover and walls, and keep moving. Barrels explode when anything hits them, throwing runners into the air and crates across the bowl. Concrete blocks never move."],
+		["Driving", "Steer with the movement keys and run the runners over. A crate breaks under one hit at speed, and the left mouse button sounds the horn. Sides swap every three rounds, so everybody gets a turn driving."],
+	]
+	s.help_sections = [["Mouse", [["Left", "Swing the hammer, or the horn in a bus; watch the next player while out"], ["Right", "Watch the one before while out"], ["Middle", "Their eyes or behind them, while out"]], &"keys"]]
+	return s
