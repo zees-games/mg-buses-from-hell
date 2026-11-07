@@ -380,13 +380,15 @@ func _set_swing(pressed: bool) -> void:
 		# Connected the server resolves the swing; the hand swings on the press.
 		viewmodel.swing()
 
-## Which spectator request an input event is, or -1. Left click is next, right click is
+## Which spectator request an input event is, or -1. A tap or left click is next, right click is
 ## back, and the jump key changes between their eyes and behind them.
 static func spectator_ask(event: InputEvent) -> int:
+	# A tap or a left click; the mouse press the engine emulates from a touch is skipped, so one tap steps once.
+	if DotSpectatorHost.is_next_press(event):
+		return BfhSpectate.ASK_NEXT
+
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
 		match (event as InputEventMouseButton).button_index:
-			MOUSE_BUTTON_LEFT:
-				return BfhSpectate.ASK_NEXT
 			MOUSE_BUTTON_RIGHT:
 				return BfhSpectate.ASK_PREVIOUS
 			MOUSE_BUTTON_MIDDLE:
