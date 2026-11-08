@@ -18,6 +18,9 @@ var net_crouch: float = 0.0
 var net_flags: int = 0
 var net_modifiers: int = 0
 
+## The jump timers (coyote, jump buffer, cooldown), owner only, for the owner's rewind. Opt-in on dot-player-controller API 10; see its docs/networking.md.
+var net_timers: int = 0
+
 ## Hit points, and the one field with a hard cap on the wire.
 var net_health: float = 100.0
 
@@ -62,6 +65,12 @@ func _register_net_vars() -> void:
 			declaration.interpolated()
 		if spec["property"] == &"net_crouch":
 			declaration.range_of(0.0, 1.0)
+
+	# Owner-only jump timers, appended after the movement specs (declaration order is wire order).
+	# Guarded: a shell without API 10 has no DotFpsNetSync.rewind_specs().
+	if DotAddonApi.build_level("dot_player_controller") >= 10:
+		for spec in DotFpsNetSync.rewind_specs():
+			var _timers := replicate(spec["property"], DotNetVar.Type[spec["type"]]).bits(int(spec["bits"])).to_owner_only()
 
 	# Server-driven: only the game writes these, never the owner's prediction, so a change is not a misprediction.
 	replicate(&"net_health", DotNetVar.Type.FLOAT_RANGE).range_of(0.0, 1000.0).bits(12).server_driven()
