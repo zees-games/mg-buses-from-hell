@@ -22,7 +22,7 @@ const BfhStats := preload("../game/bfh_stats.gd")
 
 ## Proves the bowl, the crates, the hammer, the barrels and the buses all actually work.
 
-const CHECKS := 381
+const CHECKS := 382
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
