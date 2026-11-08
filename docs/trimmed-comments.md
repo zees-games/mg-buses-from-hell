@@ -1894,7 +1894,7 @@ Swing from [param origin] along [param direction].
 
 [b]Given an origin and a direction rather than a camera.[/b] The same rule dot-props' own tools follow: a tool that owned a camera could not be swung by a bot, by a replay, or by a headless test, and all three are things this game's suite does.
 
-Returns whether the swing happened at all — false means it was still on cooldown, which is different from a swing that missed. A swing's weight against a toy, as a shot's damage (dot-props' `DotPropToyBox.shot`): a beach ball goes off at its nine metres a second, a barrel rolls.
+Returns whether the swing happened at all — false means it was still on cooldown, which is different from a swing that missed. A swing's weight against a toy, as a shot's damage (dot-props' `DotPropBodyBox.shot`): a beach ball goes off at its nine metres a second, a barrel rolls.
 
 ### game/bfh_hud.gd (was line 8)
 
@@ -3002,9 +3002,9 @@ Anything a client asks the authority for. Reliable, rare, to the server only.
 
 ### game/net/bfh_toy_net.gd (was line 3)
 
-One of the map's toys on the wire (dot-props' [DotPropToy]): where its moving part is and how it is turned, whether it is on, and how often it has been used.
+One of the map's toys on the wire (dot-props' [DotPropBody]): where its moving part is and how it is turned, whether it is on, and how often it has been used.
 
-[b]The server's physics, never predicted[/b], for the reason game-arena's ArenaProps gives: Godot's rigid-body solver is not the same on two machines. The client's toy is frozen and posed from these ([method DotPropToy.show_state]), so a see-saw a person stands on there is the plank the server tipped, an interpolation behind, and a roundabout's spin is measured from the poses.
+[b]The server's physics, never predicted[/b], for the reason game-arena's ArenaProps gives: Godot's rigid-body solver is not the same on two machines. The client's toy is frozen and posed from these ([method DotPropBody.show_state]), so a see-saw a person stands on there is the plank the server tipped, an interpolation behind, and a roundabout's spin is measured from the poses.
 
 [b]Paired by index[/b]: both ends build the same toys in the same order from the map, so the TOYS event carries only the net ids, in toy order, and nothing here says which toy it is.
 

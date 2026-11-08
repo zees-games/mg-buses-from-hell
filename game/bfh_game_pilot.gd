@@ -710,7 +710,7 @@ static func clear_cache() -> void:
 	DotHumanoidFigure.clear_cache()
 	DotHudPiece.clear_cache()
 	DotMenuKit.clear_cache()
-	DotPropToyLook.clear_cache()
+	DotPropBodyLook.clear_cache()
 	DotPropModel.clear_cache()
 	DotLog.clear_cache()
 	DotRegistry.clear_cache()

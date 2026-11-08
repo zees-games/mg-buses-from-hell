@@ -2,12 +2,12 @@ extends "bfh_game_hazards.gd"
 ## The bowl's loose toys: built from the arena's ring, pushed by the people who walk into them.
 
 ## dot-props' `sv_toys*`, bound by the module (REPLICATED) and followed by a client.
-var toy_rules: DotPropToyRules = DotPropToyRules.new()
+var toy_rules: DotPropBodyRules = DotPropBodyRules.new()
 
 ## The bowl's toys (dot-props' loose ones: beach balls, barrels, a tyre), on a ring the arena works
 ## out from its build (`BfhArena.toy_placements`), so both ends place the same toys in the same
 ## order.
-var toys: DotPropToyBox = null
+var toys: DotPropBodyBox = null
 
 ## The bowl's toys are about to go (the arena is rebuilt), and are built: what the bridge
 ## releases and pairs their entities on.
@@ -27,7 +27,7 @@ func _build_toys() -> void:
 		remove_child(toys)
 		toys.queue_free()
 		toys = null
-	toys = DotPropToyBox.new()
+	toys = DotPropBodyBox.new()
 	toys.name = "Toys"
 	toys.authoritative = authoritative
 	toys.rules = toy_rules
