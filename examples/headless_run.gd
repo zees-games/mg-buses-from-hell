@@ -1,4 +1,4 @@
-extends "headless_run_client.gd"
+extends "headless_run_flashlight.gd"
 ## Proves the bowl, the crates, the hammer, the barrels and the buses all actually work. Runs the sections in order.
 
 
@@ -55,6 +55,7 @@ func _run() -> void:
 	await _test_a_rolled_bus()
 	await _test_blind_and_beacon_drawn()
 	await _test_spectating()
+	await _test_the_flashlight()
 	await _test_the_sounds()
 	await _test_progress()
 	_test_settings()

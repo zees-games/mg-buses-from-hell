@@ -323,6 +323,11 @@ func _on_request(message: DotNetMessage) -> void:
 			_admit(peer_id)
 		BfhEvents.Ask.WATCH:
 			_answer_watch(peer_id, BfhEvents.read_watch(ask.reader()))
+		BfhEvents.Ask.FLASHLIGHT:
+			var session_id := player_for_peer(peer_id)
+
+			if session_id != 0:
+				var _switched := game.toggle_flashlight(player_key(session_id))
 		BfhEvents.Ask.SAY:
 			var said := BfhEvents.read_say(ask.reader())
 

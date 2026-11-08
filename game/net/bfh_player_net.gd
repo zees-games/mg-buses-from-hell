@@ -32,6 +32,9 @@ var net_blind: bool = false
 ## `BfhPlayer.beacon`. Everybody's.
 var net_beacon: bool = false
 
+## `BfhPlayer.flashlight`. Everybody's: the beam is drawn for the others.
+var net_flashlight: bool = false
+
 ## The net id of the bus they are driving, or 0 on foot.
 var net_bus: int = 0
 
@@ -69,6 +72,7 @@ func _register_net_vars() -> void:
 	# way, a round re-laying the bowl: each is a baseline the next snapshot corrects, where an event.
 	replicate(&"net_blind", DotNetVar.Type.BOOL).to_owner_only().server_driven()
 	replicate(&"net_beacon", DotNetVar.Type.BOOL).server_driven()
+	replicate(&"net_flashlight", DotNetVar.Type.BOOL).server_driven()
 	replicate(&"net_bus", DotNetVar.Type.VARINT).server_driven()
 
 	# Seven modes fit in three bits. The owner's alone: see [member net_watch].
@@ -121,6 +125,7 @@ func pull() -> void:
 	net_riding = player.riding
 	net_blind = player.blinded
 	net_beacon = player.beacon
+	net_flashlight = player.flashlight
 	net_bus = 0
 
 	if player.riding and bridge != null and player.ridden != null:
@@ -179,6 +184,7 @@ func _adopt() -> void:
 
 	player.blinded = net_blind
 	player.beacon = net_beacon
+	player.flashlight = net_flashlight
 
 	if net_riding and net_bus != 0 and bridge != null:
 		var bus: Variant = bridge.call("body_of_net_id", net_bus)

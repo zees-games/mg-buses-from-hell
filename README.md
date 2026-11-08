@@ -38,6 +38,7 @@ When you are run over, you watch the bus that got you for a moment, then whoever
 | **Space** | Jump | |
 | **Mouse 1** | Swing the hammer | Horn |
 | **G** | While out: a free camera (WASD, Space / Ctrl up and down, Shift fast, Alt slow, mouse to look), and back onto a player | |
+| **F** | Flashlight, while still up (starts off: the bowl is in daylight). A lit beam is seen by everyone who can see you | Flashlight, from the cab |
 | **Tab** (hold) | Scoreboard | Scoreboard |
 | **Y** / **U** | Chat / chat to your side | Chat / chat to your side |
 | **V** | Push to talk (to your side) | Push to talk |

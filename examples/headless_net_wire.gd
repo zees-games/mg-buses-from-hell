@@ -2,11 +2,11 @@ extends "headless_net_harness.gd"
 ## The wire: the join, the bowl arriving, the bus, and the local runner's prediction.
 
 
-const CHECKS := 225
+const CHECKS := 231
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
-const SECTIONS := 26
+const SECTIONS := 27
 
 
 ## Frames drawn per tick in [method _test_somebody_else_is_drawn], each at its own fraction

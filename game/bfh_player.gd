@@ -91,6 +91,10 @@ var blinded: bool = false
 ## draws, and a ping every client hears, until it is turned off.
 var beacon: bool = false
 
+## The flashlight is on (server-owned, replicated); `flashlight_ready` is cleared on a new bowl so the next tick sets its start state.
+var flashlight: bool = false
+var flashlight_ready: bool = false
+
 ## The marker [member beacon] draws, while it does. Client side; built and freed by
 ## [method present_beacon].
 var beacon_marker: DotFxBeacon = null
@@ -367,5 +371,6 @@ func describe() -> Dictionary:
 		"carried": "%.1f m" % carried_metres,
 		"blinded": blinded,
 		"beacon": beacon,
+		"flashlight": flashlight,
 		"figure": figure.describe() if figure != null else {},
 	}
