@@ -27,6 +27,9 @@ signal unlocked(player_id: StringName, achievement: DotAchievement)
 
 var stats: DotStatsTracker = null
 
+## The skill rank, built on lifetime totals: baseline read at join, republished after each reading, forgotten on leave.
+var rank: DotStatsRank = null
+
 ## Flattenings for the head-to-head table, through dot-stats' event feed; ids are player ids.
 var feed: DotStatsEventFeed = null
 var achievements: DotAchievementTracker = null
@@ -135,6 +138,22 @@ func attach(world: Node3D) -> DotResult:
 	if not linked.ok:
 		return linked.wrap("the stats-to-achievements link")
 
+	rank = DotStatsRank.new()
+	rank.stat_id = BfhStats.RANK_SCORE
+	rank.terms = [
+		{"stat": String(BfhStats.RUNNERS_FLATTENED), "weight": 3.0},
+		{"stat": String(BfhStats.ROUNDS_SURVIVED), "weight": 2.0},
+		{"stat": String(BfhStats.CRATES_INTO_PATH), "weight": 1.0},
+		{"stat": String(BfhStats.CRATES_BROKEN), "weight": 0.5},
+		{"stat": String(BfhStats.SECONDS_SURVIVED), "weight": 0.02},
+	]
+	# Filed straight on the tracker: going through _record would republish the rank from inside its own publish.
+	rank.record_fn = func(who: Variant, stat: StringName, value: float) -> void:
+		var key := key_of(StringName(str(who)))
+		if key != "" and stats != null:
+			var _filed := stats.record(StringName(key), stat, value)
+	rank.key_fn = func(who: Variant) -> StringName: return StringName(key_of(StringName(str(who))))
+
 	world.connect("player_added", _on_player_added)
 	world.connect("player_removed", _on_player_removed)
 	world.connect("player_died", _on_player_died)
@@ -198,6 +217,17 @@ func _record(player_id: StringName, stat: StringName, value: float = 1.0) -> voi
 		DotLog.warn(CHANNEL, "a reading was refused", {
 			"stat": String(stat), "why": recorded.error.message,
 		})
+		return
+
+	publish_rank(player_id)
+
+
+## Republishes the player's rank score from the stored lifetime totals plus this session.
+func publish_rank(player_id: StringName) -> void:
+	if rank == null or stats == null or key_of(player_id) == "":
+		return
+
+	var _score := rank.publish_lifetime(player_id, session_values(player_id), stats.schema)
 
 
 # --- Players
@@ -212,6 +242,11 @@ func _on_player_added(player_id: StringName) -> void:
 	_up_since[player_id] = float(_world.get("round_elapsed"))
 
 	var player := _player(player_id)
+
+	# Before this session's figures reach the store: reading later would count them twice.
+	if rank != null and stats.store != null:
+		rank.load_baseline(stats.store, player_id)
+
 	stats.begin(StringName(key), player.display_name if player != null else "")
 
 	# Not awaited: a join does not wait on a store.
@@ -239,6 +274,8 @@ func _on_player_removed(player_id: StringName) -> void:
 
 	_player_of_key.erase(key)
 	stats.end(StringName(key))
+	if rank != null:
+		rank.forget(player_id)
 	# Without this the link holds one baseline per stat per player who has ever joined,
 	# for as long as the server is up. Its own documentation says so.
 	link.forget(key)

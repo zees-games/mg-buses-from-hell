@@ -21,6 +21,9 @@ const CRATES_INTO_PATH := &"bfh.crates_into_path"
 ## to the end of it or to being put down.
 const SECONDS_SURVIVED := &"bfh.seconds_survived"
 
+## The published skill figure the site orders by (dot-stats' DotStatsRank). Derived from the five above, so it is not in [method ids].
+const RANK_SCORE := &"rank_score"
+
 
 ## Every id above, in declaration order. Written out, because a constant is not
 ## enumerable in GDScript.
@@ -39,6 +42,7 @@ static func schema() -> DotStatsSchema:
 	_counter(schema, CRATES_BROKEN, "Crates broken", "crates")
 	_counter(schema, CRATES_INTO_PATH, "Crates put in a bus's path", "crates")
 	_counter(schema, SECONDS_SURVIVED, "Time survived", "s")
+	var _rank := DotStatsRank.declare(schema, RANK_SCORE, "Rank score")
 
 	return schema
 

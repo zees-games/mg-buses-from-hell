@@ -553,7 +553,7 @@ func _test_progress() -> void:
 		if not schema.has(id):
 			undeclared.append(String(id))
 	_check(
-		unread.is_empty() and undeclared.is_empty() and schema.size() == BfhStats.ids().size(),
+		unread.is_empty() and undeclared.is_empty() and schema.size() == BfhStats.ids().size() + 1,
 		"every stat is read by an achievement, and every achievement reads a declared stat",
 		"unread %s, undeclared %s" % [str(unread), str(undeclared)]
 	)
@@ -632,6 +632,13 @@ func _progress_crates_broken(
 			progress.session_values(&"b").get_value(BfhStats.CRATES_BROKEN),
 		]
 	)
+
+	var held := DotStatsValues.new()
+	held.values = {String(BfhStats.RUNNERS_FLATTENED): 10.0}
+	progress.rank.seed_baseline(&"r", held)
+	progress.publish_rank(&"r")
+	_check(progress.session_values(&"r").get_value(BfhStats.RANK_SCORE, 0.0) == roundf(10.0 * 3.0 + 0.5),
+		"rank_score is built on the stored lifetime (10 flattened) plus this session, not the session alone")
 
 
 
