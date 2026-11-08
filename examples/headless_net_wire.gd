@@ -748,6 +748,5 @@ func _predicted_a_crate_and_an_early_join(server_player: BfhPlayer, mine: DotNet
 	var placed: Dictionary = framing.place(DotKillViewRules.Camera.BEHIND, eye, 75.0, Vector3(0, 1.2, -20))
 	_check((placed["transform"] as Transform3D).origin.z > 1.0, "the behind camera sits behind the killer's eye")
 	kc.free()
-	_done()
 
 
