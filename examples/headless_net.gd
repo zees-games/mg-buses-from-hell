@@ -13,6 +13,12 @@ func _run() -> void:
 	var errors := EngineErrors.new()
 	OS.add_logger(errors)
 
+	# One physics step per frame, and a frame this suite awaits per tick. At the default of eight a
+	# slow frame (the first ones, or a loaded machine) runs the bus's wheels and every other rigid
+	# body several steps for one tick of the game, so when the bot's bus reaches the runner, and so
+	# what every later section starts from, differs between runs of the same code.
+	Engine.max_physics_steps_per_frame = 1
+
 	print("buses-from-hell over the wire")
 	print("")
 
