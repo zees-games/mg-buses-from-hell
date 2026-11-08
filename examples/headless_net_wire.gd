@@ -1,8 +1,9 @@
 extends "headless_net_harness.gd"
 ## The wire: the join, the bowl arriving, the bus, and the local runner's prediction.
 
+const BfhKillcam := preload("../game/bfh_killcam.gd")
 
-const CHECKS := 231
+const CHECKS := 233
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -740,5 +741,13 @@ func _predicted_a_crate_and_an_early_join(server_player: BfhPlayer, mine: DotNet
 		"a local runner mirrored before HELLO is claimed when HELLO arrives",
 		"owner %d, predicted %s" % [mine.owner_peer_id, mine.is_predicted()]
 	)
+	var kc := BfhKillcam.new()
+	_check(kc.camera_mode_fn.call() == DotKillViewRules.Camera.EYE, "the killcam camera is the eye until the server says")
+	var framing := DotKillcamFraming.new(null, 1)
+	var eye := Transform3D(Basis.IDENTITY, Vector3(0, 1.6, 0))
+	var placed: Dictionary = framing.place(DotKillViewRules.Camera.BEHIND, eye, 75.0, Vector3(0, 1.2, -20))
+	_check((placed["transform"] as Transform3D).origin.z > 1.0, "the behind camera sits behind the killer's eye")
+	kc.free()
+	_done()
 
 

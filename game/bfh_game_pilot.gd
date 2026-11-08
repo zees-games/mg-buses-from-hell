@@ -31,7 +31,6 @@ var _bus_backing: Dictionary = {}
 ## Bus instance id -> the planned turn a bot is making in front of the ramp's foot.
 var _bus_turning: Dictionary = {}
 
-
 ## Overridden by the game: the runner team.
 func runners() -> Array[BfhPlayer]:
 	return []
@@ -105,7 +104,6 @@ func _round_the_blocks(player: BfhPlayer, bus: DotVehicleInstance, aim: Vector3,
 func sound_horn(_player: BfhPlayer) -> bool:
 	return false
 
-
 ## Turns each driver's movement keys into throttle and steering.
 func _drive_buses(delta: float) -> void:
 	for id: StringName in players:
@@ -154,7 +152,6 @@ func _drive_buses(delta: float) -> void:
 
 		if bus.chassis != null:
 			(bus.chassis as DotVehicleChassis).drive(command, delta)
-
 
 ## Drives a bot's bus at whoever is nearest.
 func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> DotVehicleCommand:
@@ -284,7 +281,6 @@ func _bound_for_the_ramp(bus: DotVehicleInstance, beyond: Vector3, delta: float)
 ## Instance id -> seconds of reversing a wedged bot bus has left.
 var _bus_backing_off: Dictionary = {}
 
-
 ## A bot bus that has been throttling against something, backing out of it: reverse with the wheel
 ## over (in reverse it swings the nose towards the side [param toward] is on) for
 ## `bot_unwedge_seconds`, then null so the ordinary drive takes over from where it got to.
@@ -318,17 +314,13 @@ func _back_off(bus: DotVehicleInstance, toward: Vector3, delta: float) -> DotVeh
 	command.sanitise()
 	return command
 
-
 ## Instance id -> true when the wedged bus's current leg is forward rather than reverse.
 var _bus_back_forward: Dictionary = {}
 
-
 const BACK_OFF_THROTTLE := 0.9
-
 
 ## Instance id -> `{path, age, to}`: the street route a bot bus is following.
 var _bus_routes: Dictionary = {}
-
 
 ## The waypoints a bot bus follows through a district to [param beyond], replanned every
 ## `bot_route_replan` seconds or when the quarry has moved on, with the ones it has reached
@@ -354,12 +346,10 @@ func _street_path(bus: DotVehicleInstance, quarry_at: Vector3, beyond: Vector3,
 	_bus_routes[bus.instance_id] = held
 	return path.duplicate()
 
-
 ## How far a bot's quarry may move before its route is planned again, and how close to a
 ## waypoint a bus is before it counts as passed. Metres.
 const STREET_REPLAN_MOVED := 6.0
 const STREET_PASSED := 3.5
-
 
 ## A bot bus that has to face the other way to get up the ramp turns round in legs, or null to drive
 ## on.
@@ -405,7 +395,6 @@ func _turn_for_the_ramp(bus: DotVehicleInstance, aim: Vector3, delta: float) -> 
 	command.steer = -toward if reverse else toward
 	command.sanitise()
 	return command
-
 
 ## A bot bus bound up the ramp that cannot simply drive at it (back to it, or climbing off the
 ## middle) turns or backs down and lines up again. Null when neither applies and the ordinary line-
@@ -656,7 +645,6 @@ func _ramp_turn_legs(bus: DotVehicleInstance, plan: Dictionary, command: DotVehi
 	command.sanitise()
 	return command
 
-
 ## Whether the end of [param bus] it is moving towards ([param reverse] for the tail) is about to
 ## run out of floor: any of its two corners and its middle, a margin ahead along the way that point
 ## is moving, inside [constant RAMP_TURN_MARGIN] of an obstacle, the slab or the deck, or, with a.
@@ -687,7 +675,6 @@ func _end_blocked(bus: DotVehicleInstance, pos: Vector3, forward: Vector3, right
 		if absf(pos.x - c.x) > RAMP_TURN_ACROSS and velocity.x * (pos.x - c.x) > 0.0:
 			return true
 	return false
-
 
 ## [method _turn_round_for_the_ramp]'s numbers. Degrees off the ramp's axis a ramp-bound
 ## bot has to face for it to turn round; how fast it drives to the turning point (m/s) and
@@ -744,7 +731,6 @@ const RAMP_TURN_REST := 8.0
 ## Instance id -> seconds a bus that gave up its turn has left away from the ramp rules.
 var _bus_turn_rest: Dictionary = {}
 
-
 ## How near its waypoint a stopped bot bus has to be to be standing on it: twice the
 ## autopilot's 0.5 m `arrive_radius`. See [method _autopilot].
 const PARKED_ON_WAYPOINT := 1.0
@@ -764,11 +750,8 @@ const RAMP_BACK_LONGEST := 2.5
 const RAMP_FORWARD_LONGEST := 1.5
 const RAMP_TURN_THROTTLE := 0.7
 
-
-
 ## The preset a bot's numbers are taken relative to, so medium drives as before presets.
 static var _MEDIUM: DotBotProfile = DotBotProfile.new()
-
 
 ## Releases every static resource the game holds, plus the family's shared caches, for a suite
 ## to call before quit(); after it the statics are unusable until the script reloads.
@@ -783,7 +766,6 @@ static func clear_cache() -> void:
 	DotLog.clear_cache()
 	DotRegistry.clear_cache()
 
-
 ## Where a bot aims past a runner, from where they are now: their run times the seconds the
 ## bus needs to get there (capped at two), by how much more (or less) than medium this bot
 ## reads a moving target. Zero at medium.
@@ -794,7 +776,6 @@ func _bot_lead(bus: DotVehicleInstance, quarry: BfhPlayer, skill: DotBotProfile)
 	run.y = 0.0
 	var seconds := minf(quarry.global_position.distance_to(bus.position()) / maxf(config.bus_top_speed, 1.0), 2.0)
 	return run * seconds * (skill.prediction - _MEDIUM.prediction)
-
 
 func _nearest_runner(to: Vector3) -> BfhPlayer:
 	var best: BfhPlayer = null

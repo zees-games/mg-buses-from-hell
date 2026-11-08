@@ -28,6 +28,9 @@ var winner_reveal: DotWinnerReveal = null
 
 ## The server's `mp_killcam_time`; -1 until it has said, so the config's number stands.
 var _killcam_sec: float = -1.0
+
+## The server's `mp_killview_camera` ([enum DotKillViewRules.Camera]); the eye until it has said.
+var _killcam_camera: int = DotKillViewRules.Camera.EYE
 var _round_ending: bool = false
 var _round_end_number: int = 0
 var _round_end_winner: int = 0
@@ -42,6 +45,8 @@ func _build_killcam() -> void:
 	killcam.driver_fn = func(p: BfhPlayer) -> bool: return game.team_of(p.player_id) == BfhGame.TEAM_DRIVERS
 	killcam.seconds_fn = func() -> float: return _killcam_sec if _killcam_sec >= 0.0 else game.config.killcam_seconds
 	killcam.hide_while_playing = [hud, chat.window if chat != null else null, ragdolls]
+	killcam.camera_mode_fn = func() -> int: return _killcam_camera
+	killcam.world_mask = 1
 	killcam.over.connect(func(_skipped: bool) -> void: _reveal_round())
 	add_child(killcam)
 	winner_reveal = DotWinnerReveal.new()
@@ -57,6 +62,7 @@ func _build_killcam() -> void:
 	game.round_began.connect(func(_number: int) -> void: _end_round_presentation())
 	if link != null and link.has_method(&"replicated_cvar"):
 		_on_killcam_cvar("mp_killcam_time", String(link.call(&"replicated_cvar", "mp_killcam_time", "")))
+		_on_killcam_cvar("mp_killview_camera", String(link.call(&"replicated_cvar", "mp_killview_camera", "")))
 		if link.has_signal(&"replicated_cvar_changed"):
 			link.connect(&"replicated_cvar_changed", _on_killcam_cvar)
 
@@ -65,6 +71,8 @@ func _build_killcam() -> void:
 func _on_killcam_cvar(cvar_name: String, value: String) -> void:
 	if cvar_name == "mp_killcam_time" and value.strip_edges().is_valid_float():
 		_killcam_sec = clampf(value.to_float(), 0.0, 30.0)
+	elif cvar_name == "mp_killview_camera" and value.strip_edges().is_valid_float():
+		_killcam_camera = DotKillViewRules.Camera.BEHIND if value.to_float() >= 0.5 else DotKillViewRules.Camera.EYE
 
 
 ## A death is the round's last moment if nothing follows it. A bus puts the runner in its

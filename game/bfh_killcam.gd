@@ -39,7 +39,15 @@ var buffer := DotKillcamBuffer.new()
 var killcam: DotKillcam = null
 var camera: Camera3D = null
 
+## Where the camera sits ([enum DotKillViewRules.Camera]): the server's `mp_killview_camera`.
+var camera_mode_fn: Callable = func() -> int: return DotKillViewRules.Camera.EYE
+
+## Layers the camera boom stops against (the level's).
+var world_mask: int = 1
+
 var _previous_camera: Camera3D = null
+var _framing: DotKillcamFraming = null
+var _base_fov: float = 75.0
 var _touched: Dictionary = {}
 var _buses: Dictionary = {}
 var _hidden: Dictionary = {}
@@ -150,6 +158,9 @@ func _on_started(_kill: Dictionary) -> void:
 	if _previous_camera != null and _previous_camera != camera:
 		camera.fov = _previous_camera.fov
 		camera.cull_mask = _previous_camera.cull_mask
+	_base_fov = camera.fov
+	if _framing != null:
+		_framing.reset()
 	camera.make_current()
 	for n: Variant in hide_while_playing:
 		if n is Object and is_instance_valid(n) and (n as Object).get(&"visible") != null:
@@ -163,6 +174,11 @@ func _apply(s: Dictionary) -> void:
 	var b: Dictionary = s["b"]
 	var alpha: float = s["alpha"]
 	var subject := String(killcam.kill()["data"].get("subject", ""))
+	var victim := String(killcam.kill()["data"].get("victim", ""))
+	var behind := int(camera_mode_fn.call()) == DotKillViewRules.Camera.BEHIND
+	var eye := Transform3D.IDENTITY
+	var target: Variant = null
+	var seen := false
 	if not camera.current:
 		camera.make_current()
 	for id: Variant in b:
@@ -183,9 +199,19 @@ func _apply(s: Dictionary) -> void:
 			_place_bus(p, bus_a if bus_a != null else bus_b, bus_b if bus_b != null else bus_a, alpha)
 		if String(id) == subject:
 			var rise := BfhPlayer.EYE_HEIGHT + (CAB_RISE if riding else 0.0)
-			camera.global_position = at + Vector3(0.0, rise, 0.0)
-			camera.global_rotation = Vector3(deg_to_rad(pitch), deg_to_rad(yaw), 0.0)
-		_place_body(p, at, yaw, alive and not riding and String(id) != subject, pitch, lerpf(ra[4], rb[4], alpha))
+			eye = Transform3D(Basis.from_euler(Vector3(deg_to_rad(pitch), deg_to_rad(yaw), 0.0)), at + Vector3(0.0, rise, 0.0))
+			seen = true
+		elif victim != "" and String(p.get(&"display_name")) == victim:
+			target = at + Vector3(0.0, 1.2, 0.0)
+		# Behind the killer its own body is in shot, so it is drawn.
+		_place_body(p, at, yaw, alive and not riding and (behind or String(id) != subject), pitch, lerpf(ra[4], rb[4], alpha))
+	if seen:
+		if _framing == null:
+			_framing = DotKillcamFraming.new(camera.get_world_3d() if is_inside_tree() else null, world_mask)
+		_framing.probe.collision_mask = world_mask
+		var v := _framing.place(int(camera_mode_fn.call()), eye, _base_fov, target, get_process_delta_time())
+		camera.global_transform = v["transform"]
+		camera.fov = v["fov"]
 
 
 func _place_bus(p: Node, from: Transform3D, to: Transform3D, alpha: float) -> void:

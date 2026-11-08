@@ -122,6 +122,11 @@ func _game_load() -> DotResult:
 			world.config.killcam_seconds = clampf(new_value.to_float(), 0.0, 30.0)
 			world.apply_intermission())
 
+	# REPLICATED: where the clients' killcam camera sits (0 the killer's eye, 1 behind the killer).
+	var _camera := add_cvar("mp_killview_camera", "0",
+		"Killcam camera: 0 the killer's eye, 1 behind the killer (dot-replay DotKillcamFraming)",
+		DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
+
 	_bots = add_cvar(
 		"bfh_bots", "1",
 		"Bots in empty driving seats: 1 keeps as many as bot_quota and bot_quota_mode say, 0 none at all."
