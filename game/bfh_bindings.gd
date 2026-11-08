@@ -8,6 +8,8 @@ const SCOREBOARD := &"bfh_scoreboard"
 const VIEW := &"bfh_view"
 ## A spectator's free camera: does nothing to anybody who is playing.
 const ROAM := &"bfh_roam"
+## The flashlight, on and off, for everybody still up.
+const FLASHLIGHT := &"bfh_flashlight"
 ## The chat box's actions (`BfhClientChat`), which dot-ui's window creates only if missing.
 const CHAT := &"bfh_chat"
 const CHAT_TEAM := &"bfh_chat_team"
@@ -23,6 +25,7 @@ static func make() -> DotMenuBindings:
 	keys.add(&"dot_fps_jump", &"bind_jump", "Jump (while out: change the view)", "Space", "Movement")
 	# One hammer and no switching, so the wheel is free: each tick is one press of jump.
 	keys.add_wheel_jump("Movement")
+	keys.add(FLASHLIGHT, &"bind_flashlight", "Flashlight", "F", "General")
 	keys.add(CHAT, &"bind_chat", "Chat", "Y", "Communication")
 	keys.add(CHAT_TEAM, &"bind_chat_team", "Chat to your side", "U", "Communication")
 	keys.add(SCOREBOARD, &"bind_scoreboard", "Scoreboard (hold)", "Tab", "General")

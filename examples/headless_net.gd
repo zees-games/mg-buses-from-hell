@@ -1,4 +1,4 @@
-extends "headless_net_out.gd"
+extends "headless_net_flashlight.gd"
 
 ## game-buses-from-hell over the wire: a real server, a real client, and a lossy loopback between
 ## them.
@@ -33,6 +33,7 @@ func _run() -> void:
 		await _test_a_lossy_link()
 		await _test_a_snapshot_in_parts()
 		await _test_blind_and_beacon()
+		await _test_the_flashlight_crosses()
 		await _test_somebody_else_is_drawn()
 		await _test_who_somebody_is_crosses()
 		await _test_a_runner_who_is_out()

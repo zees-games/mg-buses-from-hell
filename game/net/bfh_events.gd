@@ -48,6 +48,8 @@ enum Ask {
 	SAY,
 	## I am out and watching: next, previous, or change the view. `BfhSpectate.ASK_*`.
 	WATCH,
+	## Switch my flashlight.
+	FLASHLIGHT,
 }
 
 ## Every decoder returns an `ok` beside its fields, and every caller checks it.

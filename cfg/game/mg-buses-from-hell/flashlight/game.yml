@@ -1,0 +1,12 @@
+# mg-buses-from-hell: the flashlight (dot-flashlight), every shown key at its default here, commented out. Uncomment a line to change it;
+# an operator overrides in cfg/server/game/mg-buses-from-hell/flashlight/game.yml. Layers: defaults < this < env < argv.
+# enabled: true
+# key: F
+# default_state: 2
+# range_m: 20.0
+# angle: 36.0
+# energy: 3.2
+# shadows: true
+# shadows_on_web: false
+# shadow_beams: 2
+# battery: false

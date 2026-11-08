@@ -1,4 +1,4 @@
-extends "bfh_game_roster.gd"
+extends "bfh_game_flashlight.gd"
 
 const BfhAmbience := preload("bfh_ambience.gd")
 
@@ -604,6 +604,8 @@ func tick_once(tick: int) -> void:
 ## The step both entry points share.
 func _step(delta: float) -> void:
 	round_elapsed += delta
+
+	_advance_flashlights()
 
 	for id: StringName in players:
 		var player: BfhPlayer = players[id]

@@ -186,6 +186,10 @@ func _tell(peer_id: int, kind: int, body: PackedByteArray) -> void:
 func ask_ready() -> void:
 	_ask(BfhEvents.Ask.READY, PackedByteArray([0]))
 
+## Switch the flashlight. The server owns on/off and answers in the player's replicated state.
+func ask_flashlight() -> void:
+	_ask(BfhEvents.Ask.FLASHLIGHT, PackedByteArray([0]))
+
 ## Says something. The server decides what it means and who hears it.
 func ask_say(channel_id: StringName, text: String) -> void:
 	if text.strip_edges() == "":

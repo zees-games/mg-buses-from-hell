@@ -1,4 +1,4 @@
-extends "bfh_client_view.gd"
+extends "bfh_client_flashlight.gd"
 
 func _ready() -> void:
 	# First, before anything can be drawn: the bowl, the player and the camera arrive after
@@ -487,6 +487,10 @@ func _start_remote_workbench() -> void:
 	if game.config_binder != null:
 		for set: DotProfileSet in game.config_binder.profile_sets():
 			wb.add_set(set, "Game settings: %s" % set.rel_path.trim_prefix("config_"))
+	var _fl := game.flashlight_conf()
+	if game.flashlight_binder != null:
+		for set: DotProfileSet in game.flashlight_binder.profile_sets():
+			wb.add_set(set, "Flashlight")
 	add_child(wb)
 	var started := wb.start(game.ensure_runtime())
 	DotLog.result(CHANNEL, "the remote workbench", started)
@@ -509,11 +513,17 @@ func _add_noblock_and_workbench() -> void:
 	if game.config_binder != null:
 		for set: DotProfileSet in game.config_binder.profile_sets():
 			wb.add_set(set, "Game settings: %s" % set.rel_path.trim_prefix("config_"))
+	var _fl := game.flashlight_conf()
+	if game.flashlight_binder != null:
+		for set: DotProfileSet in game.flashlight_binder.profile_sets():
+			wb.add_set(set, "Flashlight")
 	add_child(wb)
 	var started := wb.start()
 	DotLog.result(CHANNEL, "the workbench", started)
 	if started.ok and game.config_binder != null and wb.api != null:
 		game.config_binder.attach(wb.api.runtime as DotProfileRuntime)
+	if started.ok and game.flashlight_binder != null and wb.api != null:
+		game.flashlight_binder.attach(wb.api.runtime as DotProfileRuntime)
 	platform.add_workbench(wb)
 
 ## Whether the pointer is the game's: captured. A menu frees it and the platform takes it back.
