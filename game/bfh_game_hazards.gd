@@ -192,6 +192,15 @@ func _clear_props_under(bus: DotVehicleInstance, by: StringName) -> void:
 		bus_struck.emit(prop.instance_id, by)
 		prop_damage.break_now(prop.instance_id, by)
 
+func block_positions() -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	if props == null:
+		return out
+	for prop in props.all_props():
+		if prop.def.id == &"block" and prop.body() != null:
+			out.append(prop.body().global_position)
+	return out
+
 ## A bus that is throttling and going nowhere, and what to do about it.
 func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
 	var asking := bus.command != null and absf(bus.command.throttle) > 0.3

@@ -37,6 +37,70 @@ func runners() -> Array[BfhPlayer]:
 	return []
 
 
+## Overridden by the game: where the concrete blocks lie. A bus cannot break one and can climb onto one.
+func block_positions() -> Array[Vector3]:
+	return []
+
+
+## How far ahead a bot looks for a block (more at speed: a bus doing 14 m/s needs the room), the
+## room it leaves beside one past the bus's half width, and the speed it allows itself at a block
+## `ahead` metres off: `BLOCK_SPEED_BASE + ahead * BLOCK_SPEED_PER_M`.
+const BLOCK_LOOK_AHEAD := 12.0
+const BLOCK_LOOK_SECONDS := 1.2
+const BLOCK_ROOM := 2.5
+const BLOCK_SPEED_BASE := 4.0
+const BLOCK_SPEED_PER_M := 0.8
+
+
+## Bus instance id -> `{block, sign}`: the side of a block a bot has chosen to pass on.
+var _bus_block_side: Dictionary = {}
+
+
+## [param aim] (on the way to [param goal]) swung round the nearest block lying across the bus's way,
+## or [param aim] itself, and slows the bot's driver for it. A block cannot be broken, so a bus that
+## drives onto one sits high-centred on it until the stuck rule hops it off (`bfh_downtown`,
+## `--pace-seed=12`: two seconds on open floor where an avenue crosses a street). Judged against the
+## bus's heading, so a block beside the way is left alone.
+func _round_the_blocks(player: BfhPlayer, bus: DotVehicleInstance, aim: Vector3, goal: Vector3) -> Vector3:
+	var at := bus.position()
+	var forward := -bus.body().global_basis.z
+	forward.y = 0.0
+	if forward.length() < 0.01:
+		return aim
+	forward = forward.normalized()
+	var right := Vector3(-forward.z, 0.0, forward.x)
+	var to_goal := Vector2(goal.x - at.x, goal.z - at.z).length()
+	var nearest := Vector3.INF
+	var nearest_ahead := maxf(BLOCK_LOOK_AHEAD, bus.speed() * BLOCK_LOOK_SECONDS)
+	for block in block_positions():
+		var rel := block - at
+		rel.y = 0.0
+		var ahead := rel.dot(forward)
+		if ahead < 1.0 or ahead >= nearest_ahead or ahead > to_goal:
+			continue
+		if absf(rel.dot(right)) > BUS_HALF_WIDTH + BLOCK_ROOM:
+			continue
+		nearest = block
+		nearest_ahead = ahead
+	if nearest == Vector3.INF:
+		return aim
+	player.autopilot.target_speed = minf(player.autopilot.target_speed,
+		BLOCK_SPEED_BASE + nearest_ahead * BLOCK_SPEED_PER_M)
+	# The side nearer the aim when the block is first met, and the same side after: the aim moves as
+	# the bus turns, and a bus swung back and forth between the two sides drives along the block.
+	var room := BUS_HALF_WIDTH + BLOCK_ROOM + 1.0
+	var held: Dictionary = _bus_block_side.get(bus.instance_id, {})
+	var side_sign := float(held.get("sign", 0.0))
+	if held.is_empty() or Vector3(held["block"]).distance_to(nearest) > 1.0:
+		var left := nearest - right * room
+		var right_of := nearest + right * room
+		side_sign = -1.0 if left.distance_squared_to(aim) < right_of.distance_squared_to(aim) else 1.0
+		_bus_block_side[bus.instance_id] = {"block": nearest, "sign": side_sign}
+	var detour := nearest + right * room * side_sign
+	detour.y = aim.y
+	return detour
+
+
 ## Overridden by the game: sounds a driver's horn.
 func sound_horn(_player: BfhPlayer) -> bool:
 	return false
@@ -133,6 +197,10 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 	# past the quarry is last.
 	if not bound and arena.routes_through_streets():
 		var path := _street_path(bus, quarry.global_position, beyond, delta)
+		var head := path[0] if not path.is_empty() else beyond
+		var round_block := _round_the_blocks(player, bus, head, beyond)
+		if round_block != head:
+			path.insert(0, round_block)
 		var backed := _back_off(bus, path[0] if not path.is_empty() else beyond, delta)
 		if backed != null:
 			return backed

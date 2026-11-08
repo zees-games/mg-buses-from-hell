@@ -577,7 +577,12 @@ func _pace_drive(bowl_id: StringName, seconds: float, extra: Callable = Callable
 		await _step(game, 20)
 
 	var bus := game.vehicles.get_vehicle(game._bus_ids[0])
-	var stream := DotRandomStream.new(11, &"pace")
+	# --pace-seed=N reproduces another scatter (the default 11 is the one the floors were set on).
+	var pace_seed := 11
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--pace-seed="):
+			pace_seed = int(arg.trim_prefix("--pace-seed="))
+	var stream := DotRandomStream.new(pace_seed, &"pace")
 	var out := {"covered": 0.0, "seconds": 0.0, "resets": 0, "reaches": 0, "stalls": 0,
 		"longest_stall": 0.0, "stall_at": Vector3.ZERO}
 	var last := bus.position()
