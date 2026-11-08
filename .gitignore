@@ -31,6 +31,8 @@
 /addons/dot_menu
 /addons/dot_console
 /addons/dot_net
+# dot-sim: optional native library (snapshot codec); without its built library the GDScript twins run.
+/addons/dot_sim
 /addons/dot_server
 /addons/dot_game
 /addons/dot_workbench
