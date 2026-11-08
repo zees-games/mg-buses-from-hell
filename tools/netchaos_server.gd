@@ -29,10 +29,23 @@ func _boot_world() -> void:
 		printerr("netchaos server: ", loaded.error)
 		return
 	module = server.modules.get_module("buses")
+	_game.player_added.connect(_protect)
+	var bots: DotConVar = server.console.find_cvar("bfh_bots")
+	if bots != null:
+		bots.force_set("0")
 	if solid != "":
 		var cv: DotConVar = server.console.find_cvar("mp_solidplayers")
 		if cv != null:
 			cv.force_set(solid)
+
+
+## The pilot cannot be run over. The bots drive at the only runner, and with no intermission the round that its death ends starts again
+## within 90 ms, so the client never sees it dead: it sees a live player put 60 m away, a respawn teleport that read as a prediction
+## error of that size. A bus still shoves it (`_bus_hit` knocks a runner in god mode too), a server-side impulse the client cannot predict (0.7 m at the end of a clean run), so the rig drives no bots (`bfh_bots 0`): the pilot runs alone and what is judged is its own prediction.
+func _protect(player_id: StringName) -> void:
+	var player = _game.players.get(player_id)
+	if player != null and not player.is_bot and player.health != null:
+		player.health.invulnerable = true
 
 
 func _players() -> Array:
