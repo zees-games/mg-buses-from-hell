@@ -248,12 +248,9 @@ func _shot_wait(client: Node) -> void:
 	if _o_killcam:
 		_o_seconds = 4.0
 	_o_elapsed = 0.0
-	# The loading cover lifts a moment after the player exists; capturing early shows only the cover.
-	var platform: DotGameClient = client.get("platform")
-	var waited := 0
-	while platform != null and not platform.is_shown() and waited < 600:
-		await get_tree().process_frame
-		waited += 1
+	# Past the load cover (slow on a cold GPU box); capped, so a stuck cover cannot hang the shot.
+	if not await DotShotGate.wait_lifted(get_tree(), client.get("platform")):
+		printerr("shot: load cover still up after the wait; shooting anyway")
 	while _o_elapsed < _o_seconds:
 		_o_elapsed += get_process_delta_time()
 		await get_tree().process_frame
