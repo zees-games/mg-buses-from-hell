@@ -446,7 +446,7 @@ Drives a runner through [param waypoints] the way a person would: run at each on
 
 Prints how the last [method _run_route] went — the ground it covered next to the route's length, the time, and the average speed next to the runner's [code]max_speed[/code] — and returns that average as a fraction of it.
 
-[b]Printed whether or not anything is asserted on it.[/b] A detail line shows only on failure, so a speed that is only asserted is a speed nobody reads again once it passes; `[bot-drive-1]` found game-playground's bots crossing its maps at a seventh of their speed behind checks that had passed for as long as they existed.
+[b]Printed whether or not anything is asserted on it.[/b] A detail line shows only on failure, so a speed that is only asserted is a speed nobody reads again once it passes; `[bot-drive-1]` found game-playlot's bots crossing its maps at a seventh of their speed behind checks that had passed for as long as they existed.
 
 ### examples/headless_run.gd (was line 2025)
 
@@ -2102,7 +2102,7 @@ One person in the bowl: their movement, their view, their health, and their hamm
 
 [b]This file is a bridge, and the family's own history says bridges are where the bugs are.[/b] Every addon it touches is complete and tested on its own; what has never run is the joins. The three this game adds to the family's usual set are all here, and all three are orderings:
 
-- a player standing on a crate has to be carried by it [i]after[/i] the motor has   moved them, because the motor writes an absolute position and anything applied   before it is overwritten; - the weight they press into that crate is applied on the same tick they were   standing on it, not the next one, or a crate reacts to where somebody was; - a driver's movement is turned OFF rather than ignored while they are in a bus,   for the reason game-playground records: two authorities over one transform reads   as the vehicle shaking itself apart at speed.
+- a player standing on a crate has to be carried by it [i]after[/i] the motor has   moved them, because the motor writes an absolute position and anything applied   before it is overwritten; - the weight they press into that crate is applied on the same tick they were   standing on it, not the next one, or a crate reacts to where somebody was; - a driver's movement is turned OFF rather than ignored while they are in a bus,   for the reason game-playlot records: two authorities over one transform reads   as the vehicle shaking itself apart at speed.
 
 ### game/bfh_player.gd (was line 47)
 
@@ -2320,7 +2320,7 @@ Chat, voice and moderation — and the moderator's live tools — wired to this 
 
 [b]The sides are the whole design, so the sides are the channels.[/b] Two drivers against everybody else is a game about two conversations that must not overhear each other: the drivers arranging who takes which half of the bowl, and the runners saying which way one is coming. `team` is therefore the channel that matters here — in a deathmatch it is a convenience and here it is the game — and it is what VOICE defaults to, which no other game in this family does.
 
-[b]There is no proximity channel, and that is a decision about the map.[/b] The bowl is 46 m across and a proximity range worth having would be most of it; a channel that reaches nearly everybody is a channel that lies about who can hear you. game-playground has one because a sandbox is a place with corners.
+[b]There is no proximity channel, and that is a decision about the map.[/b] The bowl is 46 m across and a proximity range worth having would be most of it; a channel that reaches nearly everybody is a channel that lies about who can hear you. game-playlot has one because a sandbox is a place with corners.
 
 ### game/bfh_services.gd (was line 44)
 
@@ -3008,7 +3008,7 @@ One of the map's toys on the wire (dot-props' [DotPropBody]): where its moving p
 
 [b]Paired by index[/b]: both ends build the same toys in the same order from the map, so the TOYS event carries only the net ids, in toy order, and nothing here says which toy it is.
 
-[b]A use count, not a use event[/b]: a honk, a switch and a bounce each move [member net_count] by one, and a client plays the sound when it sees it move, so a joiner and a lost packet cost nothing but a late sound. Eight bits; it wraps. game-hide-n-seek's HsToyNet, game-playground's PlaygroundToyNet and game-arena's arena_toy_net.gd are the same file.
+[b]A use count, not a use event[/b]: a honk, a switch and a bounce each move [member net_count] by one, and a client plays the sound when it sees it move, so a joiner and a lost packet cost nothing but a late sound. Eight bits; it wraps. game-hide-n-seek's HsToyNet, game-playlot's PlaygroundToyNet and game-arena's arena_toy_net.gd are the same file.
 
 ### props/bfh_art.gd (was line 5)
 
