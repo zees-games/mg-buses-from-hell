@@ -4,7 +4,7 @@
 
 ## Metres and seconds, not a genre's units
 
-game-g2gfast speaks a long-established community's units because its operators know them and its records must compare with theirs. Nothing here compares with anything, and a second set of units is a second place a ratio can drift. A bus does 22 m/s and the file says 22.
+game-airdrift speaks a long-established community's units because its operators know them and its records must compare with theirs. Nothing here compares with anything, and a second set of units is a second place a ratio can drift. A bus does 22 m/s and the file says 22.
 
 ## The hammer cannot kill, and that is the runners' whole side
 

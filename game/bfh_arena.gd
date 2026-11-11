@@ -82,7 +82,7 @@ func _clear() -> void:
 	_tank_end = 0
 	_district_buildings = []
 
-## The bowl's palette: a sunny sand bowl in the family's pastels (game-arena's built-in maps), one
+## The bowl's palette: a sunny sand bowl in the family's pastels (game-fatal-contact's built-in maps), one
 ## colour per kind of thing so a runner can call a place out ("behind the blue tanks", "up the
 ## lavender ramp").
 const SAND := Color(0.90, 0.74, 0.50)

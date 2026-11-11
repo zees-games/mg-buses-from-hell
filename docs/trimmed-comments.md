@@ -826,7 +826,7 @@ Where the [param index]th of [param count] buses starts, on the floor.
 
 ### game/bfh_arena.gd (was line 620)
 
-The bowl's palette: a sunny sand bowl in the family's pastels (game-arena's built-in maps), one colour per kind of thing so a runner can call a place out ("behind the blue tanks", "up the lavender ramp"). Warm sand underfoot, a peach-pink wall, a lavender ledge and ramp, sky-blue tanks with a deeper band, mint pillars with a darker cap. The crates, barrels and buses are Kenney's art and keep their own colours, which are the saturated things on screen: the cover and the threat. Each colour is the tint of the one-metre grid (`BfhTextures`), so the grid stays the same on every surface. The sand is a mid tone, not a pale one: it fills half of every frame, and at (0.98, 0.84, 0.60) the sunlit half rendered at 0.88 luminance under Compatibility, white enough that a crate's shadow was the only thing on it.
+The bowl's palette: a sunny sand bowl in the family's pastels (game-fatal-contact's built-in maps), one colour per kind of thing so a runner can call a place out ("behind the blue tanks", "up the lavender ramp"). Warm sand underfoot, a peach-pink wall, a lavender ledge and ramp, sky-blue tanks with a deeper band, mint pillars with a darker cap. The crates, barrels and buses are Kenney's art and keep their own colours, which are the saturated things on screen: the cover and the threat. Each colour is the tint of the one-metre grid (`BfhTextures`), so the grid stays the same on every surface. The sand is a mid tone, not a pale one: it fills half of every frame, and at (0.98, 0.84, 0.60) the sunlit half rendered at 0.88 luminance under Compatibility, white enough that a crate's shadow was the only thing on it.
 
 ### game/bfh_arena.gd (was line 640)
 
@@ -1310,7 +1310,7 @@ Every cvar this game has, layered like every other [DotConfig] in the family.
 
 [code]exported defaults < JSON file < environment < command line[/code], identically to dot-server, dot-cloud and the other four games. Nothing here reads [code]OS.get_cmdline_args[/code] itself.
 
-[b]The units are metres and seconds, and that is a decision this game gets to make where game-g2gfast did not.[/b] That game speaks a twenty-year-old community's units because its operators already know what [code]sv_airaccelerate 1000[/code] means and because its records have to be comparable with theirs. Nothing here is comparable with anything, nobody is going to type these into a console from memory, and a second set of units is a second place the ratio can drift. So a bus does 22 m/s and the file says 22.
+[b]The units are metres and seconds, and that is a decision this game gets to make where game-airdrift did not.[/b] That game speaks a twenty-year-old community's units because its operators already know what [code]sv_airaccelerate 1000[/code] means and because its records have to be comparable with theirs. Nothing here is comparable with anything, nobody is going to type these into a console from memory, and a second set of units is a second place the ratio can drift. So a bus does 22 m/s and the file says 22.
 
 ### game/bfh_config.gd (was line 31)
 
@@ -2482,7 +2482,7 @@ A generated grid, because a flat colour has no speed in it.
 
 [b]This game is judged almost entirely on closing speed, and a flat surface carries none.[/b] What a runner decides by is how fast a bus is getting bigger and how fast the ground is going past, and both of those are read off a repeating pattern of a known size. The first render of this game had `uv1_triplanar` set on every material and no texture under it — so the flag did nothing, the bowl was one unbroken tone, and the comment beside it claiming a readable scale was describing something that was not there. That is this family's own "a value produced correctly and consumed by nothing", in the shape where the value is a rendering flag.
 
-[b]Lines and a checker, not lines alone.[/b] game-g2gfast measured this and wrote it down: a pure grid seen at a glancing angle — which is every angle that matters when you are running away from something — collapses to nothing between its lines, because a mipmap keeps a tile's average and a tile that is 97% one colour *is* that colour a few metres out. Alternating squares survive the mipmap. The lines are what you read standing still; the checker is what you read at speed.
+[b]Lines and a checker, not lines alone.[/b] game-airdrift measured this and wrote it down: a pure grid seen at a glancing angle — which is every angle that matters when you are running away from something — collapses to nothing between its lines, because a mipmap keeps a tile's average and a tile that is 97% one colour *is* that colour a few metres out. Alternating squares survive the mipmap. The lines are what you read standing still; the checker is what you read at speed.
 
 ### game/bfh_vote.gd (was line 3)
 
@@ -2562,7 +2562,7 @@ Every decoder returns an `ok` beside its fields, and every caller checks it.
 
 Where a body may be, in metres, on the wire.
 
-[b]Read from [BfhGame], not written here.[/b] A quantised position is decoded against this range, so two files holding two numbers do not lose precision — they put the crate somewhere else. game-arena had exactly this, 256 against 128, in two files that each looked right on its own.
+[b]Read from [BfhGame], not written here.[/b] A quantised position is decoded against this range, so two files holding two numbers do not lose precision — they put the crate somewhere else. game-fatal-contact had exactly this, 256 against 128, in two files that each looked right on its own.
 
 ### game/net/bfh_events.gd (was line 116)
 
@@ -2642,7 +2642,7 @@ Joins a [BfhGame] to a [DotNetManager]. The netcode seam, and the only file in t
 
 ### game/net/bfh_net_bridge.gd (was line 51)
 
-Commands in every input packet: this tick's and the four before it, so a lost packet costs the server no tick unless the next four are lost too. Over WebSocket nothing is ever lost; over ENet (the desktop client, since servers went dual-stack) one command a packet was a tick the server ran on the previous command for every packet dropped. game-arena measured it first: 80% of ticks with the right command at 20% loss with one copy, 99-100% with three, and five closed the rest (2026-10-09).
+Commands in every input packet: this tick's and the four before it, so a lost packet costs the server no tick unless the next four are lost too. Over WebSocket nothing is ever lost; over ENet (the desktop client, since servers went dual-stack) one command a packet was a tick the server ran on the previous command for every packet dropped. game-fatal-contact measured it first: 80% of ticks with the right command at 20% loss with one copy, 99-100% with three, and five closed the rest (2026-10-09).
 
 ### game/net/bfh_net_bridge.gd (was line 59)
 
@@ -3004,11 +3004,11 @@ Anything a client asks the authority for. Reliable, rare, to the server only.
 
 One of the map's toys on the wire (dot-props' [DotPropBody]): where its moving part is and how it is turned, whether it is on, and how often it has been used.
 
-[b]The server's physics, never predicted[/b], for the reason game-arena's ArenaProps gives: Godot's rigid-body solver is not the same on two machines. The client's toy is frozen and posed from these ([method DotPropBody.show_state]), so a see-saw a person stands on there is the plank the server tipped, an interpolation behind, and a roundabout's spin is measured from the poses.
+[b]The server's physics, never predicted[/b], for the reason game-fatal-contact's ArenaProps gives: Godot's rigid-body solver is not the same on two machines. The client's toy is frozen and posed from these ([method DotPropBody.show_state]), so a see-saw a person stands on there is the plank the server tipped, an interpolation behind, and a roundabout's spin is measured from the poses.
 
 [b]Paired by index[/b]: both ends build the same toys in the same order from the map, so the TOYS event carries only the net ids, in toy order, and nothing here says which toy it is.
 
-[b]A use count, not a use event[/b]: a honk, a switch and a bounce each move [member net_count] by one, and a client plays the sound when it sees it move, so a joiner and a lost packet cost nothing but a late sound. Eight bits; it wraps. game-hide-n-seek's HsToyNet, game-playlot's PlaygroundToyNet and game-arena's arena_toy_net.gd are the same file.
+[b]A use count, not a use event[/b]: a honk, a switch and a bounce each move [member net_count] by one, and a client plays the sound when it sees it move, so a joiner and a lost packet cost nothing but a late sound. Eight bits; it wraps. game-hide-n-seek's HsToyNet, game-playlot's PlaygroundToyNet and game-fatal-contact's arena_toy_net.gd are the same file.
 
 ### props/bfh_art.gd (was line 5)
 
@@ -3066,7 +3066,7 @@ Derived from the art's own transform, so this keeps telling the truth if the mod
 
 Drawn per FRAME and not per tick, like every other visual in this family.
 
-A wheel advanced once per physics tick and drawn three times is a wheel that turns in bursts, which is exactly the jitter game-g2gfast measured on its camera: every simulated number correct and the picture wrong several times a second.
+A wheel advanced once per physics tick and drawn three times is a wheel that turns in bursts, which is exactly the jitter game-airdrift measured on its camera: every simulated number correct and the picture wrong several times a second.
 
 ### props/bfh_bus.gd (was line 154)
 
