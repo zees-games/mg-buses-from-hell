@@ -1,4 +1,5 @@
 extends DotGameCheckSuite
+const BfhTestPorts := preload("test_ports.gd")
 ## The dedicated server's boot, its module, the bowl vote and the rotation file.
 
 

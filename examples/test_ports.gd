@@ -1,4 +1,3 @@
-class_name BfhTestPorts
 extends RefCounted
 ## Free loopback ports for suites, so two suites (or two runs) never collide on a fixed one.
 
