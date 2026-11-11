@@ -1,0 +1,4 @@
+# logging
+# Baselines only shrink: scripts/<gate> --update lowers or drops entries and refuses to add.
+game/bfh_touch.gd::channel_silent	1
+game/bfh_vote.gd::channel_silent	1
