@@ -52,6 +52,14 @@ static func piece_theme() -> Theme:
 ## on the HUD's root now and at every theme change, and applies the player's HUD size. Duck-typed
 ## and called by name, for a client shell older than dot-menu 7.
 var _menu: Object = null
+var _wl_text := ""
+var _wl_target: StringName = &""
+var _wl_mode := -1
+var _wl_roam := false
+var _wl_can := false
+var _wl_name := ""
+var _wl_bus := false
+var _wl_touch := false
 
 
 func follow_menu(menu: Object) -> void:
@@ -212,8 +220,41 @@ func _status_line() -> String:
 	if player != null and player.riding:
 		return "driving"
 	if player != null and player.health != null and not player.health.alive:
-		return watching_line(game, player)
+		return _watching_cached()
 	return ""
+
+
+## [method watching_line], rebuilt only when what it reads changes (it is asked every frame).
+func _watching_cached() -> String:
+	var spec = game.spectate
+	var id: StringName = player.player_id
+	var key_target: StringName = &""
+	var key_mode := -1
+	var key_roam := false
+	var key_can := false
+	var key_name := ""
+	var key_bus := false
+	if spec != null and spec.is_spectating(id):
+		key_target = spec.target_of(id)
+		key_mode = spec.mode_of(id)
+		key_roam = spec.is_roaming(id)
+		key_can = spec.can_roam(id)
+		var who: BfhPlayer = game.players.get(key_target)
+		key_name = who.display_name if who != null else ""
+		key_bus = who != null and game.team_of(key_target) == BfhGame.TEAM_DRIVERS
+	var touch := DotPlatform.has_touch()
+	if _wl_text.is_empty() or key_target != _wl_target or key_mode != _wl_mode or key_roam != _wl_roam \
+			or key_can != _wl_can or key_name != _wl_name or key_bus != _wl_bus or touch != _wl_touch:
+		_wl_target = key_target
+		_wl_mode = key_mode
+		_wl_roam = key_roam
+		_wl_can = key_can
+		_wl_name = key_name
+		_wl_bus = key_bus
+		_wl_touch = touch
+		var build := watching_line  # rebuilt only on a change, so held as a Callable
+		_wl_text = build.call(game, player)
+	return _wl_text
 
 
 ## What a runner who is out is told about the camera they are looking through.

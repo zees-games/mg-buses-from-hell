@@ -69,7 +69,8 @@ func _present_flashlights(delta: float) -> void:
 		flash.handle_input = false
 		flash.authoritative = false
 		flash.audio = _flash_audio_ref()
-		flash.switch_requested.connect(_on_flash_switch)
+		if not flash.switch_requested.is_connected(_on_flash_switch):
+			flash.switch_requested.connect(_on_flash_switch)
 		camera.add_child(flash)
 
 	flash.allowed = allowed
