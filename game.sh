@@ -36,7 +36,7 @@
 GAME_NAME="Buses From Hell"
 PACK="buses"
 EXTRA_PACKS=""
-SUITES="headless_config headless_touch headless_workbench headless_mapcfg headless_run headless_net headless_workshop dedicated"
+SUITES="headless_config headless_touch headless_workbench headless_mapcfg headless_run headless_net headless_workshop dedicated headless_native_motor"
 # --------------------------------------------------------------------------------
 
 set -uo pipefail
