@@ -1,15 +1,20 @@
-This is a game to demonstrate the capabilities of the [**Dot collection**](https://moddingcommunity.com/co/4-dot-assets) built on-top of [Godot 4](https://godotengine.org/) and [TMC's gaming platform](https://moddingcommunity.com/play). In this 3D game, one or two players are the bus driver(s) while all other players are on foot trying to survive. The bus driver's job is to run over the runners. This is heavily inspired off of a classic Counter-Strike: Source MiniGames map called [**buses_from_hell**](https://gamebanana.com/mods/127607) ([gameplay video](https://www.youtube.com/watch?v=wnY1eu890k4)).
+# Buses From Hell
+
+Buses From Hell is a 3D multiplayer game. A few players drive buses, and everybody else is on foot and trying to survive. The drivers try to run the runners over before the clock runs out. It is inspired by a classic Counter-Strike: Source MiniGames map called [**buses_from_hell**](https://gamebanana.com/mods/127607) ([gameplay video](https://www.youtube.com/watch?v=wnY1eu890k4)).
 
 ![Preview](https://github.com/zees-games/mg-buses-from-hell/blob/main/images/preview.gif?raw=true)
 
-*Play on my test server [here](https://moddingcommunity.com/godot/s/bfh01/play)!*
+[Play on the test server](https://moddingcommunity.com/godot/s/bfh01/play).
 
-**This project and the assets under it are COMPLETELY OPEN SOURCE**. You are free to use, modify, and distribute them under the terms of the MIT license. The only thing not open source is the back-end web infrastructure. So if you opt into using your own authentication backend instead of integrating with TMC, you will need to build and integrate your own back-end infrastructure.
+It is built on [Godot 4](https://godotengine.org/), the [Dot collection](https://moddingcommunity.com/co/4-dot-assets) and [TMC's gaming platform](https://moddingcommunity.com/play).
 
-**Please treat this as partially tested.** The game was built with Claude Code. Its headless test suite passes, but little of it has been in front of real players. Please report anything you run into.
+Everything in this repository is open source under the MIT license. The only closed part is the website back-end it can sign in through. If you do not want to use TMC's platform, you can plug in your own sign-in back-end.
+
+The game was built with Claude Code and is maintained with it. It has a full automated test suite, but few real players have tried it yet, so expect rough edges. Please report what you find.
 
 ## How it plays
-Two players drive buses. Everybody else is on foot in a walled sand bowl full of crates and exploding barrels. The drivers try to run the runners over before the clock runs out; the runners win if anybody is still standing at the end. Sides swap every three rounds, so everybody gets a turn driving.
+
+By default four players drive buses (`bfh_drivers`). Everybody else is on foot in a walled sand bowl full of crates and exploding barrels. The drivers try to run the runners over before the clock runs out; the runners win if anybody is still standing at the end. Sides swap every three rounds by default, so everybody gets a turn driving.
 
 The runners have a hammer, and **the hammer can't hurt anybody**. It breaks crates and shoves them. So the only thing a runner can change is the shape of the bowl: break the crate a driver is hiding behind, shove one into a bus's path, open a gap or close one. You can stand on a crate, and it carries you when it moves.
 
@@ -21,7 +26,14 @@ The runners have a hammer, and **the hammer can't hurt anybody**. It breaks crat
 
 The bowl always has three landmarks: a lane of concrete pillars in the west, four tanks round a courtyard in the east, and a staircase of crates in the south-east that is the only high ground a runner can climb (and a bus can knock down). The rest of the crates and barrels are scattered from a seed, so two servers on the same seed get the same layout.
 
-Three more maps are on the ballot, each a kind of place rather than a bowl of landmarks: **Downtown**, a grid of tower blocks with a painted one-way loop round the middle four; **Hill Town**, a road that winds in an S-bend and a switchback with houses stepping along it; and **The Suburbs**, a ring road with three roundabouts and a cul-de-sac. They are designed by hand and built in code, and every street between buildings is wide enough for a bus, the same rule as the bowl.
+Three more maps are on the ballot. Each is a kind of place rather than a bowl of landmarks, designed by hand and built in code, and every street between buildings is wide enough for a bus, the same rule as the bowl.
+
+| Map | What it is |
+| --- | --- |
+| Sand bowl | The default: a walled bowl with a lane of concrete pillars, four tanks round a courtyard and a staircase of crates |
+| Downtown | A grid of tower blocks with a painted one-way loop round the middle four |
+| Hill Town | A road that winds in an S-bend and a switchback, with houses stepping along it |
+| The Suburbs | A ring road with three roundabouts and a cul-de-sac |
 
 When you are run over, you watch the bus that got you for a moment, then whoever is still up until the next round.
 
@@ -43,6 +55,7 @@ When you are run over, you watch the bus that got you for a moment, then whoever
 While you are out: **Mouse 1** / **Mouse 2** watch the next or previous player, and **Space** switches between their eyes and behind them.
 
 ## Getting started
+
 You need [Godot 4.7](https://godotengine.org/download). The game is built from many Dot addons, each in its own repository, so the easiest way to get everything is [dot-bootstrap](https://github.com/modcommunity/dot-bootstrap). It clones every project and links the addons into each one:
 
 ```bash
@@ -70,44 +83,45 @@ On Windows, run `bootstrap.ps1` instead and open the project in Godot.
 `online` and `server` use [dot-server-deploy](https://github.com/modcommunity/dot-server-deploy), which bootstrap clones next to this one. Run its `./setup.sh` once first.
 
 ## Running a server
+
 Settings are cvars. Set them in the server's config, on the command line, or live from the console. Changes to the layout take effect from the next round.
 
-Every `BfhConfig` field is also a `bfh_<field>` cvar and a key in `cfg/game/mg-buses-from-hell/config/game.yml` (or the same file under `cfg/server/`); a typo stops a dedicated server's boot. `bfh_config_diff save` writes what differs from the defaults, ready to copy back as shipped defaults, and F9 (or the `workbench` console command) opens the tuning panel, off on a dedicated server unless `workbench: enabled: true` is in `cfg/server.yml`. The buses' feel (mass, engine, brakes, steering, springs) is server-side, so it is a config field too and a change reaches buses built from then on. `mp_teamblock` (0) and `mp_enemyblock` (1) with `!block` and `!noblock` come from dot-team through dot-game; players are not solid to each other in this game, so they change nothing physical yet.
+Every `BfhConfig` field is also a `bfh_<field>` cvar and a key in a file under `cfg/game/mg-buses-from-hell/config_<group>/game.yml` (or the same file under `cfg/server/`); a typo stops a dedicated server's boot. `bfh_config_diff save` writes what differs from the defaults, ready to copy back as shipped defaults, and F9 (or the `workbench` console command) opens the tuning panel, off on a dedicated server unless `workbench: enabled: true` is in `cfg/server.yml`. The buses' feel (mass, engine, brakes, steering, springs) is server-side, so it is a config field too and a change reaches buses built from then on. `mp_teamblock` (0) and `mp_enemyblock` (1) with `!block` and `!noblock` come from dot-team through dot-game; players are not solid to each other in this game, so they change nothing physical yet.
 
-```
-bfh_round_seconds 180        // length of a round
-bfh_drivers 4                // how many buses (and, unmanned, bots)
-bfh_crates 34                // crates in the next round
-bfh_barrels 9                // barrels in the next round
-bfh_bus_top_speed 22         // m/s
-bfh_bus_lethal_speed 9       // closing speed at which a bus kills outright, m/s
-bfh_bus_lane_width 6         // metres kept clear in front of each bus start (0 = none)
-bfh_bots 1                   // 0 = no automatic bots at all
-bot_quota 2                  // driving seats kept full: bots + people driving; a person who takes a seat replaces a bot
-bot_quota_mode fill          // fill (as above), fixed (that many bots), per_player (that many per driver) or off
-bot_difficulty medium        // easy, medium, hard or nightmare: how far ahead of a runner a bot bus aims and how fast it drives (every bot_* setting is a cvar too; solo: the console, or -- --bot_difficulty)
-bfh_bot_aim_past 8           // metres past a runner a bot bus aims, so it arrives at speed
-bfh_bot_steer_clearance 3.6  // metres a bot bus keeps off a pillar's or drum's surface
-bfh_bot_route_clearance 3.4  // metres a district route keeps off a building, wall or the ramp
-bfh_bot_route_replan 0.5     // seconds between a bot bus's route replans
-bfh_bot_unwedge_after 0.5    // seconds against something before a bot bus reverses off it
-bfh_bot_unwedge_seconds 1.4  // seconds it reverses for
-bfh_bus_stuck_break 1        // seconds a bus may push against something before what is under it breaks
-bfh_bus_stuck_reset 5        // seconds before a stuck bus is put back on its start line
-```
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `bfh_round_seconds` | 180 | Length of a round |
+| `bfh_drivers` | 4 | How many buses (and, with nobody in a seat, bots). Currently 1 to 8 |
+| `bfh_crates` | 34 | Crates in the next round |
+| `bfh_barrels` | 9 | Barrels in the next round |
+| `bfh_bus_top_speed` | 22 | Bus top speed, metres per second |
+| `bfh_bus_lethal_speed` | 9 | Closing speed at which a bus kills outright, metres per second |
+| `bfh_bus_lane_width` | 6 | Metres kept clear in front of each bus start (0 = none) |
+| `bfh_bots` | 1 | 0 = no automatic bots at all |
+| `bot_quota` | same as `bfh_drivers` (4) | Driving seats kept full: bots plus people driving. A person who takes a seat replaces a bot. |
+| `bot_quota_mode` | `fill` | `fill`, `fixed` (that many bots), `per_player` (that many per driver) or `off` |
+| `bot_difficulty` | `medium` | `easy`, `medium`, `hard` or `nightmare`: how far ahead of a runner a bot bus aims and how fast it drives. Every `bot_*` setting is also a cvar. |
+| `bfh_bot_aim_past` | 8 | Metres past a runner a bot bus aims, so it arrives at speed |
+| `bfh_bot_steer_clearance` | 3.6 | Metres a bot bus keeps off a pillar or drum |
+| `bfh_bot_route_clearance` | 3.4 | Metres a route keeps off a building, wall or ramp |
+| `bfh_bot_route_replan` | 0.5 | Seconds between a bot bus's route replans |
+| `bfh_bot_unwedge_after` | 0.5 | Seconds against something before a bot bus reverses off it |
+| `bfh_bot_unwedge_seconds` | 1.4 | Seconds it reverses for |
+| `bfh_bus_stuck_break` | 1 | Seconds a bus may push against something before what is under it breaks |
+| `bfh_bus_stuck_reset` | 5 | Seconds before a stuck bus is put back on its start line |
 
 Runners who are run over or blown up fly as ragdolls ([dot-player-char](https://github.com/modcommunity/dot-player-char)); the server picks how each one goes down and everybody sees the same fall. `sv_ragdoll 0` makes it a quick fall with no physics, `sv_ragdoll_style` picks ragdoll, stiff, topple or hide, `sv_ragdoll_time` and `sv_ragdoll_max` say how long and how many, and `sv_ragdoll_reactions` weights the falls (`limp`, `face_plant`, `crumple`, `headshot_launch`, `power_launch`; 0 turns one off).
 
-A runner who is out can fly a free camera (G); `mp_freeroam 0` keeps them on players, `mp_forcecamera 1` or `2` restricts the camera and switches it off, and `mp_freeroam_speed` (metres a second, 12) sets the speed.
+A runner who is out can fly a free camera (G); `mp_freeroam 0` keeps them on players, `mp_forcecamera 1` or `2` restricts the camera and switches it off, and `mp_freeroam_speed` (metres a second) sets the speed.
 
 The bot cvars are the family's shared ones (dot-server's `DotBotQuota`), counted here in driving seats because a bot only ever drives: `bfh_drivers` is how many seats there are and caps the quota.
 
 Two settings are the map itself, so they are read when the bowl is built and are not cvars: set them in the JSON config, the environment (`BFH_HOOK_LAYOUT`, `BFH_COURTYARD_WEST_LANE`) or the command line (`--bfh-hook-layout`, `--bfh-courtyard-west-lane`) and restart. Connected clients are told them when they join.
 
-```
-hook_layout tight            // the three pillars past the stacks: tight (as built) or wide (5.6 m gaps opened to 7.4-7.6 m)
-courtyard_west_lane 7.6      // metres of floor in the tank farm's west lane; 6.6 is the farm as first built
-```
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `hook_layout` | `tight` | The three pillars past the stacks: `tight` (as built) or `wide` (5.6 m gaps opened to 7.4 to 7.6 m) |
+| `courtyard_west_lane` | 7.6 | Metres of floor in the tank farm's west lane (6.6 is the farm as first built) |
 
 Console commands:
 
@@ -132,6 +146,7 @@ These come from [dot-moderation](https://github.com/modcommunity/dot-moderation)
 `respawn`, `give`, `strip` and `burn` are turned off: a runner who is out stays out until the next round, and the hammer is the only thing anybody holds.
 
 ## Stats and achievements
+
 Five numbers are counted per player (runners flattened, rounds survived, seconds survived, crates broken, and crates you shoved that a bus then hit) and there are eight achievements built on them. They only last for the session for now, because the game has no accounts yet.
 
 ## Testing
@@ -145,6 +160,9 @@ Five numbers are counted per player (runners flattened, rounds survived, seconds
 | --- | --- |
 | `headless_run` | The game itself: rounds, buses, crates, barrels, the hammer and bots driving |
 | `headless_net` | A server and a client in one process, over the network code |
+| `headless_config`, `headless_workbench`, `headless_mapcfg` | Settings, the workbench and per-map config |
+| `headless_touch` | Phone controls |
+| `headless_workshop` | The workshop (content) flow |
 | `dedicated` | A real server: boots, loads the game, runs its commands |
 
 [`CLAUDE.md`](CLAUDE.md) has the design decisions and the reasoning behind them.
@@ -164,4 +182,5 @@ Five numbers are counted per player (runners flattened, rounds survived, seconds
 If you made one of these assets and want it removed, open an issue.
 
 ## License
+
 MIT. See [LICENSE](LICENSE). The Kenney art is CC0, which is public domain.
