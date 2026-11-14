@@ -14,7 +14,7 @@
 # rounds_before_swap: 3
 
 # --- Sides
-# How many drivers the round starts with: how many buses, and (in fill mode, the default) how many bots there... [1..8]
+# How many drivers the round starts with: how many buses, and (in fill mode, the default) how many bots there... [1..]
 # driver_count: 4
 
 # --- The arena

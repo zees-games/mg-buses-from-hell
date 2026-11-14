@@ -23,7 +23,7 @@ extends DotConfig
 
 ## How many drivers the round starts with: how many buses, and (in fill mode, the default) how many
 ## bots there are when nobody has taken a seat.
-@export_range(1, 8, 1) var driver_count: int = 4
+@export_range(1, 8, 1, "or_greater") var driver_count: int = 4
 
 @export_group("The runners")
 

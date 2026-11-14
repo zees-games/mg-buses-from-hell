@@ -11,7 +11,7 @@ const KEYS := {
 	"bfh_round_seconds": {"type": "float", "min": 10.0, "max": 3600.0},
 	"bfh_crates": {"type": "int", "min": 0, "max": 500},
 	"bfh_barrels": {"type": "int", "min": 0, "max": 500},
-	"bfh_drivers": {"type": "int", "min": 1, "max": 32},
+	"bfh_drivers": {"type": "int", "min": 1},
 	"bfh_bus_top_speed": {"type": "float", "min": 1.0, "max": 120.0},
 	"bfh_bus_lethal_speed": {"type": "float", "min": 0.0, "max": 120.0},
 	"bfh_bus_lane_width": {"type": "float", "min": 0.0, "max": 50.0},

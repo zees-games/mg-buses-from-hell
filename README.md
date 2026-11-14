@@ -91,7 +91,7 @@ Every `BfhConfig` field is also a `bfh_<field>` cvar and a key in a file under `
 | Setting | Default | What it does |
 | --- | --- | --- |
 | `bfh_round_seconds` | 180 | Length of a round |
-| `bfh_drivers` | 4 | How many buses (and, with nobody in a seat, bots). Currently 1 to 8 |
+| `bfh_drivers` | 4 | How many buses (and, with nobody in a seat, bots). Any value from 1 |
 | `bfh_crates` | 34 | Crates in the next round |
 | `bfh_barrels` | 9 | Barrels in the next round |
 | `bfh_bus_top_speed` | 22 | Bus top speed, metres per second |
