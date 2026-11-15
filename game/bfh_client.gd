@@ -507,6 +507,7 @@ func _add_noblock_and_workbench() -> void:
 		return
 	var wb := DotGameWorkbench.new()
 	wb.name = "Workbench"
+	wb.lazy_panel = true
 	wb.listen_host_fn = func() -> bool: return true
 	workbench = wb
 	wb.config = {"enabled": false}

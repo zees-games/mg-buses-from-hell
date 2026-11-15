@@ -249,6 +249,7 @@ func _bind_config(world: BfhGame) -> DotResult:
 		return DotResult.success(null)
 	workbench = DotGameWorkbench.new()
 	workbench.name = "Workbench"
+	workbench.lazy_panel = true
 	workbench.dedicated = DisplayServer.get_name() == "headless"
 	workbench.listen_host_fn = func() -> bool: return DisplayServer.get_name() != "headless"
 	# Admission: the console's admins, and dot-game's ticket login for the uids and groups listed under `workbench:` in cfg/server.yml.
