@@ -55,11 +55,9 @@ const BLOCK_SPEED_PER_M := 0.8
 var _bus_block_side: Dictionary = {}
 
 
-## [param aim] (on the way to [param goal]) swung round the nearest block lying across the bus's way,
-## or [param aim] itself, and slows the bot's driver for it. A block cannot be broken, so a bus that
-## drives onto one sits high-centred on it until the stuck rule hops it off (`bfh_downtown`,
-## `--pace-seed=12`: two seconds on open floor where an avenue crosses a street). Judged against the
-## bus's heading, so a block beside the way is left alone.
+## [param aim] (on the way to [param goal]) swung round the nearest block lying across the bus's way, or [param aim] itself, and slows the bot's driver for it.
+## A block cannot be broken, so a bus that drives onto one sits high-centred on it until the stuck rule hops it off (`bfh_downtown`, `--pace-seed=12`:
+## two seconds on open floor where an avenue crosses a street). Judged against the bus's heading, so a block beside the way is left alone.
 func _round_the_blocks(player: BfhPlayer, bus: DotVehicleInstance, aim: Vector3, goal: Vector3) -> Vector3:
 	var at := bus.position()
 	var forward := -bus.body().global_basis.z
