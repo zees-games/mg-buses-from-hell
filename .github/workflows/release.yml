@@ -1,7 +1,7 @@
 # Tag it and the artifact lands on the release. What gets built is decided by shape:
 # an addon repository ships addons/<name>/ as a zip that installs by being unpacked at
 # a project root, everything else ships the tracked tree as a tarball. Both come with
-# a SHA256SUMS, and a game adds its pack zip. See modcommunity/dot-ci.
+# a SHA256SUMS, and a game adds its pack zip. See gamespice-platform/ci.
 #
 # The release may already exist by the time this runs -- the tag is what the sync
 # reacts to -- so this uploads into one that is there rather than failing on it.
@@ -17,7 +17,7 @@ on:
 
 jobs:
     validate:
-        uses: modcommunity/dot-ci/.github/workflows/validate.yml@v1
+        uses: gamespice-platform/ci/.github/workflows/validate.yml@v1
         with:
             suite-timeout: 900
         secrets:
@@ -28,7 +28,7 @@ jobs:
     # @v1.2.2 (images/ left out of the pack, as well as v1.2.1's requires.json and draft-until-complete) until v1 is moved onto it.
     release:
         needs: validate
-        uses: modcommunity/dot-ci/.github/workflows/release.yml@v1.3.14
+        uses: gamespice-platform/ci/.github/workflows/release.yml@v1.3.14
         permissions:
             contents: write
         with:
