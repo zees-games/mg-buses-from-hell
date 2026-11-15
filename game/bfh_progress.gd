@@ -138,21 +138,7 @@ func attach(world: Node3D) -> DotResult:
 	if not linked.ok:
 		return linked.wrap("the stats-to-achievements link")
 
-	rank = DotStatsRank.new()
-	rank.stat_id = BfhStats.RANK_SCORE
-	rank.terms = [
-		{"stat": String(BfhStats.RUNNERS_FLATTENED), "weight": 3.0},
-		{"stat": String(BfhStats.ROUNDS_SURVIVED), "weight": 2.0},
-		{"stat": String(BfhStats.CRATES_INTO_PATH), "weight": 1.0},
-		{"stat": String(BfhStats.CRATES_BROKEN), "weight": 0.5},
-		{"stat": String(BfhStats.SECONDS_SURVIVED), "weight": 0.02},
-	]
-	# Filed straight on the tracker: going through _record would republish the rank from inside its own publish.
-	rank.record_fn = func(who: Variant, stat: StringName, value: float) -> void:
-		var key := key_of(StringName(str(who)))
-		if key != "" and stats != null:
-			var _filed := stats.record(StringName(key), stat, value)
-	rank.key_fn = func(who: Variant) -> StringName: return StringName(key_of(StringName(str(who))))
+	rank = _make_rank()
 
 	world.connect("player_added", _on_player_added)
 	world.connect("player_removed", _on_player_removed)
@@ -171,6 +157,26 @@ func attach(world: Node3D) -> DotResult:
 		_on_player_added(id)
 
 	return DotResult.success(self)
+
+
+## The rank built from the run's stats, filed back on [member stats] under the player's key.
+func _make_rank() -> DotStatsRank:
+	var made := DotStatsRank.new()
+	made.stat_id = BfhStats.RANK_SCORE
+	made.terms = [
+		{"stat": String(BfhStats.RUNNERS_FLATTENED), "weight": 3.0},
+		{"stat": String(BfhStats.ROUNDS_SURVIVED), "weight": 2.0},
+		{"stat": String(BfhStats.CRATES_INTO_PATH), "weight": 1.0},
+		{"stat": String(BfhStats.CRATES_BROKEN), "weight": 0.5},
+		{"stat": String(BfhStats.SECONDS_SURVIVED), "weight": 0.02},
+	]
+	# Filed straight on the tracker: going through _record would republish the rank from inside its own publish.
+	made.record_fn = func(who: Variant, stat: StringName, value: float) -> void:
+		var key := key_of(StringName(str(who)))
+		if key != "" and stats != null:
+			var _filed := stats.record(StringName(key), stat, value)
+	made.key_fn = func(who: Variant) -> StringName: return StringName(key_of(StringName(str(who))))
+	return made
 
 
 # --- Keys

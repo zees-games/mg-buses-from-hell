@@ -182,12 +182,7 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 	# wedges nose-on and the stuck rule then teleports it back to its start line, which from the
 	# runner's side reads as hiding behind a pillar deleting the bus.
 	var bound := _bound_for_the_ramp(bus, beyond, delta)
-	var pace := config.bus_top_speed * clampf(1.0 + 0.4 * (skill.aggression - _MEDIUM.aggression), 0.5, 1.0)
-	player.autopilot.target_speed = minf(pace, config.bot_ramp_speed) if bound else pace
-	# Written every tick rather than once, so `bfh_bot_steer_clearance` takes effect on the
-	# next tick. Only the bots read it; see [member BfhArena.steer_clearance].
-	arena.steer_clearance = config.bot_steer_clearance
-	arena.route_clearance = config.bot_route_clearance
+	_set_pace(player, skill, bound)
 
 	# [b]A district is a maze and is driven by a route.[/b] Through the streets with [method
 	# BfhArena.street_route]; the first waypoints are passed at speed like any detour and the point
@@ -235,6 +230,16 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 	else:
 		player.autopilot.set_target(aim)
 	return player.autopilot.drive(bus, delta)
+
+
+## The bot's target speed for this tick, slowed to the ramp speed when [param bound] up it.
+func _set_pace(player: BfhPlayer, skill: DotBotProfile, bound: bool) -> void:
+	var pace := config.bus_top_speed * clampf(1.0 + 0.4 * (skill.aggression - _MEDIUM.aggression), 0.5, 1.0)
+	player.autopilot.target_speed = minf(pace, config.bot_ramp_speed) if bound else pace
+	# Written every tick rather than once, so `bfh_bot_steer_clearance` takes effect on the
+	# next tick. Only the bots read it; see [member BfhArena.steer_clearance].
+	arena.steer_clearance = config.bot_steer_clearance
+	arena.route_clearance = config.bot_route_clearance
 
 
 ## The bot driver, made once and tuned for a nine-metre bus.

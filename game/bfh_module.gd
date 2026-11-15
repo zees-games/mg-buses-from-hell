@@ -83,35 +83,7 @@ func _game_load() -> DotResult:
 	_build_vote(world)
 	_add_rotation(world)
 
-	# Dead bodies: dot-player-char's sv_ragdoll* set. The server only picks each death's reaction
-	# from them; REPLICATED, because the clients draw the bodies (see the client's _build_netcode).
-	var _ragdolls := world.ragdoll_rules.bind_cvars(
-		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
-	)
-	# The bowl's toys: dot-props' sv_toys* set. REPLICATED, because a client hides the toys the
-	# server took away.
-	var _toys := world.toy_rules.bind_cvars(
-		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
-	)
-
-	# bfh_ambient*: REPLICATED, because each client plays its own ambience under the server's intent; the directory cvar stays local.
-	var _ambient := world.ambient_rules.bind_cvars(
-		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED,
-		DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY
-	)
-
-	# dot-player-controller's mp_forceview: first or third person, the player's choice or one
-	# held. REPLICATED, because each client places its own camera under it.
-	var _views := world.view_rules.bind_cvars(
-		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
-	)
-
-	# dot-spectate's mp_forcecamera, mp_freeroam and mp_freeroam_speed: whether a runner who is
-	# out may fly a free camera. REPLICATED, because the client flies it and hides the key.
-	if world.spectate != null and world.spectate.manager != null:
-		_spectate_cvars = world.spectate.manager.rules.bind_cvars(
-			add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
-		)
+	_bind_rule_cvars(world)
 
 	# REPLICATED: the clients play the killcam, the server only lengthens the intermission for it.
 	var killcam := add_cvar("mp_killcam_time", _number(world.config.killcam_seconds),
@@ -153,6 +125,41 @@ func _game_load() -> DotResult:
 
 	log_info("the bowl is open", world.describe())
 	return DotResult.success(null)
+
+
+## The cvar sets the world's rule objects own (ragdolls, toys, ambience, view, spectating), each
+## bound under its addon's own names.
+func _bind_rule_cvars(world: BfhGame) -> void:
+	# Dead bodies: dot-player-char's sv_ragdoll* set. The server only picks each death's reaction
+	# from them; REPLICATED, because the clients draw the bodies (see the client's _build_netcode).
+	var _ragdolls := world.ragdoll_rules.bind_cvars(
+		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
+	)
+	# The bowl's toys: dot-props' sv_toys* set. REPLICATED, because a client hides the toys the
+	# server took away.
+	var _toys := world.toy_rules.bind_cvars(
+		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
+	)
+
+	# bfh_ambient*: REPLICATED, because each client plays its own ambience under the server's intent; the directory cvar stays local.
+	var _ambient := world.ambient_rules.bind_cvars(
+		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED,
+		DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY
+	)
+
+	# dot-player-controller's mp_forceview: first or third person, the player's choice or one
+	# held. REPLICATED, because each client places its own camera under it.
+	var _views := world.view_rules.bind_cvars(
+		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
+	)
+
+	# dot-spectate's mp_forcecamera, mp_freeroam and mp_freeroam_speed: whether a runner who is
+	# out may fly a free camera. REPLICATED, because the client flies it and hides the key.
+	if world.spectate != null and world.spectate.manager != null:
+		_spectate_cvars = world.spectate.manager.rules.bind_cvars(
+			add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
+		)
+
 
 ## A bowl's file (`cfg/game/mg-buses-from-hell/dot_map/map/`) may set only [constant BfhMapConfig.KEYS].
 func _map_config_keys() -> Dictionary:
