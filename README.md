@@ -6,9 +6,9 @@ Buses From Hell is a 3D multiplayer game. A few players drive buses, and everybo
 
 [Play on the test server](https://moddingcommunity.com/godot/s/bfh01/play).
 
-It is built on [Godot 4](https://godotengine.org/), the [Dot collection](https://moddingcommunity.com/co/4-dot-assets) and [TMC's gaming platform](https://moddingcommunity.com/play).
+It is built on [Godot 4](https://godotengine.org/), the [Gamespice](https://gamespice.net) platform and addon collection.
 
-Everything in this repository is open source under the MIT license. The only closed part is the website back-end it can sign in through. If you do not want to use TMC's platform, you can plug in your own sign-in back-end.
+Everything in this repository is open source under the MIT license. The only closed part is the website back-end it can sign in through. If you do not want to use Gamespice, you can plug in your own sign-in back-end.
 
 The game was built with Claude Code and is maintained with it. It has a full automated test suite, but few real players have tried it yet, so expect rough edges. Please report what you find.
 
@@ -56,7 +56,7 @@ While you are out: **Mouse 1** / **Mouse 2** watch the next or previous player, 
 
 ## Getting started
 
-You need [Godot 4.7](https://godotengine.org/download). The game is built from many Dot addons, each in its own repository, so the easiest way to get everything is [dot-bootstrap](https://github.com/gamespice-platform/bootstrap). It clones every project and links the addons into each one:
+You need [Godot 4.7](https://godotengine.org/download). The game is built from many Gamespice addons, each in its own repository, so the easiest way to get everything is [dot-bootstrap](https://github.com/gamespice-platform/bootstrap). It clones every project and links the addons into each one:
 
 ```bash
 git clone https://github.com/gamespice-platform/bootstrap.git
