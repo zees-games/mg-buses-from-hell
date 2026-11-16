@@ -1,7 +1,7 @@
 {
 	"format": 1,
 	"mirrors": [],
-	"origin": "https://dotgames.org/content",
+	"origin": "https://content.gamespice.net/content",
 	"packs": [
 		{
 			"id": "gamemann/mg-buses-from-hell",
