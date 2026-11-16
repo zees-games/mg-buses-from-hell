@@ -90,8 +90,9 @@ func _game_load() -> DotResult:
 		"Seconds the killcam of a round's last moment plays, added to the intermission (0 for none)",
 		DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
 	if killcam != null:
+		var _floor := killcam.with_min(0.0)  # no ceiling; below 0 is refused
 		killcam.changed.connect(func(_old: String, new_value: String) -> void:
-			world.config.killcam_seconds = clampf(new_value.to_float(), 0.0, 30.0)
+			world.config.killcam_seconds = new_value.to_float()
 			world.apply_intermission())
 
 	# REPLICATED: where the clients' killcam camera sits (0 the killer's eye, 1 behind the killer).
@@ -194,33 +195,33 @@ func _add_tunables(world: BfhGame) -> void:
 			config.bus_lane_width = maxf(value, 0.0))
 	_tunable("bfh_scaffold_margin", config.scaffold_scatter_margin,
 		"Metres round the scaffold kept clear when the next round is laid out (never under 2.2)",
-		func(value: float) -> void: config.scaffold_scatter_margin = maxf(value, 0.0))
+		func(value: float) -> void: config.scaffold_scatter_margin = value)
 	# The bots' knobs, live from the next tick: the autopilot and the stuck rule run on the authority
 	# only and read these every tick, so no client has anything to agree with.
 	_tunable("bfh_bot_aim_past", config.bot_aim_past,
 		"Metres past a runner a bot bus aims, so it arrives at speed",
-		func(value: float) -> void: config.bot_aim_past = maxf(value, 0.0))
+		func(value: float) -> void: config.bot_aim_past = value)
 	_tunable("bfh_bot_steer_clearance", config.bot_steer_clearance,
 		"Metres a bot bus keeps off a pillar's or drum's surface; the map is laid out for 3.6",
-		func(value: float) -> void: config.bot_steer_clearance = maxf(value, 0.5))
+		func(value: float) -> void: config.bot_steer_clearance = value)
 	_tunable("bfh_bot_route_clearance", config.bot_route_clearance,
 		"Metres a bot bus's centre keeps off a building when routed along a district's streets",
-		func(value: float) -> void: config.bot_route_clearance = clampf(value, 1.5, 4.0))
+		func(value: float) -> void: config.bot_route_clearance = value)
 	_tunable("bfh_bot_route_replan", config.bot_route_replan,
 		"Seconds between a bot bus planning its route through a district again",
-		func(value: float) -> void: config.bot_route_replan = clampf(value, 0.1, 3.0))
+		func(value: float) -> void: config.bot_route_replan = value)
 	_tunable("bfh_bot_unwedge_after", config.bot_unwedge_after,
 		"Seconds a bot bus throttles against something before it backs off",
-		func(value: float) -> void: config.bot_unwedge_after = clampf(value, 0.1, 3.0))
+		func(value: float) -> void: config.bot_unwedge_after = value)
 	_tunable("bfh_bot_unwedge_seconds", config.bot_unwedge_seconds,
 		"Seconds a bot bus reverses for, wheel over, when it backs off",
-		func(value: float) -> void: config.bot_unwedge_seconds = clampf(value, 0.3, 4.0))
+		func(value: float) -> void: config.bot_unwedge_seconds = value)
 	_tunable("bfh_bus_stuck_break", config.bus_stuck_break_seconds,
 		"Seconds a bus may throttle against something before what is under it breaks",
-		func(value: float) -> void: config.bus_stuck_break_seconds = maxf(value, 0.1))
+		func(value: float) -> void: config.bus_stuck_break_seconds = value)
 	_tunable("bfh_bus_stuck_reset", config.bus_stuck_reset_seconds,
 		"Seconds a stuck bus is given before it is put back on its start line",
-		func(value: float) -> void: config.bus_stuck_reset_seconds = maxf(value, 0.1))
+		func(value: float) -> void: config.bus_stuck_reset_seconds = value)
 
 ## Config fields whose hand-written cvar is not `bfh_<field>`.
 const HAND_RENAMES := {
@@ -367,6 +368,20 @@ func _cmd_maps_reload(ctx: DotCmdContext) -> void:
 	ctx.reply("maps.yml read." if read.ok else read.error.message)
 
 ## One cvar, its default taken from the configuration rather than written twice.
+## The lowest each tunable takes (the bots and buses misbehave below it); no ceiling. Below it is refused with the reason, never clamped.
+const TUNABLE_FLOORS := {
+	"bfh_scaffold_margin": 0.0,
+	"bfh_bot_aim_past": 0.0,
+	"bfh_bot_steer_clearance": 0.5,
+	"bfh_bot_route_clearance": 1.5,
+	"bfh_bot_route_replan": 0.1,
+	"bfh_bot_unwedge_after": 0.1,
+	"bfh_bot_unwedge_seconds": 0.3,
+	"bfh_bus_stuck_break": 0.1,
+	"bfh_bus_stuck_reset": 0.1,
+}
+
+
 func _tunable(
 	cvar_name: String, current: float, description: String, apply: Callable
 ) -> void:
@@ -374,6 +389,9 @@ func _tunable(
 
 	if cvar == null:
 		return
+
+	if TUNABLE_FLOORS.has(cvar_name):
+		var _floor := cvar.with_min(float(TUNABLE_FLOORS[cvar_name]))
 
 	# The handler must not capture `cvar`: it would be a reference cycle the engine never frees.
 	cvar.changed.connect(func(_old: String, new_value: String) -> void:

@@ -70,7 +70,7 @@ func _build_killcam() -> void:
 ## `mp_killcam_time`, from the server's replicated cvar.
 func _on_killcam_cvar(cvar_name: String, value: String) -> void:
 	if cvar_name == "mp_killcam_time" and value.strip_edges().is_valid_float():
-		_killcam_sec = clampf(value.to_float(), 0.0, 30.0)
+		_killcam_sec = maxf(value.to_float(), 0.0)
 	elif cvar_name == "mp_killview_camera" and value.strip_edges().is_valid_float():
 		_killcam_camera = DotKillViewRules.Camera.BEHIND if value.to_float() >= 0.5 else DotKillViewRules.Camera.EYE
 
