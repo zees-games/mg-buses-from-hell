@@ -4,14 +4,24 @@ extends DotGameCheckSuite
 ## round trip.
 
 const BfhConfig := preload("../game/bfh_config.gd")
-const ROOT := "user://bfh_cfgtest"
+## One directory per suite process (the probe child is handed its parent's): user:// is shared by
+## every copy of this project on a box, and two suites at once wrote and deleted each other's cfg files.
+const ROOT_ARG := "--cfgroot="
+var ROOT := _root()
 const GAME := "mg-buses-from-hell"
-const CHECKS := 29
+const CHECKS := 30
 
 
 func _ready() -> void:
 	DotLog.set_level(DotLog.Level.FATAL)
 	_run.call_deferred()
+
+
+func _root() -> String:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with(ROOT_ARG):
+			return a.substr(ROOT_ARG.length())
+	return "user://bfh_cfgtest_%d" % OS.get_process_id()
 
 
 func _run() -> void:
@@ -36,17 +46,17 @@ func _run() -> void:
 	console.set_cvar("bfh_crate_count", "7")
 	_check(config.crate_count == 7 and binder.source_of("crate_count") == "cvar", "a cvar writes the field")
 	_check(binder.diff_yaml().contains("crate_count: 7"), "the diff names the edit")
-	var schema_path := "user://bfh_config_schema.json"
+	var schema_path := ROOT + "_config_schema.json"
 	_check(binder.write_schema(schema_path).ok and FileAccess.file_exists(schema_path), "write_schema writes the schema")
 	DirAccess.remove_absolute(schema_path)
 
-	var bad := FileAccess.open("user://bfh_config_bad.json", FileAccess.WRITE)
+	var bad := FileAccess.open(ROOT + "_config_bad.json", FileAccess.WRITE)
 	bad.store_string('{"no_such_field": 1}')
 	bad.close()
-	var strict := BfhConfig.make_binder(BfhConfig.new(), "user://bfh_config_bad.json")
+	var strict := BfhConfig.make_binder(BfhConfig.new(), ROOT + "_config_bad.json")
 	strict.strict = true
 	_check(not strict.load_layers().ok, "strict: an unknown key is refused")
-	DirAccess.remove_absolute("user://bfh_config_bad.json")
+	DirAccess.remove_absolute(ROOT + "_config_bad.json")
 
 	_layers()
 	_templates(binder)
@@ -107,7 +117,7 @@ func _write(rel: String, text: String) -> void:
 func _child() -> String:
 	var out: Array = []
 	OS.execute(OS.get_executable_path(), ["--headless", "--path", ProjectSettings.globalize_path("res://"),
-		"res://examples/headless_config.tscn", "--", "--probe", "--bfh-hammer-damage=7.5", "--bfh-gravity=15.0"], out, true)
+		"res://examples/headless_config.tscn", "--", "--probe", ROOT_ARG + ROOT, "--bfh-hammer-damage=7.5", "--bfh-gravity=15.0"], out, true)
 	return "".join(PackedStringArray(out))
 
 
@@ -125,8 +135,8 @@ func _layers() -> void:
 	OS.unset_environment("BFH_BUS_MASS")
 	_write("game/%s/config_round/game.yml" % GAME, "bus_mass: 9000.0\n")
 	_check(_child().contains("PROBE ok=false"), "strict: a key in the wrong file is refused")
-	for f in ["config_round", "config_buses"]:
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(ROOT.path_join("game/%s/%s/game.yml" % [GAME, f])))
+	var removed := DotPaths.remove_tree(ProjectSettings.globalize_path(ROOT))
+	_check(removed.ok and not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(ROOT)), "the per-process cfg fixture directory is removed", ROOT if removed.ok else str(removed.error))
 
 
 ## The shipped cfg files hold every key, in step with BfhConfig, and change nothing as they are.
