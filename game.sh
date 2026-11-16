@@ -21,7 +21,7 @@
 #   --no-parse       skip the parse pass in `test`
 #
 # `online` and `server` use dot-server-deploy, found next to this repository (or at
-# $DOT_SERVER_DEPLOY). dot-bootstrap puts it there. Both rebuild this game's pack first, so
+# GS_SERVER_DEPLOY). dot-bootstrap puts it there. Both rebuild this game's pack first, so
 # what you play is what is on disk now.
 #
 # The same script is in every game repository; only the settings below differ. It is
@@ -87,8 +87,8 @@ Run dot-bootstrap first: https://github.com/gamespice-platform/bootstrap" 2
 }
 
 deploy_dir() {
-    local dir="${DOT_SERVER_DEPLOY:-$ROOT/../dot-server-deploy}"
-    [ -x "$dir/server" ] || die "dot-server-deploy not found at $dir (run its ./setup.sh, or set DOT_SERVER_DEPLOY)." 2
+    local dir="${GS_SERVER_DEPLOY:-${DOT_SERVER_DEPLOY:-$ROOT/../dot-server-deploy}}"
+    [ -x "$dir/server" ] || die "dot-server-deploy not found at $dir (run its ./setup.sh, or set GS_SERVER_DEPLOY)." 2
     (cd "$dir" && pwd)
 }
 
