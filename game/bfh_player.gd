@@ -332,6 +332,8 @@ func present_body(own_view: bool, driver_side: bool = false) -> bool:
 		var height := controller.tunables.stand_height \
 			if controller != null and controller.tunables != null else 1.8
 		figure.build(height, wanted)
+		# A runner carries the hammer; a driver on foot has none.
+		figure.hold_hammer(not driver_side)
 
 	figure.visible = shown
 

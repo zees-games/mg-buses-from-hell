@@ -1,6 +1,7 @@
 extends Node3D
 
 const BfhPaths := preload("bfh_paths.gd")
+const BfhViewmodel := preload("bfh_viewmodel.gd")
 
 ## What somebody ELSE looks like: a Kenney blocky character, scaled to the runner's hull and turned
 ## to face where they are looking. Client side only; a server never builds one.
@@ -32,6 +33,15 @@ var from_art: bool = false
 ## The person, under this node.
 var person: DotHumanoidFigure = null
 
+## The hammer in the right hand, or null when the figure holds nothing (a driver on foot).
+var hammer: Node3D = null
+
+## The hammer's size in the hand mount, which is itself [member DotHumanoidFigure.held_scale]
+## times life size: this brings the drawn hammer back to about life size.
+const HAMMER_SCALE := 0.6
+
+var _holds_hammer: bool = false
+
 
 ## Builds the figure to stand [param height] metres tall, feet at this node's origin.
 func build(height: float, atlas_path: String) -> void:
@@ -48,8 +58,38 @@ func build(height: float, atlas_path: String) -> void:
 	person.build(look, height)
 	person.auto_animate = true
 	from_art = person.from_art
+	hammer = null
+	hold_hammer(_holds_hammer)
 	if not from_art:
 		DotLog.warn(CHANNEL, "the person's art did not load; a capsule stands in", {"atlas": atlas.get_file()})
+
+
+## Puts the hammer in the right hand (and the arms in the melee hold), or takes it away. Kept over
+## a rebuild.
+func hold_hammer(on: bool) -> void:
+	_holds_hammer = on
+	if person == null:
+		return
+	if not on:
+		if hammer != null and is_instance_valid(hammer):
+			hammer.queue_free()
+		hammer = null
+		person.set_hold(DotHumanoidFigure.Hold.NONE)
+		return
+	person.set_hold(DotHumanoidFigure.Hold.MELEE)
+	if hammer != null and is_instance_valid(hammer):
+		return
+	var hand := person.attachment(&"right_hand")
+	if hand == null:
+		return
+	hammer = BfhViewmodel.build_hammer(hand, true)
+	hammer.scale = Vector3.ONE * HAMMER_SCALE
+
+
+## A hammer blow over whatever the legs are doing; an empty hand punches.
+func swing() -> void:
+	if person != null:
+		person.swing()
 
 
 ## Turns the figure to face [param yaw_radians], the controller's own yaw.
@@ -62,5 +102,6 @@ func describe() -> Dictionary:
 		"art": from_art,
 		"atlas": atlas.get_file(),
 		"visible": visible,
+		"hammer": hammer != null,
 		"at": str(global_position.snapped(Vector3.ONE * 0.01)) if is_inside_tree() else "-",
 	}

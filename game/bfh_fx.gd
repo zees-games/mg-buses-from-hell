@@ -31,6 +31,13 @@ var drawn: int = 0
 
 var _world: Node = null
 
+## How far from a swinging player's eye the swing's sound may be, metres: the swing is heard at the
+## eye, so anything near it is the same player.
+const SWING_MATCH_M := 0.5
+
+## Third-person swings drawn, for the suite.
+var swings_drawn: int = 0
+
 
 static func catalogue() -> DotFxCatalogue:
 	var c := DotFxCatalogue.new()
@@ -112,6 +119,24 @@ func _on_blast(at: Vector3, radius: float) -> void:
 func _on_noise(id: StringName, at: Vector3) -> void:
 	if id == BfhSounds.CRATE_BREAK and break_fx != null:
 		var _b := break_fx.burst("wood", at, Vector3.UP, 1.0)
+	elif id == BfhSounds.HAMMER_SWING:
+		_draw_swing(at)
+
+
+## The swinging player's figure plays the blow, for everybody who can see them. The noise carries
+## only where the eye was, so the figure is found by it.
+func _draw_swing(eye: Vector3) -> void:
+	var players = _world.get("players") if _world != null else null
+	if not (players is Dictionary):
+		return
+	for player in players.values():
+		var figure: Node3D = player.get("figure") if player != null else null
+		if figure == null or not figure.visible or not player.has_method("eye_position"):
+			continue
+		if player.eye_position().distance_to(eye) <= SWING_MATCH_M:
+			figure.call("swing")
+			swings_drawn += 1
+			return
 
 
 func describe() -> Dictionary:
@@ -119,5 +144,6 @@ func describe() -> Dictionary:
 		"breaks": break_fx.spawned if break_fx != null else 0,
 		"heard": heard,
 		"drawn": drawn,
+		"swings": swings_drawn,
 		"live": fx.live_count() if fx != null else 0,
 	}

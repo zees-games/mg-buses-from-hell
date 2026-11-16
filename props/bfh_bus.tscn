@@ -18,7 +18,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
 shape = SubResource("hull")
 
 [node name="Art" parent="." instance=ExtResource("art")]
-transform = Transform3D(-1.56, 0, 0, 0, 1.56, 0, 0, 0, -1.56, 0, -0.88, 0)
+transform = Transform3D(-1.56, 0, 0, 0, 1.56, 0, 0, 0, -1.56, 0, -1.07, 0)
 
 [node name="Seat" type="Marker3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, -1.8)
@@ -28,7 +28,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.1, -0.35, -2)
 use_as_traction = true
 use_as_steering = true
 wheel_radius = 0.6
-suspension_rest_length = 0.4
+wheel_rest_length = 0.15
 wheel_friction_slip = 3.2
 suspension_travel = 0.3
 suspension_stiffness = 200.0
@@ -39,7 +39,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, -0.35, -2)
 use_as_traction = true
 use_as_steering = true
 wheel_radius = 0.6
-suspension_rest_length = 0.4
+wheel_rest_length = 0.15
 wheel_friction_slip = 3.2
 suspension_travel = 0.3
 suspension_stiffness = 200.0
@@ -49,7 +49,7 @@ suspension_max_force = 30000.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.1, -0.35, 2)
 use_as_traction = true
 wheel_radius = 0.6
-suspension_rest_length = 0.4
+wheel_rest_length = 0.15
 wheel_friction_slip = 3.2
 suspension_travel = 0.3
 suspension_stiffness = 200.0
@@ -59,7 +59,7 @@ suspension_max_force = 30000.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, -0.35, 2)
 use_as_traction = true
 wheel_radius = 0.6
-suspension_rest_length = 0.4
+wheel_rest_length = 0.15
 wheel_friction_slip = 3.2
 suspension_travel = 0.3
 suspension_stiffness = 200.0

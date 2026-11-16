@@ -6,8 +6,21 @@ const BfhHammer := preload("bfh_hammer.gd")
 ## primitives: no art to vendor, so nothing here can break in a delivered pack.
 
 const SWING_TIME := 0.28
-const REST := Vector3(-25.0, -12.0, 8.0)
-const SWUNG := Vector3(-95.0, -4.0, 8.0)
+
+## The pivot is the elbow; the forearm runs forward from it to the fist on the handle. REST and SWUNG
+## are the forearm's turn (x is the chop: up at rest, down through the blow) and HAMMER_TILT the
+## handle's in the fist, so the head leans forward at rest and comes down in front of the eye.
+const REST := Vector3(15.0, -12.0, 8.0)
+const SWUNG := Vector3(-40.0, -4.0, 8.0)
+const HAMMER_TILT := Vector3(-40.0, 0.0, 0.0)
+
+## Forearm length, elbow to the grip, metres.
+const FOREARM := 0.34
+
+const WOOD := Color(0.55, 0.38, 0.2)
+const IRON := Color(0.32, 0.33, 0.36)
+const SKIN := Color(0.87, 0.67, 0.52)
+const SLEEVE := Color(0.24, 0.26, 0.3)
 
 var hammer: BfhHammer = null
 
@@ -20,25 +33,37 @@ var _t: float = -1.0
 
 func _init() -> void:
 	name = "Viewmodel"
-	position = Vector3(0.34, -0.34, -0.5)
+	# The elbow, below and behind the fist; the fist lands where the bare hammer's grip used to.
+	position = Vector3(0.32, -0.38, -0.18)
 	_pivot = Node3D.new()
 	_pivot.name = "Pivot"
 	add_child(_pivot)
 	_pivot.rotation_degrees = REST
 
-	var wood := _material(Color(0.55, 0.38, 0.2))
-	var iron := _material(Color(0.32, 0.33, 0.36))
-	_part(CylinderMesh.new(), Vector3(0.0, 0.2, 0.0), wood, 0.035, 0.5)
-	var head := BoxMesh.new()
-	head.size = Vector3(0.09, 0.09, 0.2)
-	var head_node := MeshInstance3D.new()
-	head_node.mesh = head
-	head_node.material_override = iron
-	head_node.position = Vector3(0.0, 0.46, 0.0)
-	head_node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_pivot.add_child(head_node)
+	_box(_pivot, Vector3(0.075, 0.075, FOREARM), Vector3(0.0, 0.0, -FOREARM * 0.5), _material(SLEEVE), false)
+	_box(_pivot, Vector3(0.09, 0.1, 0.1), Vector3(0.0, 0.0, -FOREARM), _material(SKIN), false)
+
+	var head := build_hammer(_pivot, false)
+	head.position = Vector3(0.0, 0.0, -FOREARM)
+	head.rotation_degrees = HAMMER_TILT
 	visible = false
 	set_process(false)
+
+
+## The hammer, built from primitives under [param parent]: the origin is the grip, the handle runs up
+## +Y and the head's striking face points -Z. Life size (a 0.5 m handle); the third-person figure
+## scales it. Returns the hammer's own node.
+static func build_hammer(parent: Node3D, shadows: bool) -> Node3D:
+	var root := Node3D.new()
+	root.name = "Hammer"
+	parent.add_child(root)
+	var handle := CylinderMesh.new()
+	handle.top_radius = 0.035
+	handle.bottom_radius = 0.035
+	handle.height = 0.5
+	_mesh(root, handle, Vector3(0.0, 0.2, 0.0), _material(WOOD), shadows)
+	_box(root, Vector3(0.09, 0.09, 0.2), Vector3(0.0, 0.46, 0.0), _material(IRON), shadows)
+	return root
 
 
 func bind(p_hammer: BfhHammer) -> void:
@@ -84,20 +109,23 @@ func _process(delta: float) -> void:
 		set_process(false)
 
 
-func _part(mesh: Mesh, at: Vector3, mat: Material, radius: float, length: float) -> void:
-	var cyl := mesh as CylinderMesh
-	cyl.top_radius = radius
-	cyl.bottom_radius = radius
-	cyl.height = length
+static func _box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, shadows: bool) -> void:
+	var box := BoxMesh.new()
+	box.size = size
+	_mesh(parent, box, at, mat, shadows)
+
+
+static func _mesh(parent: Node3D, mesh: Mesh, at: Vector3, mat: Material, shadows: bool) -> void:
 	var node := MeshInstance3D.new()
 	node.mesh = mesh
 	node.material_override = mat
 	node.position = at
-	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_pivot.add_child(node)
+	if not shadows:
+		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(node)
 
 
-func _material(color: Color) -> StandardMaterial3D:
+static func _material(color: Color) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
 	return mat

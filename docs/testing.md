@@ -34,6 +34,18 @@ Break the thing the check is about, watch it fail, put it back. Most checks here
 
 Four of this game's bugs (flat lighting, no grid, the stacked HUD, the bus facing the wall) and the jitter of every remote body were only visible in a picture. After any change to what is drawn, render it: `tools/shot.sh <seconds> <file.png> [flags]` (`./game.sh shot` wraps it). Flags frame the feature: `--stacks`, `--tanks`, `--scaffold`, `--yard[=courtyard]`, `--lane`, `--hook` (with `--bfh-hook-layout=wide`), `--west-lane`, `--ramp`, `--deck`, `--plan` (the bowl from above, north up), `--blind`, `--beacon [--bus]`, `--watch=follow`, `--settings`, `--blast`, `--scoreboard`. `--net` renders a connected client watching another runner and prints a per-frame movement probe (standing-still frames and frames off the median speed); `--net --walk` runs the client's own runner and reports key-to-motion latency, corrections per second and eye smoothness; `--close` brings the other runner near; `--no-interp` turns interpolation off for comparison. `tools/drive_shot.sh stop|handbrake|turn` draws a person driving a bus from straight above, eight frames a quarter of a second apart on one contact sheet (`screenshots/drive_<how>.png`): S from 15 m/s, Ctrl and D from 12 m/s, and D alone to compare.
 
+## Visual QA: every figure, the bus and the hammer at 60 fps
+
+`tools/visual_qa.gd` is this game's half of dot-game's shared harness (`DotGameVisualQaCapture`): the six runners (atlases a b c e f k) and the driver on foot (j) idle, walk, run and jump; the hammer is the runner's own first-person arm and a runner holding and swinging it; the bus drives and turns; crate, barrel (and its blast) and bowl turn. Each clip is recorded at 60 fps from the eye (`fp`), behind (`tp`) and in front (`op`), with checks for floor contact, foot slide, pops and the bus's tyres on the floor.
+
+```bash
+bash addons/dot_game/tools/dot_game_visual_qa.sh --shot tools/visual_qa_shot.sh            # everything
+bash addons/dot_game/tools/dot_game_visual_qa.sh --shot tools/visual_qa_shot.sh --fresh bus -- --only bus
+bash addons/dot_game/tools/dot_game_visual_qa_post.sh <review-key> --variant before|after   # to a nightly review
+```
+
+Read `screenshots/visual_qa/report.md` first (one verdict per clip), then only the sheets (`<item>/<clip>_{fp,tp,op}_sheet.png`) of what failed or changed. A run's floor contact of about 0.25 m is the stride's flight, not a float.
+
 ## The deployment is the only test of this
 
 The loopback suite runs both ends in one process: it proves encoders, prediction, reconciliation and ordering, and cannot see Godot's RPC routing, a pack being mounted, or a project setting that did not travel. Everything in [delivery.md](delivery.md) was found by:
