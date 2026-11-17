@@ -129,12 +129,13 @@ func _build() -> void:
 	_root.add_child(vitals)
 
 	_cover = _label(font_size)
-	# Top right: the bottom right belongs to the touch buttons.
+	# Top right: the bottom right belongs to the touch buttons. Under the menu's "H Help" chip
+	# (36..70 px down, 14 px in), which drew over this line's "alive" when it sat at the top.
 	_cover.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	_cover.offset_left = -330.0
-	_cover.offset_right = -30.0
-	_cover.offset_top = 18.0
-	_cover.offset_bottom = 64.0
+	_cover.offset_right = -14.0
+	_cover.offset_top = 76.0
+	_cover.offset_bottom = 122.0
 	_cover.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 
 	# A dot rather than a cross: the hammer has a reach of two metres and no spread,
