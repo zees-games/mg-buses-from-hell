@@ -45,7 +45,7 @@ func _ready() -> void:
 	# The sampler lives HERE and not on the player, because on a connected client the
 	# local player does not exist yet: they arrive in a JOIN, several frames after the
 	# keyboard does.
-	_sampler = BfhTouch.make_sampler(BfhPlayer.tunables_for(config), _touch_ignores)
+	_sampler = BfhTouch.make_sampler(BfhPlayer.tunables_for(config))
 
 	_build_hud()
 	_build_touch()
@@ -293,7 +293,7 @@ func _adopt(candidate: BfhPlayer) -> void:
 		_suspend_input(platform.is_input_blocked())
 
 	if DotPlatform.has_touch() and player.sampler != null and not player.sampler is DotFpsTouchSampler:
-		player.sampler = BfhTouch.make_sampler(player.sampler.tunables, _touch_ignores)
+		player.sampler = BfhTouch.make_sampler(player.sampler.tunables)
 		_suspend_input(platform.is_input_blocked() if platform != null else false)
 
 	if settings != null:
@@ -362,7 +362,7 @@ func _build_touch() -> void:
 	host.set_anchors_preset(Control.PRESET_FULL_RECT)
 	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(host)
-	_touch.build(host, _active_sampler, _set_swing, platform)
+	_touch.build(host, _active_sampler(), _set_swing, platform)
 
 
 ## After the world, because it listens to the world's round signals from the start: a

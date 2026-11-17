@@ -1,9 +1,9 @@
 extends DotGameCheckSuite
 
-## The phone's on-screen buttons: the layout fits a phone, nothing overlaps, and a press reaches the swing or the sampler.
+## The phone's controls: the layout fits a phone, nothing overlaps, and dot-mobile's overlay drives the client's sampler: the stick, the look half, the swing and the handbrake.
 
 const BfhTouch := preload("../game/bfh_touch.gd")
-const CHECKS := 12
+const CHECKS := 21
 
 
 func _ready() -> void:
@@ -33,15 +33,80 @@ func _run() -> void:
 		_check(inside, "every button sits in the right half at %dx%d" % [size.x, size.y])
 		_check(clear, "and no two overlap at %dx%d" % [size.x, size.y])
 
-	var swings: Array = []
-	var sampler := DotFpsTouchSampler.new(DotFpsTunables.new())
-	var sampler_fn := func() -> Variant: return sampler
-	var swing_fn := func(down: bool) -> void: swings.append(down)
-	BfhTouch.route(BfhTouch.FIRE, true, sampler_fn, swing_fn)
-	BfhTouch.route(BfhTouch.FIRE, false, sampler_fn, swing_fn)
-	_check(swings == [true, false], "a press and a release of HIT reach the swing", str(swings))
-	BfhTouch.route(BfhTouch.HANDBRAKE, true, sampler_fn, swing_fn)
-	_check((sampler.sample(0.016).buttons & DotFpsCommand.BUTTON_CROUCH) != 0, "BRAKE holds the handbrake bit the bus reads")
-	BfhTouch.route(BfhTouch.HANDBRAKE, false, sampler_fn, swing_fn)
-	_check((sampler.sample(0.016).buttons & DotFpsCommand.BUTTON_CROUCH) == 0, "and releasing lets it go")
+	await _overlay()
 	_report_sections(1, 1, 1, CHECKS)
+
+
+func _overlay() -> void:
+	DotPlatform.touch_override = 1
+	# The real HUD is a CanvasLayer with a Control host inside it; the overlay anchors to the Control.
+	var layer := CanvasLayer.new()
+	add_child(layer)
+	var host := Control.new()
+	host.size = Vector2(844, 390)
+	layer.add_child(host)
+	var sampler := DotFpsTouchSampler.new(DotFpsTunables.new())
+	var swings: Array = []
+	var touch := BfhTouch.new()
+	var controls := touch.build(host, sampler, func(down: bool) -> void: swings.append(down))
+	controls.size = host.size
+	await get_tree().process_frame
+	_check(controls.touch and controls.sampler == sampler and touch.buttons != null, "the overlay is built and drives the client's own sampler")
+	_check(not controls.crosshair_fn.is_valid() and not controls.effective.autofire, "no crosshair and no auto-fire: this is a hammer, not a gun")
+
+	var tap := InputEventScreenTouch.new()
+	tap.pressed = true
+	var fake := InputEventMouseMotion.new()
+	fake.device = InputEvent.DEVICE_ID_EMULATION
+	_check(touch.takes(tap) and touch.takes(fake), "it takes touches and the mouse emulated from them")
+
+	# The steer pad: a finger down in the left zone and dragged up is throttle.
+	var down := InputEventScreenTouch.new()
+	down.index = 0
+	down.pressed = true
+	var vw := get_viewport().get_visible_rect().size.x
+	down.position = Vector2(vw * 0.1, 300)
+	get_viewport().push_input(down)
+	var drag := InputEventScreenDrag.new()
+	drag.index = 0
+	drag.position = Vector2(vw * 0.1, 240)
+	drag.relative = Vector2(0, -60)
+	get_viewport().push_input(drag)
+	_check(sampler.sample(0.016).move.y > 0.1, "a finger on the left half drags the stick forward", str(sampler.sample(0.016).move))
+	var up := InputEventScreenTouch.new()
+	up.index = 0
+	up.pressed = false
+	up.position = drag.position
+	get_viewport().push_input(up)
+
+	# The buttons: HIT reaches the swing, BRAKE holds the bit the bus reads.
+	_press(touch.buttons.centre_of(BfhTouch.FIRE), 1, true)
+	_check(swings == [true], "a press of HIT reaches the swing", str(swings))
+	_press(touch.buttons.centre_of(BfhTouch.FIRE), 1, false)
+	_check(swings == [true, false], "and its release too", str(swings))
+	_press(touch.buttons.centre_of(BfhTouch.HANDBRAKE), 2, true)
+	_check((sampler.sample(0.016).buttons & DotFpsCommand.BUTTON_CROUCH) != 0, "BRAKE holds the handbrake bit")
+	_press(touch.buttons.centre_of(BfhTouch.HANDBRAKE), 2, false)
+	_check((sampler.sample(0.016).buttons & DotFpsCommand.BUTTON_CROUCH) == 0, "and releasing lets it go")
+	_press(touch.buttons.centre_of(BfhTouch.JUMP), 3, true)
+	_check((sampler.sample(0.016).buttons & DotFpsCommand.BUTTON_JUMP) != 0, "JUMP holds the jump bit")
+	_press(touch.buttons.centre_of(BfhTouch.JUMP), 3, false)
+
+	touch.sync(true)
+	_check(not controls.visible and not touch.active() and not touch.takes(tap), "a menu pauses it and lets the touch through")
+	touch.sync(false)
+	_check(touch.active(), "closing the menu brings it back")
+
+	var other := DotFpsTouchSampler.new(DotFpsTunables.new())
+	touch.bind_sampler(other)
+	_check(controls.sampler == other, "a new active sampler (the player changed) is the one it drives")
+	layer.free()
+	DotPlatform.touch_override = -1
+
+
+func _press(at: Vector2, finger: int, pressed: bool) -> void:
+	var e := InputEventScreenTouch.new()
+	e.index = finger
+	e.pressed = pressed
+	e.position = at
+	get_viewport().push_input(e)

@@ -118,6 +118,7 @@ func _physics_process(delta: float) -> void:
 		bridge.client_tick(net.clock.input_tick() - (ticks - 1 - i), move)
 
 func _process(delta: float) -> void:
+	_sync_touch()
 	third_person = game.view_rules.resolve(third_person)
 	var _shown := present_frame(net, game, player, delta, -1.0, third_person)
 	if killcam != null:
@@ -308,8 +309,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _covered():
 		return
 
-	# A finger on the steer pad or the look half; the buttons are DotTouchButtons' own.
+	# A finger on the steer pad or the look half. The overlay forwards its own to the sampler (and the mouse the engine
+	# emulates from a touch is dropped further down, once a spectator's tap has had it); only a touch it does not
+	# take (a menu is up, the overlay is off) reaches the sampler from here.
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:
+		if _touch != null and _touch.takes(event):
+			return
 		var touch_sampler := _active_sampler()
 		if touch_sampler is DotFpsTouchSampler:
 			(touch_sampler as DotFpsTouchSampler).set_screen_width(get_viewport().get_visible_rect().size.x)
@@ -341,6 +346,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_view()
 		return
 
+	# The mouse a touch emulates is the overlay's finger already: a second swing or look.
+	if event is InputEventMouse and _touch != null and _touch.takes(event):
+		return
+
 	if event is InputEventMouseButton:
 		var button := event as InputEventMouseButton
 
@@ -364,8 +373,14 @@ func _active_sampler() -> DotFpsSampler:
 		return player.sampler
 	return _sampler
 
-func _touch_ignores(position: Vector2) -> bool:
-	return _touch != null and _touch.buttons != null and _touch.buttons.contains_point(position)
+## The overlay drives whichever sampler is the active one, and rests under a menu, the chat, the console, the load
+## cover or a spectator's view, so a tap meant for those is never a button.
+func _sync_touch() -> void:
+	if _touch == null:
+		return
+	_touch.bind_sampler(_active_sampler())
+	var spectating := player != null and game.spectate != null and game.spectate.is_spectating(player.player_id)
+	_touch.sync(_covered() or spectating or (platform != null and platform.is_input_blocked()))
 
 ## The swing button, from the mouse or the screen.
 func _set_swing(pressed: bool) -> void:

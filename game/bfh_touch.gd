@@ -1,8 +1,9 @@
 extends RefCounted
 
-## The on-screen buttons a phone needs to drive and swing: the hammer (the horn in a bus), jump and the handbrake.
-## The left half of the screen is [DotFpsTouchSampler]'s steer pad (up and down are throttle and brake, sideways is
-## the wheel) and the right half looks; [member buttons] tells it where a button is.
+## The phone's controls: dot-mobile's overlay driving the client's [DotFpsTouchSampler]. The buttons a phone needs to
+## drive and swing: the hammer (the horn in a bus), jump and the handbrake.
+## The left half of the screen is the sampler's steer pad (up and down are throttle and brake, sideways is the wheel)
+## and the right half looks; [DotMobileControls] draws the stick, forwards the fingers and holds the buttons.
 
 const CHANNEL := "bfh.touch"
 
@@ -22,40 +23,90 @@ static func touch_layout() -> DotGameTouchLayout:
 		return DotGameTouchLayout.custom()
 	return res.value
 
-var buttons: DotTouchButtons = null
+
+## The rows [method touch_layout] gives, with the command bit the overlay holds on the sampler for jump and the handbrake.
+static func controls_layout() -> Array[Dictionary]:
+	var rows := touch_layout().buttons()
+	for row in rows:
+		if row["id"] == JUMP:
+			row["hold"] = DotFpsCommand.BUTTON_JUMP
+		elif row["id"] == HANDBRAKE:
+			row["hold"] = DotFpsCommand.BUTTON_CROUCH
+	return rows
 
 
-## Builds the buttons under [param parent]: jump and the handbrake go to the sampler (read through the callable, the
-## active one changes when the player does), the swing to [param swing_fn], which takes `down: bool`. [param client] fits them.
-func build(parent: Control, sampler_fn: Callable, swing_fn: Callable, client: Object = null) -> DotTouchButtons:
-	buttons = DotTouchButtons.new()
-	buttons.name = "TouchButtons"
-	buttons.set_anchors_preset(Control.PRESET_FULL_RECT)
-	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	touch_layout().apply(buttons, client)
-	parent.add_child(buttons)
-	buttons.button_down.connect(func(id: StringName) -> void: route(id, true, sampler_fn, swing_fn))
-	buttons.button_up.connect(func(id: StringName) -> void: route(id, false, sampler_fn, swing_fn))
-	return buttons
+var controls: DotMobileControls = null
+## dot-ui's buttons inside the overlay, for the shell's DPI fit.
+var buttons: DotTouchButtons:
+	get:
+		return controls.buttons if controls != null else null
+
+var _swing_fn: Callable = Callable()
+var _client: Object = null
 
 
-static func route(id: StringName, down: bool, sampler_fn: Callable, swing_fn: Callable) -> void:
-	if id == FIRE:
-		swing_fn.call(down)
+## Builds dot-mobile's overlay under [param parent] (a Control) over [param sampler]: the stick is the steer pad, the
+## right half looks, jump and the handbrake hold their bits, the hammer goes to [param swing_fn] (takes `down: bool`).
+## No crosshair is given, so auto-fire and aim assist have nothing to act on: this is not a shooter. [param client] fits
+## the buttons to the phone's DPI.
+func build(parent: Control, sampler: DotFpsSampler, swing_fn: Callable, client: Object = null) -> DotMobileControls:
+	_swing_fn = swing_fn
+	_client = client
+	controls = DotMobileControls.new()
+	controls.name = "TouchControls"
+	controls.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	controls.setup(sampler, controls_layout())
+	controls.button_pressed.connect(_on_button.bind(true))
+	controls.button_released.connect(_on_button.bind(false))
+	parent.add_child(controls)
+	_fit()
+	return controls
+
+
+## The active sampler changed (the player did): the overlay drives the new one.
+func bind_sampler(sampler: DotFpsSampler) -> void:
+	if controls == null or controls.sampler == sampler:
 		return
-	var sampler: Variant = sampler_fn.call()
-	if sampler != null and sampler.has_method(&"hold"):
-		var bit := DotFpsCommand.BUTTON_JUMP if id == JUMP else DotFpsCommand.BUTTON_CROUCH
-		sampler.call(&"hold", bit, down)
+	controls.setup(sampler, controls_layout())
+	_fit()
 
 
-## A touch sampler where a phone is, the keyboard one otherwise; [param ignore_fn] is asked with a screen position
-## and keeps a button's finger off the stick.
-static func make_sampler(tunables: DotFpsTunables, ignore_fn: Callable) -> DotFpsSampler:
+## True while the overlay is up and forwards [param event] itself, or [param event] is the mouse the engine emulates
+## from a touch, which would swing a second time.
+func takes(event: InputEvent) -> bool:
+	if controls == null or not controls.touch:
+		return false
+	return controls.takes(event) or (event is InputEventMouse and event.device == InputEvent.DEVICE_ID_EMULATION)
+
+
+func active() -> bool:
+	return controls != null and controls.touch
+
+
+## Pauses the overlay under a menu, the chat, the console or the cover.
+func sync(busy: bool) -> void:
+	if controls != null and controls.paused != busy:
+		controls.paused = busy
+
+
+func _fit() -> void:
+	if buttons != null and _client != null and _client.has_method(&"fit_touch_buttons"):
+		_client.call(&"fit_touch_buttons", buttons, controls_layout())
+
+
+func _on_button(id: StringName, down: bool) -> void:
+	if id == FIRE and _swing_fn.is_valid():
+		_swing_fn.call(down)
+
+
+## A touch sampler where a phone is, the keyboard one otherwise; [param ignore_fn], when given, is asked with a screen
+## position and keeps a finger off the stick.
+static func make_sampler(tunables: DotFpsTunables, ignore_fn: Callable = Callable()) -> DotFpsSampler:
 	var sampler: DotFpsSampler
 	if DotPlatform.has_touch():
 		var touch := DotFpsTouchSampler.new(tunables)
-		touch.ignore_fn = ignore_fn
+		if ignore_fn.is_valid():
+			touch.ignore_fn = ignore_fn
 		sampler = touch
 	else:
 		sampler = DotFpsSampler.new(tunables)
