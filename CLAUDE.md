@@ -49,6 +49,8 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 - **Runners step and the bowl has wind** (dot-audio's stock, `BfhAudio`); drivers make the engine instead. Levels are measured with `addons/dot_audio/tools/loudness.sh` (−17 LUFS band, `loudness_trim_db`); stock ids have files, so the suite's stand-in checks skip them.
 - **The loopback suites cannot see delivery.** After touching paths, art, scripts' types or project settings, pack it and join with a real client. [testing](docs/testing.md#the-deployment-is-the-only-test-of-this)
 
+`tools/check_addons.sh [checkout]` warns when a checkout's `addons/` links or native libraries differ from the `.gitignore` manifest (phantom failures come from a stale main checkout); fix with dot-bootstrap, never by editing it.
+
 ## Rules
 
 - A dead body falls as dot-player-char's ragdoll: the server picks the fall (`BfhGame.decide_death`, on `player.death`; a bus or a barrel always throws it), it rides DEATH last and optional, and the client copies it from the figure it draws (`BfhClient._fall`, from the world's `player_died` in both halves). The `sv_ragdoll*` cvars are bound in the module, REPLICATED, and followed by the client. Sounds in a pack are under its root except an addon's own (`res://addons/`). See dot-player-char's [docs/ragdolls.md](../dot-player-char/docs/ragdolls.md).
