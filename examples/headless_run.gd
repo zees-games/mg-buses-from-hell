@@ -12,7 +12,7 @@ func _run() -> void:
 	print("")
 
 	# `-- --only=<method>` runs that one section and nothing else, for working on it; the
-	# totals are not checked. The playground's suite has the same switch.
+	# totals are not checked. Playlot's suite has the same switch.
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--only="):
 			await call(arg.trim_prefix("--only="))
