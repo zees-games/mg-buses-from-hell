@@ -37,6 +37,8 @@ static func spec_for() -> DotMenuGameSpec:
 	s.comfort_row_text = "The end-of-round announcement appears at once."
 	s.ambient_text = "Quiet sounds under the bowl."
 	s.not_applied = NOT_APPLIED
+	# The touch Menu button sits top left: the round status label owns the top right, and the thumbs the bottom.
+	s.menu_button_corner = &"top_left"
 	s.bindings_maker = func() -> DotMenuBindings: return BfhBindings.make()
 	s.help_about = "Two players drive buses; everybody else runs. Drivers win by flattening every runner before the clock runs out; runners win if anybody is still standing when it does."
 	s.help_cards = [

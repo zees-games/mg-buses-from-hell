@@ -156,6 +156,11 @@ func _build() -> void:
 	_crosshair = dot
 
 
+## Where the top-right label sits on screen now: a suite checks it stays clear of the touch Menu button.
+func corner_label_rect() -> Rect2:
+	return _cover.get_global_rect() if _cover != null else Rect2()
+
+
 func _label(size: int) -> Label:
 	var label := Label.new()
 	label.add_theme_font_size_override("font_size", size)

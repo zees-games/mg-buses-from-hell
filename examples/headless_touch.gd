@@ -3,7 +3,9 @@ extends DotGameCheckSuite
 ## The phone's controls: the layout fits a phone, nothing overlaps, and dot-mobile's overlay drives the client's sampler: the stick, the look half, the swing and the handbrake.
 
 const BfhTouch := preload("../game/bfh_touch.gd")
-const CHECKS := 21
+const BfhHud := preload("../game/bfh_hud.gd")
+const BfhSettings := preload("../game/bfh_settings.gd")
+const CHECKS := 22
 
 
 func _ready() -> void:
@@ -34,7 +36,33 @@ func _run() -> void:
 		_check(clear, "and no two overlap at %dx%d" % [size.x, size.y])
 
 	await _overlay()
+	await _hud_clear_of_menu()
 	_report_sections(1, 1, 1, CHECKS)
+
+
+## The top-right HUD label stays clear of the Menu button at the corner this game's spec puts it in (dot-menu's default is the
+## top right, which sat on the label), and the button stays on screen.
+func _hud_clear_of_menu() -> void:
+	# A headless window is 64 px square, so the HUD lays out in a phone-sized viewport of its own.
+	var view := Vector2(844, 390)
+	var frame := SubViewport.new()
+	frame.size = Vector2i(view)
+	add_child(frame)
+	var hud := BfhHud.new()
+	frame.add_child(hud)
+	hud.bind(null, null)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var corner := BfhSettings.spec_for().menu_button_corner
+	var size := Vector2(96.0, 52.0)
+	var inset := 14.0
+	var right := corner == &"top_right" or corner == &"bottom_right"
+	var bottom := corner == &"bottom_right" or corner == &"bottom_left"
+	var menu := Rect2(Vector2(view.x - inset - size.x if right else inset, view.y - inset - size.y if bottom else inset), size)
+	var label := hud.corner_label_rect()
+	_check(label.size.x > 0.0 and Rect2(Vector2.ZERO, view).encloses(menu) and not label.intersects(menu),
+		"the top-right label does not sit under the Menu button", "%s vs %s" % [label, menu])
+	frame.free()
 
 
 func _overlay() -> void:
