@@ -33,7 +33,7 @@
 /addons/dot_net
 # dot-sim: optional native library (snapshot codec); without its built library the GDScript twins run.
 # bootstrap fetches this release's library for the machine (dot-bootstrap: bootstrap-natives).
-# bootstrap-natives: dot-sim v0.2.8
+# bootstrap-natives: dot-sim v0.2.10
 /addons/dot_sim
 /addons/dot_server
 /addons/dot_game
