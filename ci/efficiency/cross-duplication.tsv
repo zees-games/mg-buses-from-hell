@@ -1,0 +1,15 @@
+# duplication (cross-game)
+# Baselines only shrink: scripts/<gate> --update lowers or drops entries and refuses to add.
+examples/dedicated_boot.gd	31
+examples/dedicated_exit.gd	55
+examples/dedicated_live.gd	52
+examples/headless_config.gd	35
+examples/headless_native_motor.gd	137
+examples/headless_net_drawn.gd	47
+game/bfh_avatars.gd	50
+game/bfh_killcam.gd	32
+game/net/bfh_events.gd	93
+game/net/bfh_net_bridge_toys.gd	30
+game/net/bfh_net_link.gd	121
+tools/render_cover.gd	50
+tools/shot.gd	66
