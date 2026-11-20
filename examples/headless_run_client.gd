@@ -7,9 +7,12 @@ extends "headless_run_bus.gd"
 func _test_what_a_bot_travels_at() -> void:
 	print("what a bot actually travels at")
 
+	# The south rim without its colonnade: the bus's straight along z = 32 is where the run's end
+	# pillars stand, so these measurements are made on the open floor.
 	var game := _world(func(c: BfhConfig) -> void:
 		c.crate_count = 0
 		c.barrel_count = 0
+		c.south_run = false
 		c.round_seconds = 120.0)
 	var driver := game.add_player(&"d", "Driver", BfhGame.TEAM_DRIVERS)
 	var runner := game.add_player(&"r", "Runner", BfhGame.TEAM_RUNNERS)

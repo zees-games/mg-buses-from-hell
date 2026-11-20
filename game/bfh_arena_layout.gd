@@ -197,7 +197,26 @@ const COLONNADE_FIRST := 236.0
 ## [method colonnade_clearance], which `headless_run` asks at this radius.
 const COLONNADE_MIN_RADIUS := 45.0
 
+## [b]The south rim's own colonnade[/b]: the largest empty floor left after the north run, between the
+## scaffold and the stacks. Same walk off the wall as the north run, wider spacing (12.0 m axis to axis,
+## 9.6 m of floor in a gap: at the north run's 10.4 a bot bus swerved into the middle pillar).
+const SOUTH_RUN_SPACING := 12.0
+const SOUTH_RUN_PILLARS := 4
+
+## Degrees round the bowl from +X towards +Z of the first pillar, the scaffold's side; the rest step
+## on towards the stacks, to about 122.
+const SOUTH_RUN_FIRST := 66.0
+
+## Below this it is left out, for the reason [constant COLONNADE_MIN_RADIUS] is a number.
+const SOUTH_RUN_MIN_RADIUS := 46.0
+
 var radius: float = 46.0
+
+## Whether the south run is built. On in every shipped bowl; `headless_run` turns it off for the
+## drives that need the whole south rim as open floor (a bus's straight, its brakes, a handbrake turn,
+## which all run along z = 32) and which would otherwise have to dodge its end pillars. Layout, not a
+## cvar, like [member hook_layout]: it travels in the HELLO and a client builds the server's.
+var south_run: bool = true
 
 ## Which of [code]BfhDistricts[/code] the floor is, by id; empty (or an id this build does not know)
 ## is the bowl with its stacks, tank farm and colonnade. Layout, not a cvar, for the reason [member
@@ -227,6 +246,9 @@ var _stack_count: int = 0
 
 ## Where the tanks end in [member _obstacles]. The colonnade's pillars follow.
 var _tank_end: int = 0
+
+## Where the north colonnade ends in [member _obstacles]. The south run's pillars follow.
+var _north_end: int = 0
 
 ## Where a runner may be put: anywhere on the floor, inside a margin.
 func runner_area_radius() -> float:
@@ -352,11 +374,39 @@ func colonnade_walk_point(t: float) -> Vector3:
 
 ## Whether this bowl was built with the colonnade.
 func has_colonnade() -> bool:
-	return _obstacles.size() > _tank_end
+	return _north_end > _tank_end
 
 ## The pillars, deck end first. Empty on a bowl too small for it.
 func colonnade() -> PackedVector3Array:
-	return _obstacles.slice(_tank_end)
+	return _obstacles.slice(_tank_end, _north_end)
+
+## Where the south run's pillars stand, scaffold side first. Defined whether or not this bowl has it.
+func south_run_points() -> PackedVector3Array:
+	var out := PackedVector3Array()
+	var arc := colonnade_arc_radius()
+	var step := 2.0 * asin(SOUTH_RUN_SPACING * 0.5 / arc)
+	var first := deg_to_rad(SOUTH_RUN_FIRST)
+	for i in range(SOUTH_RUN_PILLARS):
+		var angle := first + step * float(i)
+		out.append(Vector3(cos(angle), 0.0, sin(angle)) * arc)
+	return out
+
+## A point on the middle of the south walk, [param t] of the way from the first pillar (0) to the last
+## (1), as [method colonnade_walk_point].
+func south_run_walk_point(t: float) -> Vector3:
+	var arc := colonnade_arc_radius()
+	var step := 2.0 * asin(SOUTH_RUN_SPACING * 0.5 / arc)
+	var angle := deg_to_rad(SOUTH_RUN_FIRST) + step * t * float(SOUTH_RUN_PILLARS - 1)
+	var middle := radius - COLONNADE_WALK * 0.5
+	return Vector3(cos(angle), 0.0, sin(angle)) * middle
+
+## Whether this bowl was built with the south run.
+func has_south_run() -> bool:
+	return _obstacles.size() > _north_end
+
+## The south run's pillars, scaffold side first. Empty when it was not built.
+func south_run_pillars() -> PackedVector3Array:
+	return _obstacles.slice(_north_end)
 
 ## The narrowest clear floor between a colonnade pillar and anything that is not the walk or a
 ## neighbour in the row: every other cylinder, the ramp's slab and the deck. The walk (to the wall)
@@ -368,7 +418,7 @@ func colonnade_clearance() -> float:
 	var deck_z := -(radius - LEDGE_DEPTH)
 	var half_ramp := RAMP_WIDTH * 0.5
 	var foot_z := ramp_foot().z
-	for i in range(_tank_end, _obstacles.size()):
+	for i in range(_tank_end, _north_end):
 		var at := _obstacles[i]
 		for j in range(_tank_end):
 			var axis := Vector2(at.x - _obstacles[j].x, at.z - _obstacles[j].z).length()

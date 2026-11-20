@@ -206,6 +206,11 @@ extends DotConfig
 ## for the same reason.
 @export_range(4.8, 10.0, 0.1) var courtyard_west_lane: float = 7.6
 
+## Whether the south rim has its colonnade (four pillars a walk's width off the wall). Read when the
+## bowl is built, like [member hook_layout]. Off leaves the south rim open floor, which is where the
+## suite measures a bus's straight, brakes and handbrake turn.
+@export var south_run: bool = true
+
 ## Seed for where they land.
 @export var arena_seed: int = 1337
 
@@ -281,6 +286,7 @@ func describe() -> Dictionary:
 		"bus_lethal_speed": "%.1f m/s" % bus_lethal_speed,
 		"hook_layout": hook_layout,
 		"courtyard_west_lane": "%.1f m" % courtyard_west_lane,
+		"south_run": south_run,
 		"bot_aim_past": "%.1f m" % bot_aim_past,
 		"bot_steer_clearance": "%.1f m" % bot_steer_clearance,
 		"bot_route": "%.1f m clear, replanned every %.1f s" % [bot_route_clearance, bot_route_replan],

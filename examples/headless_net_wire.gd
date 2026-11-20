@@ -3,7 +3,7 @@ extends "headless_net_harness.gd"
 
 const BfhKillcam := preload("../game/bfh_killcam.gd")
 
-const CHECKS := 233
+const CHECKS := 234
 
 ## Sections that must run to their last line. Each calls `_done()` there, and before
 ## every early return.
@@ -69,6 +69,10 @@ func _test_the_wire() -> void:
 	_check(bool(bowl["ok"]) and absf(float(bowl["arena_radius"]) - 54.0) < 0.05
 			and str(bowl["hook_layout"]) == "tight" and absf(float(bowl["courtyard_west_lane"]) - 7.6) < 0.005,
 		"bowl round-trips: the map a vote changed between rounds", str(bowl))
+
+	var open_bowl := BfhEvents.read_bowl(DotNetReader.new(BfhEvents.write_bowl(46.0, "tight", 7.6, "", false)))
+	_check(bool(bowl["south_run"]) and bool(open_bowl["ok"]) and not bool(open_bowl["south_run"]),
+		"bowl: the south run travels with it, on unless the server built the rim open")
 
 	_check(str(hello["district"]) == "" and str(bowl["district"]) == "",
 		"neither names a district unless the map is one")

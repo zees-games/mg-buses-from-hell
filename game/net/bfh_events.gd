@@ -117,7 +117,8 @@ static func write_hello(
 	round_seconds: float,
 	hook_layout: String,
 	courtyard_west_lane: float,
-	district: String = ""
+	district: String = "",
+	south_run: bool = true
 ) -> PackedByteArray:
 	var w := _w()
 	w.write_varint(player_id)
@@ -128,6 +129,7 @@ static func write_hello(
 	w.write_string(hook_layout, LAYOUT_NAME_BYTES)
 	w.write_float_range(courtyard_west_lane, 0.0, LAYOUT_MAX, LAYOUT_BITS)
 	w.write_string(district, LAYOUT_NAME_BYTES)
+	w.write_bool(south_run)
 	return w.to_bytes()
 
 
@@ -141,12 +143,13 @@ const LAYOUT_NAME_BYTES := 32
 ## The map, as the HELLO's last three fields: what a client needs to rebuild the bowl when
 ## the server rebuilds its own between rounds.
 static func write_bowl(arena_radius: float, hook_layout: String, courtyard_west_lane: float,
-		district: String = "") -> PackedByteArray:
+		district: String = "", south_run: bool = true) -> PackedByteArray:
 	var w := _w()
 	w.write_float_range(arena_radius, 0.0, 512.0, 16)
 	w.write_string(hook_layout, LAYOUT_NAME_BYTES)
 	w.write_float_range(courtyard_west_lane, 0.0, LAYOUT_MAX, LAYOUT_BITS)
 	w.write_string(district, LAYOUT_NAME_BYTES)
+	w.write_bool(south_run)
 	return w.to_bytes()
 
 
@@ -155,11 +158,13 @@ static func read_bowl(r: DotNetReader) -> Dictionary:
 	var hook_layout := r.read_string(LAYOUT_NAME_BYTES)
 	var courtyard_west_lane := r.read_float_range(0.0, LAYOUT_MAX, LAYOUT_BITS)
 	var district := r.read_string(LAYOUT_NAME_BYTES)
+	var south_run := r.read_bool()
 	return {
 		"arena_radius": arena_radius,
 		"hook_layout": hook_layout,
 		"courtyard_west_lane": courtyard_west_lane,
 		"district": district,
+		"south_run": south_run,
 		"ok": r.ok(),
 	}
 
@@ -173,6 +178,7 @@ static func read_hello(r: DotNetReader) -> Dictionary:
 	var hook_layout := r.read_string(LAYOUT_NAME_BYTES)
 	var courtyard_west_lane := r.read_float_range(0.0, LAYOUT_MAX, LAYOUT_BITS)
 	var district := r.read_string(LAYOUT_NAME_BYTES)
+	var south_run := r.read_bool()
 	return {
 		"player_id": player_id,
 		"tick_rate": tick_rate,
@@ -182,6 +188,7 @@ static func read_hello(r: DotNetReader) -> Dictionary:
 		"hook_layout": hook_layout,
 		"courtyard_west_lane": courtyard_west_lane,
 		"district": district,
+		"south_run": south_run,
 		"ok": r.ok(),
 	}
 

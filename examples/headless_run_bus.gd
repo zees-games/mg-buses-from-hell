@@ -379,9 +379,11 @@ func _test_bus_propulsion() -> void:
 func _test_bus_brakes() -> void:
 	print("a bus's brakes")
 
+	# The south rim without its colonnade: this drives along z = 32, where the run's end pillars stand.
 	var game := _world(func(c: BfhConfig) -> void:
 		c.crate_count = 0
 		c.barrel_count = 0
+		c.south_run = false
 		c.driver_count = 1)
 	game.add_player(&"d", "Driver", BfhGame.TEAM_DRIVERS)
 	game.add_player(&"r", "Runner", BfhGame.TEAM_RUNNERS)
@@ -492,9 +494,11 @@ func _bus_stop(game: BfhGame, driver: BfhPlayer, how: String) -> Dictionary:
 func _test_handbrake_turn() -> void:
 	print("a handbrake turn")
 
+	# The south rim without its colonnade: this drives along z = 32, where the run's end pillars stand.
 	var game := _world(func(c: BfhConfig) -> void:
 		c.crate_count = 0
 		c.barrel_count = 0
+		c.south_run = false
 		c.driver_count = 1)
 	game.add_player(&"d", "Driver", BfhGame.TEAM_DRIVERS)
 	game.add_player(&"r", "Runner", BfhGame.TEAM_RUNNERS)

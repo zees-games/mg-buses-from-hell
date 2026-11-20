@@ -42,6 +42,8 @@
 # hook_layout: "tight"
 # The clear floor of the tank farm's courtyard's west lane, in metres: its 4.4 m drum is moved out along the ... [4.8..10.0]
 # courtyard_west_lane: 7.6
+# Whether the south rim has its colonnade (four pillars a walk's width off the wall). Read when the bowl is b...
+# south_run: true
 # Seed for where they land.
 # arena_seed: 1337
 # Whether a new layout is rolled each round.

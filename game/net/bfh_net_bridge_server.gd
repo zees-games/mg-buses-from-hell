@@ -243,7 +243,7 @@ func _announce_seat(vehicle: DotVehicleInstance, rider_id: StringName, seated: b
 func _on_bowl_changed(_bowl_id: StringName) -> void:
 	_broadcast(BfhEvents.Kind.BOWL, BfhEvents.write_bowl(
 		game.arena.radius, game.arena.hook_layout, game.arena.courtyard_west_lane,
-		game.arena.district
+		game.arena.district, game.arena.south_run
 	))
 
 func _on_round_began(number: int) -> void:

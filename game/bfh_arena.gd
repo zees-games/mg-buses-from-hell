@@ -24,6 +24,7 @@ func build(p_radius: float) -> void:
 		_build_district()
 		_stack_count = 0
 		_tank_end = 0
+		_north_end = 0
 	else:
 		_build_stacks()
 		# Counted here rather than inside `_build_stacks`, which returns early on a bowl too
@@ -33,6 +34,8 @@ func build(p_radius: float) -> void:
 		_build_tanks()
 		_tank_end = _obstacles.size()
 		_build_colonnade()
+		_north_end = _obstacles.size()
+		_build_south_run()
 	_toy_spots = _find_toy_spots()
 
 	DotLog.info(
@@ -43,7 +46,8 @@ func build(p_radius: float) -> void:
 			"segments": WALL_SEGMENTS,
 			"pillars": _stack_count,
 			"tanks": _tank_end - _stack_count,
-			"colonnade": _obstacles.size() - _tank_end,
+			"colonnade": _north_end - _tank_end,
+			"south run": _obstacles.size() - _north_end,
 			"scaffold": "%d crates" % scaffold_cells().size(),
 			"tightest gap": "%.1f m" % narrowest_gap(),
 			"district": district if district != "" else "the bowl",
@@ -80,6 +84,7 @@ func _clear() -> void:
 	_route = null
 	_stack_count = 0
 	_tank_end = 0
+	_north_end = 0
 	_district_buildings = []
 
 ## The bowl's palette: a sunny sand bowl in the family's pastels (game-fatal-contact's built-in maps), one
@@ -479,6 +484,19 @@ func _build_colonnade() -> void:
 	for i in range(at.size()):
 		_add_obstacle(at[i], PILLAR_RADIUS)
 		_build_pillar(row, "Colonnade%d" % i, at[i])
+
+## The south run's pillars, through [method _add_obstacle] like the north run's. See
+## [constant SOUTH_RUN_SPACING].
+func _build_south_run() -> void:
+	if not south_run or radius < SOUTH_RUN_MIN_RADIUS or radius < COLONNADE_MIN_RADIUS:
+		return
+	var row := Node3D.new()
+	row.name = "SouthRun"
+	add_child(row)
+	var at := south_run_points()
+	for i in range(at.size()):
+		_add_obstacle(at[i], PILLAR_RADIUS)
+		_build_pillar(row, "SouthRun%d" % i, at[i])
 
 func _build_tank(parent: Node3D, node_name: String, at: Vector3, tank_radius: float) -> void:
 	var body := StaticBody3D.new()

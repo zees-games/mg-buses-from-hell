@@ -36,6 +36,7 @@ func _run() -> void:
 	await _test_the_back_yard()
 	await _test_the_second_lane()
 	await _test_the_colonnade()
+	await _test_the_south_run()
 	await _test_the_courtyard_lanes()
 	await _test_the_hook_gaps()
 	await _test_up_onto_the_deck()

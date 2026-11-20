@@ -31,7 +31,8 @@ func _admit(peer_id: int) -> void:
 		game.config.round_seconds,
 		game.arena.hook_layout if game.arena != null else game.config.hook_layout,
 		game.arena.courtyard_west_lane if game.arena != null else game.config.courtyard_west_lane,
-		game.arena.district if game.arena != null else ""
+		game.arena.district if game.arena != null else "",
+		game.arena.south_run if game.arena != null else game.config.south_run
 	))
 
 	# The bowl's toys by net id in ring order, which the joiner's own are paired with.
@@ -122,7 +123,8 @@ func _on_event(message: DotNetMessage) -> void:
 			var bowl := BfhEvents.read_bowl(reader)
 			if bool(bowl["ok"]):
 				_adopt_map(float(bowl["arena_radius"]), str(bowl["hook_layout"]),
-					float(bowl["courtyard_west_lane"]), str(bowl["district"]))
+					float(bowl["courtyard_west_lane"]), str(bowl["district"]),
+					bool(bowl["south_run"]))
 		BfhEvents.Kind.SOUND:
 			var sound := BfhEvents.read_sound(reader)
 			var id := BfhSounds.world_id(int(sound["index"]))
@@ -187,14 +189,17 @@ func _heard_a_swap() -> void:
 
 ## The server's bowl, built here if it is not the one this client has: from the HELLO on joining,
 ## and from a BOWL when the players' vote changed it between rounds.
-func _adopt_map(radius: float, hook: String, west: float, district: String = "") -> void:
+func _adopt_map(radius: float, hook: String, west: float, district: String = "",
+		south: bool = true) -> void:
 	if game.arena != null and (absf(game.arena.radius - radius) > 0.01
 			or game.arena.district != district
 			or game.arena.hook_layout != hook
+			or game.arena.south_run != south
 			or absf(game.arena.courtyard_west_lane - west) > 0.005):
 		game.arena.hook_layout = hook
 		game.arena.courtyard_west_lane = west
 		game.arena.district = district
+		game.arena.south_run = south
 		game.arena.build(radius)
 
 func _apply_hello(reader: DotNetReader) -> void:
@@ -217,7 +222,7 @@ func _apply_hello(reader: DotNetReader) -> void:
 	# `BfhArena.build(radius)` run on both ends — so a client that kept its own default against a
 	# server running a smaller bowl would have its wall, its ledge and its stacks all in the wrong.
 	_adopt_map(float(hello["arena_radius"]), str(hello["hook_layout"]),
-		float(hello["courtyard_west_lane"]), str(hello["district"]))
+		float(hello["courtyard_west_lane"]), str(hello["district"]), bool(hello["south_run"]))
 
 	game.config.round_seconds = float(hello["round_seconds"])
 

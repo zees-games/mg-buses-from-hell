@@ -536,6 +536,29 @@ func scaffold_peak() -> int:
 func scaffold_footprint() -> AABB:
 	return AABB(_scaffold_origin, scaffold_size()) if _has_scaffold else AABB()
 
+## The narrowest clear floor between a south-run pillar and anything that is not the walk or a
+## neighbour in its row: every other cylinder, the scaffold, the ramp's slab and the deck.
+func south_run_clearance() -> float:
+	if not has_south_run():
+		return INF
+	var nearest := INF
+	var deck_z := -(radius - LEDGE_DEPTH)
+	var half_ramp := RAMP_WIDTH * 0.5
+	var foot_z := ramp_foot().z
+	for i in range(_north_end, _obstacles.size()):
+		var at := _obstacles[i]
+		for j in range(_north_end):
+			var axis := Vector2(at.x - _obstacles[j].x, at.z - _obstacles[j].z).length()
+			nearest = minf(nearest, axis - PILLAR_RADIUS - _obstacle_radii[j])
+		nearest = minf(nearest, _to_box(at, -half_ramp, half_ramp, deck_z, foot_z) - PILLAR_RADIUS)
+		nearest = minf(nearest,
+			_to_box(at, -LEDGE_WIDTH * 0.5, LEDGE_WIDTH * 0.5, -radius, deck_z) - PILLAR_RADIUS)
+		if _has_scaffold:
+			var fp := scaffold_footprint()
+			nearest = minf(nearest,
+				_to_box(at, fp.position.x, fp.end.x, fp.position.z, fp.end.z) - PILLAR_RADIUS)
+	return nearest
+
 ## The least clear floor between the scaffold's footprint and any pillar or tank, in metres. INF
 ## with no scaffold.
 func scaffold_clearance() -> float:
@@ -651,7 +674,8 @@ func describe() -> Dictionary:
 		"ledge": str(ledge_centre()),
 		"pillars": _stack_count,
 		"tanks": _tank_end - _stack_count,
-		"colonnade": _obstacles.size() - _tank_end,
+		"colonnade": _north_end - _tank_end,
+		"south run": _obstacles.size() - _north_end,
 		"scaffold": scaffold_cells().size(),
 		"ramp": "%.0f deg, lips %s" % [ramp_slope(), str(ramp_lips())],
 		"tightest gap": "%.1f m" % narrowest_gap(),

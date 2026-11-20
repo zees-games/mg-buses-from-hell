@@ -1,4 +1,4 @@
-extends "headless_run_lanes.gd"
+extends "headless_run_south.gd"
 ## The courtyard lanes, the deck, the hook gaps, and the hammer and barrel sections.
 
 

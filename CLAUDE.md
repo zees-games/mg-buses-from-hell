@@ -112,3 +112,5 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 - Each test world has its own physics space; move a runner with `_put`, never `global_position` alone; assert a bot's pace and a bus's lethal speed, not arrival; arm every new check.
 
 - **Publishing**: `tools/publish.sh [--version V | --bump patch] [--site URL --token-file F]` publishes this game as the dot-cloud pack `gamemann/mg-buses-from-hell` (host addons from the server, `licence.json` covers every shipped file); see dot-cloud/docs/cdn-publish.md.
+
+- The south run (`BfhArena.SOUTH_RUN_*`, `south_run`): four pillars 66 to ~122 deg at 12.0 m spacing, a walk off the south wall. The bus's straight, brakes and handbrake sections drive along z = 32, where its end pillars stand, so their worlds set `config.south_run = false` (cleared place); the flag travels in HELLO/BOWL.

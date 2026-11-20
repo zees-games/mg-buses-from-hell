@@ -142,6 +142,7 @@ func _build_arena() -> void:
 	# defaults until the HELLO says what the server built (see the bridge).
 	arena.hook_layout = config.hook_layout
 	arena.courtyard_west_lane = config.courtyard_west_lane
+	arena.south_run = config.south_run
 	add_child(arena)
 	# Every build, the server's and a client's rebuild on HELLO alike.
 	var _toys := arena.built.connect(_build_toys)
