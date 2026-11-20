@@ -1,5 +1,3 @@
-# Buses From Hell
-
 Buses From Hell is a 3D multiplayer game. A few players drive buses, and everybody else is on foot and trying to survive. The drivers try to run the runners over before the clock runs out. It is inspired by a classic Counter-Strike: Source MiniGames map called [**buses_from_hell**](https://gamebanana.com/mods/127607) ([gameplay video](https://www.youtube.com/watch?v=wnY1eu890k4)).
 
 ![Preview](https://github.com/zees-games/mg-buses-from-hell/blob/main/images/preview.gif?raw=true)
