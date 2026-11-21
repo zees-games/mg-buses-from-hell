@@ -1,4 +1,4 @@
-extends DotGameCheckSuite
+extends GSGameCheckSuite
 
 ## The phone's controls: the layout fits a phone, nothing overlaps, and dot-mobile's overlay drives the client's sampler: the stick, the look half, the swing and the handbrake.
 
@@ -9,7 +9,7 @@ const CHECKS := 22
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.FATAL)
+	GSLog.set_level(GSLog.Level.FATAL)
 	_run.call_deferred()
 
 
@@ -19,7 +19,7 @@ func _run() -> void:
 	var ids: Array = list.map(func(b: Dictionary) -> Variant: return b["id"])
 	for want: StringName in [BfhTouch.FIRE, BfhTouch.JUMP, BfhTouch.HANDBRAKE]:
 		_check(ids.has(want), "the layout has the %s button" % want)
-	var probe := DotTouchButtons.new()
+	var probe := GSTouchButtons.new()
 	var m := probe.margin
 	probe.free()
 	for size: Vector2 in [Vector2(667, 375), Vector2(844, 390), Vector2(932, 430)]:
@@ -66,14 +66,14 @@ func _hud_clear_of_menu() -> void:
 
 
 func _overlay() -> void:
-	DotPlatform.touch_override = 1
+	GSPlatform.touch_override = 1
 	# The real HUD is a CanvasLayer with a Control host inside it; the overlay anchors to the Control.
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	var host := Control.new()
 	host.size = Vector2(844, 390)
 	layer.add_child(host)
-	var sampler := DotFpsTouchSampler.new(DotFpsTunables.new())
+	var sampler := GSFpsTouchSampler.new(GSFpsTunables.new())
 	var swings: Array = []
 	var touch := BfhTouch.new()
 	var controls := touch.build(host, sampler, func(down: bool) -> void: swings.append(down))
@@ -113,11 +113,11 @@ func _overlay() -> void:
 	_press(touch.buttons.centre_of(BfhTouch.FIRE), 1, false)
 	_check(swings == [true, false], "and its release too", str(swings))
 	_press(touch.buttons.centre_of(BfhTouch.HANDBRAKE), 2, true)
-	_check((sampler.sample(0.016).buttons & DotFpsCommand.BUTTON_CROUCH) != 0, "BRAKE holds the handbrake bit")
+	_check((sampler.sample(0.016).buttons & GSFpsCommand.BUTTON_CROUCH) != 0, "BRAKE holds the handbrake bit")
 	_press(touch.buttons.centre_of(BfhTouch.HANDBRAKE), 2, false)
-	_check((sampler.sample(0.016).buttons & DotFpsCommand.BUTTON_CROUCH) == 0, "and releasing lets it go")
+	_check((sampler.sample(0.016).buttons & GSFpsCommand.BUTTON_CROUCH) == 0, "and releasing lets it go")
 	_press(touch.buttons.centre_of(BfhTouch.JUMP), 3, true)
-	_check((sampler.sample(0.016).buttons & DotFpsCommand.BUTTON_JUMP) != 0, "JUMP holds the jump bit")
+	_check((sampler.sample(0.016).buttons & GSFpsCommand.BUTTON_JUMP) != 0, "JUMP holds the jump bit")
 	_press(touch.buttons.centre_of(BfhTouch.JUMP), 3, false)
 
 	touch.sync(true)
@@ -125,11 +125,11 @@ func _overlay() -> void:
 	touch.sync(false)
 	_check(touch.active(), "closing the menu brings it back")
 
-	var other := DotFpsTouchSampler.new(DotFpsTunables.new())
+	var other := GSFpsTouchSampler.new(GSFpsTunables.new())
 	touch.bind_sampler(other)
 	_check(controls.sampler == other, "a new active sampler (the player changed) is the one it drives")
 	layer.free()
-	DotPlatform.touch_override = -1
+	GSPlatform.touch_override = -1
 
 
 func _press(at: Vector2, finger: int, pressed: bool) -> void:

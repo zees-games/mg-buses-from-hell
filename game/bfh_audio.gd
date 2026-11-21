@@ -21,7 +21,7 @@ const ENGINE_TOP_SPEED := 22.0
 ## lands just after a snapshot; a pulse rate that jumped with it would stutter.
 const ENGINE_SMOOTHING := 8.0
 
-var audio: DotAudioManager = null
+var audio: GSAudioManager = null
 
 var _world: Node3D = null
 
@@ -34,23 +34,23 @@ var _engines: Dictionary = {}
 
 ## Runners' footsteps (sand, so dot-audio's grass set) and the bowl's wind, from dot-audio's
 ## stock. Drivers are in a bus and make the engine instead.
-var steps: DotAudioFootsteps = null
-var ambience: DotAudioAmbience = null
+var steps: GSAudioFootsteps = null
+var ambience: GSAudioAmbience = null
 
 ## Quiet moods under the bowl (dot-audio's stock set); the wind bed plays only when none loaded.
-var ambient: DotAmbienceDirector = null
+var ambient: GSAmbienceDirector = null
 
 
 ## Builds the manager and listens to [param world]. [param own] returns this client's
 ## player, or null before there is one.
-func setup(world: Node3D, own: Callable = Callable()) -> DotResult:
+func setup(world: Node3D, own: Callable = Callable()) -> GSResult:
 	_world = world
 	_own = own
 
-	audio = DotAudioManager.new()
+	audio = GSAudioManager.new()
 	audio.name = "Manager"
 	audio.catalogue = BfhSounds.catalogue()
-	audio.mixer = DotAudioMixer.new()
+	audio.mixer = GSAudioMixer.new()
 	# Not registered. A client and a server in one editor session, and the suite, are two
 	# of these in one process, and a registry name is the last one's.
 	audio.register_as_service = false
@@ -69,23 +69,23 @@ func setup(world: Node3D, own: Callable = Callable()) -> DotResult:
 	# Only on a real sink, and only after setup: the manager decides whether there is a
 	# device, and baking streams on a machine with nothing to play them on is a few
 	# hundred milliseconds of arithmetic for nobody.
-	var godot_sink := audio.sink as DotAudioSinkGodot
+	var godot_sink := audio.sink as GSAudioSinkGodot
 	if godot_sink != null:
-		godot_sink.bank = DotAudioSynth.bank(audio.catalogue, BfhSounds.sound_recipes())
-		DotLog.info(CHANNEL, "no audio files; synthesised stand-ins are in use", {
+		godot_sink.bank = GSAudioSynth.bank(audio.catalogue, BfhSounds.sound_recipes())
+		GSLog.info(CHANNEL, "no audio files; synthesised stand-ins are in use", {
 			"ids": BfhSounds.sound_recipes().size(), "dir": BfhSounds.sound_dir(),
 		})
 
-	steps = DotAudioFootsteps.new()
+	steps = GSAudioFootsteps.new()
 	steps.name = "Footsteps"
 	steps.manager = audio
 	steps.default_surface = &"sand"
 	add_child(steps)
-	ambience = DotAudioAmbience.new()
+	ambience = GSAudioAmbience.new()
 	ambience.name = "Ambience"
 	ambience.manager = audio
 	add_child(ambience)
-	ambient = DotAmbienceDirector.new()
+	ambient = GSAmbienceDirector.new()
 	ambient.name = "Ambient"
 	ambient.manager = audio
 	ambient.default_mood = BfhAmbience.DEFAULT_MOOD
@@ -113,7 +113,7 @@ func setup(world: Node3D, own: Callable = Callable()) -> DotResult:
 	world.connect("round_over", _on_round_over)
 	world.connect("sides_swapped", _on_sides_swapped)
 
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 ## Once a frame: where the listener is, and every driven bus's engine.

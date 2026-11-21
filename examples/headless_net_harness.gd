@@ -1,4 +1,4 @@
-extends DotGameCheckSuite
+extends GSGameCheckSuite
 ## The wire suite's harness: both halves of a game over a lossy loopback, brought up and stepped.
 ## Split from headless_net.gd (which extends this) so that file stays a size the gate allows.
 
@@ -47,8 +47,8 @@ var _completed := 0
 
 var _server_game: BfhGame = null
 var _client_game: BfhGame = null
-var _server_net: DotNetManager = null
-var _client_net: DotNetManager = null
+var _server_net: GSNetManager = null
+var _client_net: GSNetManager = null
 var _server_bridge: BfhNetBridge = null
 var _client_bridge: BfhNetBridge = null
 
@@ -96,8 +96,8 @@ func _make_game(server: bool, parent: Node) -> BfhGame:
 
 func _make_manager(
 	server: bool, scope: StringName, peer_id: int, parent: Node, tick_rate: int
-) -> DotNetManager:
-	var manager := DotNetManager.new()
+) -> GSNetManager:
+	var manager := GSNetManager.new()
 	manager.name = "Server" if server else "Client"
 	manager.is_server = server
 	manager.local_peer_id = peer_id
@@ -105,7 +105,7 @@ func _make_manager(
 	manager.auto_tick = false
 	manager.config_file = ""
 
-	var config := DotNetConfig.new()
+	var config := GSNetConfig.new()
 	config.tick_rate = tick_rate
 	config.snapshot_rate = SNAPSHOT_RATE
 	config.enable_prediction = true
@@ -186,7 +186,7 @@ func _make_managers(server_side: Node, client_side: Node) -> void:
 	)
 	# This harness stamps commands itself, so asking for the input-lead report would steer the
 	# clock by commands it never stamped. Read by constant map so older dot-net still parses.
-	var lead_bit := int((DotNetMessageRegistry as Script).get_script_constant_map().get("FEATURE_INPUT_LEAD", 0))
+	var lead_bit := int((GSNetMessageRegistry as Script).get_script_constant_map().get("FEATURE_INPUT_LEAD", 0))
 	_client_net.messages.features &= ~lead_bit
 
 
@@ -215,7 +215,7 @@ func _attach_bridges(server_side: Node, client_side: Node) -> bool:
 	add_child(wrong)
 	var refused := wrong.attach(_client_game, _server_net)
 	_check(
-		not refused.ok and refused.error.code == DotError.CODE_STATE,
+		not refused.ok and refused.error.code == GSError.CODE_STATE,
 		"a client world on a server manager is refused"
 	)
 	wrong.queue_free()
@@ -240,7 +240,7 @@ func _open_links(server_side: Node, client_side: Node) -> void:
 	_server_bridge.link.loopback = _on_server_send
 	_client_bridge.link.loopback = _on_client_send
 
-	# Stands in for `DotClientLink.ping_ms()`: with no RTT sample the clock believes the
+	# Stands in for `GSClientLink.ping_ms()`: with no RTT sample the clock believes the
 	# link is instant and every command it stamps arrives after its tick has passed.
 	_client_bridge.rtt_source = _rtt_ms
 
@@ -315,19 +315,19 @@ func _exchange() -> void:
 ## One tick on both ends, with a real physics frame between them.
 ## The awaited physics frame is not padding: crates, barrels and the bus are rigid bodies,
 ## integrated only on the physics frame, so a tight loop would replicate nothing and pass.
-func _step(command: DotFpsCommand = null) -> void:
+func _step(command: GSFpsCommand = null) -> void:
 	_tick += 1
 	_client_net.clock.advance(1.0 / float(maxi(_client_game.tick_rate, 1)))
 	_server_bridge.server_tick(_tick)
 	_flush()
 	_client_bridge.client_tick(
-		_tick + INPUT_LEAD, command if command != null else DotFpsCommand.new()
+		_tick + INPUT_LEAD, command if command != null else GSFpsCommand.new()
 	)
 	_flush()
 	await get_tree().physics_frame
 
 
-func _steps(count: int, command: DotFpsCommand = null) -> void:
+func _steps(count: int, command: GSFpsCommand = null) -> void:
 	for _i in range(count):
 		await _step(command)
 
@@ -341,8 +341,8 @@ func _corrections() -> int:
 	return int(_client_net.predictor.describe()["corrections"])
 
 
-func _forward() -> DotFpsCommand:
-	var c := DotFpsCommand.new()
+func _forward() -> GSFpsCommand:
+	var c := GSFpsCommand.new()
 	c.move = Vector2(0.0, 1.0)
 	return c
 

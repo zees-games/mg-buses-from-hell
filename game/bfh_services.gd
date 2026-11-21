@@ -1,4 +1,4 @@
-extends DotGameServices
+extends GSGameServices
 
 const BfhGame := preload("bfh_game.gd")
 const BfhNetBridge := preload("net/bfh_net_bridge.gd")
@@ -6,7 +6,7 @@ const BfhPlayer := preload("bfh_player.gd")
 
 ## Chat, voice and moderation — and the moderator's live tools — wired to this game's two sides.
 
-# No `const CHANNEL`: [DotGameServices] declares one and GDScript refuses a redeclaration,
+# No `const CHANNEL`: [GSGameServices] declares one and GDScript refuses a redeclaration,
 # which is the right refusal — one layer, one channel an operator can turn up.
 
 const CH_ALL := &"all"
@@ -29,8 +29,8 @@ func _chat_rules() -> Object:
 
 
 ## The same rules, as a static a CLIENT can ask for without building a services layer.
-static func chat_rules() -> DotChatRules:
-	var rules := DotChatRules.new()
+static func chat_rules() -> GSChatRules:
+	var rules := GSChatRules.new()
 	rules.max_length = 140
 	rules.refuse_over_length = false
 	rules.allow_newlines = false
@@ -56,10 +56,10 @@ func _chat_channels() -> Array:
 
 
 ## The channels, as a static for the same reason [method chat_rules] is one.
-static func chat_channels() -> Array[DotChatChannel]:
-	var out: Array[DotChatChannel] = []
+static func chat_channels() -> Array[GSChatChannel]:
+	var out: Array[GSChatChannel] = []
 
-	var everyone := DotChatChannel.make(CH_ALL, "All", DotChatChannel.Scope.EVERYONE)
+	var everyone := GSChatChannel.make(CH_ALL, "All", GSChatChannel.Scope.EVERYONE)
 	everyone.colour = Color(0.93, 0.94, 0.96)
 	# Short, because a round is three minutes: a backlog longer than the round is a
 	# conversation from a game the new player was not in.
@@ -67,7 +67,7 @@ static func chat_channels() -> Array[DotChatChannel]:
 	everyone.history_limit = 200
 	out.append(everyone)
 
-	var team := DotChatChannel.make(CH_TEAM, "Team", DotChatChannel.Scope.TEAM)
+	var team := GSChatChannel.make(CH_TEAM, "Team", GSChatChannel.Scope.TEAM)
 	team.prefix = "[team]"
 	team.colour = Color(0.55, 0.82, 0.95)
 	# [b]No backlog, and it is the sides that make that matter.[/b] A backlog is handed to
@@ -77,7 +77,7 @@ static func chat_channels() -> Array[DotChatChannel]:
 	team.history_limit = 120
 	out.append(team)
 
-	var admin := DotChatChannel.make(CH_ADMIN, "Admin", DotChatChannel.Scope.EVERYONE)
+	var admin := GSChatChannel.make(CH_ADMIN, "Admin", GSChatChannel.Scope.EVERYONE)
 	admin.prefix = "[ADMIN]"
 	admin.colour = Color(0.98, 0.72, 0.35)
 	admin.admin_only = true
@@ -87,7 +87,7 @@ static func chat_channels() -> Array[DotChatChannel]:
 	admin.backlog = 0
 	out.append(admin)
 
-	var whisper := DotChatChannel.make(CH_WHISPER, "Whisper", DotChatChannel.Scope.DIRECT)
+	var whisper := GSChatChannel.make(CH_WHISPER, "Whisper", GSChatChannel.Scope.DIRECT)
 	whisper.prefix = "[w]"
 	whisper.colour = Color(0.78, 0.71, 0.93)
 	whisper.backlog = 0
@@ -97,8 +97,8 @@ static func chat_channels() -> Array[DotChatChannel]:
 
 
 ## The voice format, which both ends must agree on exactly.
-static func voice_format() -> DotVoiceConfig:
-	var config := DotVoiceConfig.new()
+static func voice_format() -> GSVoiceConfig:
+	var config := GSVoiceConfig.new()
 	config.sample_rate = 16000
 	config.frame_ms = 20.0
 	config.codec_id = &"adpcm"
@@ -121,7 +121,7 @@ func _voice_config() -> Object:
 
 ## TEAM, and this is the only game here that says so.
 func _voice_default_channel() -> int:
-	return DotVoiceRouter.Channel.TEAM
+	return GSVoiceRouter.Channel.TEAM
 
 
 ## Which side somebody is on, for the team channel and for team voice.
@@ -153,67 +153,67 @@ func _player_of(peer_id: int) -> BfhPlayer:
 
 # --- dot-moderation's live tools
 
-## What the admin set means here, one callable per ability. See `DotGameServices`.
+## What the admin set means here, one callable per ability. See `GSGameServices`.
 func _mod_abilities() -> Dictionary:
 	return {
-		"noclip": func(id: StringName, args: Dictionary) -> DotResult:
-			return _on_foot(id, func(p: BfhPlayer) -> DotResult:
-				return DotFpsAdminModifiers.set_noclip(p.controller, bool(args["on"]))),
-		"freeze": func(id: StringName, args: Dictionary) -> DotResult:
-			return _on_foot(id, func(p: BfhPlayer) -> DotResult:
-				return DotFpsAdminModifiers.set_frozen(p.controller, bool(args["on"]))),
-		"speed": func(id: StringName, args: Dictionary) -> DotResult:
-			return _on_foot(id, func(p: BfhPlayer) -> DotResult:
-				return DotFpsAdminModifiers.set_speed(p.controller, float(args["scale"]))),
-		"gravity": func(id: StringName, args: Dictionary) -> DotResult:
-			return _on_foot(id, func(p: BfhPlayer) -> DotResult:
-				return DotFpsAdminModifiers.set_gravity(p.controller, float(args["scale"]))),
-		"god": func(id: StringName, args: Dictionary) -> DotResult:
+		"noclip": func(id: StringName, args: Dictionary) -> GSResult:
+			return _on_foot(id, func(p: BfhPlayer) -> GSResult:
+				return GSFpsAdminModifiers.set_noclip(p.controller, bool(args["on"]))),
+		"freeze": func(id: StringName, args: Dictionary) -> GSResult:
+			return _on_foot(id, func(p: BfhPlayer) -> GSResult:
+				return GSFpsAdminModifiers.set_frozen(p.controller, bool(args["on"]))),
+		"speed": func(id: StringName, args: Dictionary) -> GSResult:
+			return _on_foot(id, func(p: BfhPlayer) -> GSResult:
+				return GSFpsAdminModifiers.set_speed(p.controller, float(args["scale"]))),
+		"gravity": func(id: StringName, args: Dictionary) -> GSResult:
+			return _on_foot(id, func(p: BfhPlayer) -> GSResult:
+				return GSFpsAdminModifiers.set_gravity(p.controller, float(args["scale"]))),
+		"god": func(id: StringName, args: Dictionary) -> GSResult:
 			var p := _mod_player(id)
 			if p == null or p.health == null:
 				return _mod_absent(id)
 			p.health.invulnerable = bool(args["on"])
-			return DotResult.success(p.health.invulnerable),
-		"buddha": func(id: StringName, args: Dictionary) -> DotResult:
+			return GSResult.success(p.health.invulnerable),
+		"buddha": func(id: StringName, args: Dictionary) -> GSResult:
 			var p := _mod_player(id)
 			if p == null or p.health == null:
 				return _mod_absent(id)
 			p.health.cannot_die = bool(args["on"])
-			return DotResult.success(p.health.cannot_die),
-		"health": func(id: StringName, args: Dictionary) -> DotResult:
+			return GSResult.success(p.health.cannot_die),
+		"health": func(id: StringName, args: Dictionary) -> GSResult:
 			var p := _mod_player(id)
 			if p == null or p.health == null:
 				return _mod_absent(id)
 			if not p.health.alive:
-				return DotResult.fail(DotError.CODE_STATE, "They are out until the next round.")
+				return GSResult.fail(GSError.CODE_STATE, "They are out until the next round.")
 			p.health.health = minf(float(args["value"]), 2000.0)
-			return DotResult.success(p.health.health),
-		"slay": func(id: StringName, _args: Dictionary) -> DotResult:
+			return GSResult.success(p.health.health),
+		"slay": func(id: StringName, _args: Dictionary) -> GSResult:
 			return _mod_hurt(id, -1.0),
-		"slap": func(id: StringName, args: Dictionary) -> DotResult:
+		"slap": func(id: StringName, args: Dictionary) -> GSResult:
 			return _mod_hurt(id, float(args.get("damage", 0.0))),
 		# [b]The screen and nothing else, for either side.[/b] A blinded runner still moves and can still
 		# be run over; a blinded driver still drives, which is the point.
-		"blind": func(id: StringName, args: Dictionary) -> DotResult:
+		"blind": func(id: StringName, args: Dictionary) -> GSResult:
 			var p := _mod_player(id)
 			if p == null:
 				return _mod_absent(id)
 			p.blinded = bool(args["on"])
-			return DotResult.success(p.blinded),
+			return GSResult.success(p.blinded),
 		# On a driver the beacon is drawn round their BUS, because the bus is the only
 		# thing anybody can see of them; see `BfhPlayer.present_beacon`.
-		"beacon": func(id: StringName, args: Dictionary) -> DotResult:
+		"beacon": func(id: StringName, args: Dictionary) -> GSResult:
 			var p := _mod_player(id)
 			if p == null:
 				return _mod_absent(id)
 			p.beacon = bool(args["on"])
-			return DotResult.success(p.beacon),
-		"rename": func(id: StringName, args: Dictionary) -> DotResult:
+			return GSResult.success(p.beacon),
+		"rename": func(id: StringName, args: Dictionary) -> GSResult:
 			var p := _mod_player(id)
 			if p == null:
 				return _mod_absent(id)
 			p.display_name = str(args["name"]).strip_edges().substr(0, 32)
-			return DotResult.success(p.display_name),
+			return GSResult.success(p.display_name),
 	}
 
 
@@ -273,32 +273,32 @@ func _mod_player(id: StringName) -> BfhPlayer:
 	return (game as BfhGame).players.get(_mod_key(id))
 
 
-func _mod_absent(id: StringName) -> DotResult:
-	return DotResult.fail(DotError.CODE_STATE, "Player %s is not in the bowl." % String(id))
+func _mod_absent(id: StringName) -> GSResult:
+	return GSResult.fail(GSError.CODE_STATE, "Player %s is not in the bowl." % String(id))
 
 
-func _on_foot(id: StringName, act: Callable) -> DotResult:
+func _on_foot(id: StringName, act: Callable) -> GSResult:
 	var p := _mod_player(id)
 
 	if p == null:
 		return _mod_absent(id)
 
 	if p.riding:
-		return DotResult.fail(DotError.CODE_STATE, "They are driving a bus; the bus is what moves.")
+		return GSResult.fail(GSError.CODE_STATE, "They are driving a bus; the bus is what moves.")
 
 	return act.call(p)
 
 
 ## A slay (amount < 0) or a slap, as ordinary damage through the combat manager — so the
 ## round's elimination rule hears about a slain runner exactly as it hears about a bus.
-func _mod_hurt(id: StringName, amount: float) -> DotResult:
+func _mod_hurt(id: StringName, amount: float) -> GSResult:
 	var p := _mod_player(id)
 
 	if p == null or p.health == null:
 		return _mod_absent(id)
 
 	if not p.health.alive:
-		return DotResult.fail(DotError.CODE_STATE, "They are already out.")
+		return GSResult.fail(GSError.CODE_STATE, "They are already out.")
 
 	var bowl := game as BfhGame
 
@@ -307,26 +307,26 @@ func _mod_hurt(id: StringName, amount: float) -> DotResult:
 		var was_buddha := p.health.cannot_die
 		p.health.invulnerable = false
 		p.health.cannot_die = false
-		var fatal := DotDamage.make(0, p.entity_id, p.health.health + 1000.0, null)
+		var fatal := GSDamage.make(0, p.entity_id, p.health.health + 1000.0, null)
 		fatal.weapon_id = &"slay"
 		bowl.combat.apply_damage(fatal)
 		p.health.invulnerable = was_god
 		p.health.cannot_die = was_buddha
-		return DotResult.success(null) if fatal.lethal else DotResult.fail(
-			DotError.CODE_STATE, "The slay was refused: %s" % fatal.refusal
+		return GSResult.success(null) if fatal.lethal else GSResult.fail(
+			GSError.CODE_STATE, "The slay was refused: %s" % fatal.refusal
 		)
 
 	if not p.riding:
 		# Into the simulated velocity, which replicates; the owning client reconciles to it.
 		p.controller.state.velocity += Vector3(3.0, 5.0, 3.0)
-		p.controller.state.mode = DotFpsState.Mode.AIR
+		p.controller.state.mode = GSFpsState.Mode.AIR
 
 	if amount > 0.0:
-		var hurt := DotDamage.make(0, p.entity_id, amount, null)
+		var hurt := GSDamage.make(0, p.entity_id, amount, null)
 		hurt.weapon_id = &"slap"
 		bowl.combat.apply_damage(hurt)
 
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
 ## A round is everybody's new body: a freeze or a noclip from last round ends, god carries.
@@ -336,8 +336,8 @@ func _on_round_began_for_tools(_number: int) -> void:
 
 
 ## The team seam dot-chat and dot-voice both ask for, which the base cannot wire.
-func setup(p_server: DotServer, p_game: Object, p_link: Object) -> DotResult:
-	var ready_now: DotResult = await super.setup(p_server, p_game, p_link)
+func setup(p_server: GSServer, p_game: Object, p_link: Object) -> GSResult:
+	var ready_now: GSResult = await super.setup(p_server, p_game, p_link)
 
 	if not ready_now.ok:
 		return ready_now
@@ -359,5 +359,5 @@ func setup(p_server: DotServer, p_game: Object, p_link: Object) -> DotResult:
 	if game is BfhGame and not (game as BfhGame).round_began.is_connected(_on_round_began_for_tools):
 		(game as BfhGame).round_began.connect(_on_round_began_for_tools)
 
-	DotLog.info(CHANNEL, "chat, voice and moderation are up for this game", describe())
+	GSLog.info(CHANNEL, "chat, voice and moderation are up for this game", describe())
 	return ready_now

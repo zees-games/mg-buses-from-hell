@@ -1,6 +1,6 @@
-extends DotVoteRoundGame
+extends GSVoteRoundGame
 
-## The players choose the next bowl: dot-vote's [DotVoteRoundGame] with Buses From Hell's names. Every round is a play and owes a
+## The players choose the next bowl: dot-vote's [GSVoteRoundGame] with Buses From Hell's names. Every round is a play and owes a
 ## ballot, opened [member open_after_sec] into it and applied at its end; the rest is dot-vote's settings
 ## (`user://cfg/buses_vote.json`, `game.yml` metadata `bowl_vote:`).
 
@@ -32,9 +32,9 @@ func _default_kinds() -> PackedStringArray:
 
 ## A bowl is a radius built in code, so a subscribed pack's scene map has nothing to build here: it is listed, and refused when it wins
 ## (docs/not-yet.md).
-func _apply(id: StringName) -> DotResult:
+func _apply(id: StringName) -> GSResult:
 	if not _own_ids().has(id):
-		return DotResult.fail(DotError.CODE_STATE, "'%s' is a Workshop map this game cannot play yet." % id)
+		return GSResult.fail(GSError.CODE_STATE, "'%s' is a Workshop map this game cannot play yet." % id)
 
 	return super._apply(id)
 

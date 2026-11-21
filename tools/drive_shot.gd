@@ -61,7 +61,7 @@ func _run() -> void:
 	cam.look_at(Vector3(-17.0, 0.0, 27.0), Vector3(0.0, 0.0, -1.0))
 	cam.current = true
 
-	var go := DotFpsCommand.new()
+	var go := GSFpsCommand.new()
 	go.move = Vector2(0.0, 1.0)
 	var wanted := 15.0 if how == "stop" else 12.0
 	var guard := 300
@@ -69,13 +69,13 @@ func _run() -> void:
 		await _step(game, 1, driver, go)
 		guard -= 1
 
-	var keys := DotFpsCommand.new()
+	var keys := GSFpsCommand.new()
 	match how:
 		"stop":
 			keys.move = Vector2(0.0, -1.0)
 		"handbrake":
 			keys.move = Vector2(1.0, 0.0)
-			keys.set_button(DotFpsCommand.BUTTON_CROUCH, true)
+			keys.set_button(GSFpsCommand.BUTTON_CROUCH, true)
 		"turn":
 			keys.move = Vector2(1.0, 0.0)
 
@@ -100,7 +100,7 @@ func _run() -> void:
 	get_tree().quit()
 
 
-func _step(game: BfhGame, ticks: int, driver: BfhPlayer, keys: DotFpsCommand = null) -> void:
+func _step(game: BfhGame, ticks: int, driver: BfhPlayer, keys: GSFpsCommand = null) -> void:
 	for _i in ticks:
 		if driver != null and keys != null:
 			driver.controller.apply_command(keys)

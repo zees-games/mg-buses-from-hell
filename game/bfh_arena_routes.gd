@@ -313,7 +313,7 @@ func _box(
 	return body
 
 ## A point on the floor for something to be dropped at, from a seeded stream.
-func scatter_point(stream: DotRandomStream, margin: float, height: float) -> Vector3:
+func scatter_point(stream: GSRandomStream, margin: float, height: float) -> Vector3:
 	var usable := maxf(radius - margin, 1.0)
 
 	for _attempt in range(32):
@@ -449,7 +449,7 @@ var _scaffold_origin: Vector3 = Vector3.ZERO
 
 func _place_scaffold() -> void:
 	if radius < SCAFFOLD_MIN_RADIUS:
-		DotLog.info(CHANNEL, "bowl too small for the scaffold; left out", {
+		GSLog.info(CHANNEL, "bowl too small for the scaffold; left out", {
 			"radius": "%.0f m" % radius, "needs": "%.0f m" % SCAFFOLD_MIN_RADIUS,
 		})
 		return

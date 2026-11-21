@@ -1,4 +1,4 @@
-extends DotGameCheckSuite
+extends GSGameCheckSuite
 const BfhTestPorts := preload("test_ports.gd")
 ## The dedicated server's boot, its module, the bowl vote and the rotation file.
 
@@ -15,7 +15,7 @@ const BfhBowls := preload("../game/bfh_bowls.gd")
 const BfhDistricts := preload("../game/bfh_districts.gd")
 const BfhNetBridge := preload("../game/net/bfh_net_bridge.gd")
 
-## Boots a real [DotServer], loads this game into it as a module, and runs the commands an operator
+## Boots a real [GSServer], loads this game into it as a module, and runs the commands an operator
 ## would actually type.
 
 const CHECKS := 180
@@ -38,7 +38,7 @@ const TICK_RATE := 40
 
 var _completed := 0
 
-var server: DotServer = null
+var server: GSServer = null
 var game: BfhGame = null
 
 
@@ -104,21 +104,21 @@ func _test_who_they_are() -> void:
 	var module := _module()
 	var identity: Object = module.get("identity") if module != null else null
 
-	_check(identity is DotPlatformIdentity, "the module built dot-platform's identity layer")
+	_check(identity is GSPlatformIdentity, "the module built dot-platform's identity layer")
 	_check(server.modules.has_module("platform"), "and dot-game loaded the platform module")
 	_check(
-		identity is DotPlatformIdentity and (identity as DotPlatformIdentity).avatars != null
-			and (identity as DotPlatformIdentity).avatars.schema.id == BfhAvatars.SCHEMA_ID,
+		identity is GSPlatformIdentity and (identity as GSPlatformIdentity).avatars != null
+			and (identity as GSPlatformIdentity).avatars.schema.id == BfhAvatars.SCHEMA_ID,
 		"validating avatars against this game's schema"
 	)
 
-	var net: DotNetManager = module.get("net")
+	var net: GSNetManager = module.get("net")
 	var previous_send := net.send_fn
 	net.send_fn = func(_peer: int, _payload: PackedByteArray, _delivery: int) -> void:
 		pass
 	var platform := server.modules.get_module("platform")
 	# Late: seated with no identity, then given one and announced.
-	var late := DotClientSession.new()
+	var late := GSClientSession.new()
 	late.peer_id = 7171
 	late.userid = 717
 	late.display_name = "guest-717"
@@ -132,7 +132,7 @@ func _test_who_they_are() -> void:
 		"seated before the platform knows them, they wear the stock look for their seat"
 	)
 
-	late.identity = DotAuthIdentity.from_dict({
+	late.identity = GSAuthIdentity.from_dict({
 		"uid": "backbone:acc-717", "provider": "backbone", "provider_id": "acc-717",
 		"display_name": "Margaret", "authenticated_at": int(Time.get_unix_time_from_system()),
 	})
@@ -172,11 +172,11 @@ func _test_who_they_are() -> void:
 	)
 
 	# Early: signed in before they are seated, which is the usual order.
-	var early := DotClientSession.new()
+	var early := GSClientSession.new()
 	early.peer_id = 7181
 	early.userid = 718
 	early.display_name = "guest-718"
-	early.identity = DotAuthIdentity.from_dict({
+	early.identity = GSAuthIdentity.from_dict({
 		"uid": "backbone:acc-718", "provider": "backbone", "provider_id": "acc-718",
 		"display_name": "Hedy", "authenticated_at": int(Time.get_unix_time_from_system()),
 	})
@@ -217,7 +217,7 @@ func _done() -> void:
 
 
 ## The loaded module, looked up rather than kept.
-func _module() -> DotModule:
+func _module() -> GSModule:
 	return server.modules.get_module("buses") if server != null else null
 
 
@@ -225,7 +225,7 @@ func _module() -> DotModule:
 func _run_command(line: String) -> PackedStringArray:
 	var captured: Array[String] = []
 
-	var context := DotCmdContext.console("", PackedStringArray())
+	var context := GSCmdContext.console("", PackedStringArray())
 	context.reply_sink = func(text: String) -> void: captured.append(text)
 
 	server.console.execute(line, context)
@@ -285,7 +285,7 @@ func _test_no_message_preloads_itself() -> void:
 func _extends_message(source: String) -> bool:
 	for line in source.split("\n"):
 		if line.begins_with("extends "):
-			return line.contains("DotNetMessage") or line.contains("dot_net_message.gd")
+			return line.contains("GSNetMessage") or line.contains("dot_net_message.gd")
 	return false
 
 
@@ -307,7 +307,7 @@ func _boot() -> void:
 	cfg.store_line("hostname \"buses test\"")
 	cfg.close()
 
-	var config := DotServerConfig.new()
+	var config := GSServerConfig.new()
 	config.startup_config = cfg_path
 	# And nothing in the after-the-listener file, so the test is unambiguous about which
 	# one set it.
@@ -326,7 +326,7 @@ func _boot() -> void:
 	# calls `quit()`, and hangs.
 	config.stdin_console_enabled = false
 
-	server = DotServer.new()
+	server = GSServer.new()
 	server.name = "Server"
 	server.config = config
 	add_child(server)
@@ -337,13 +337,13 @@ func _boot() -> void:
 	for _i in range(90):
 		await get_tree().process_frame
 
-		if server.state == DotServer.State.RUNNING:
+		if server.state == GSServer.State.RUNNING:
 			break
 
 	_check(
-		server.state == DotServer.State.RUNNING,
+		server.state == GSServer.State.RUNNING,
 		"the server boots",
-		DotServer.State.keys()[server.state]
+		GSServer.State.keys()[server.state]
 	)
 	_check(server.console != null, "and has a console")
 	_check(
@@ -377,7 +377,7 @@ func _test_the_module_loads() -> void:
 	await get_tree().process_frame
 
 	_check(
-		DotRegistry.get_node_service(BfhGame.SERVICE) == game,
+		GSRegistry.get_node_service(BfhGame.SERVICE) == game,
 		"the world publishes itself where a module will look for it"
 	)
 
@@ -386,7 +386,7 @@ func _test_the_module_loads() -> void:
 		"punishments_file", "%s/punishments.json" % SERVER_DIR
 	)
 
-	var loaded: DotResult = await server.modules.load_module("res://game/bfh_module.gd")
+	var loaded: GSResult = await server.modules.load_module("res://game/bfh_module.gd")
 	_check(
 		loaded.ok, "the module loads into the server",
 		loaded.error.message if not loaded.ok else ""
@@ -407,7 +407,7 @@ func _test_the_module_loads() -> void:
 	_check(module.get("bridge") != null, "with the game's bridge attached to it")
 	_check(module.get("roster") != null, "and a roster waiting for players")
 
-	var net: DotNetManager = module.get("net")
+	var net: GSNetManager = module.get("net")
 	_check(
 		net.config.tick_rate == TICK_RATE,
 		"and the netcode runs at the rate the operator's config file asked for",
@@ -439,8 +439,8 @@ func _test_the_module_loads() -> void:
 	_done()
 
 
-## Config cvars, a workbench edit reaching a hand-written cvar and the bus feel, and dot-team's block rules through dot-game's DotGameNoblock.
-func _noblock_and_config(module: DotModule) -> void:
+## Config cvars, a workbench edit reaching a hand-written cvar and the bus feel, and dot-team's block rules through dot-game's GSGameNoblock.
+func _noblock_and_config(module: GSModule) -> void:
 	var teamblock := server.console.find_cvar("mp_teamblock")
 	var enemyblock := server.console.find_cvar("mp_enemyblock")
 	_check(teamblock != null and teamblock.get_string() == "0" and enemyblock != null and enemyblock.get_string() == "1",
@@ -452,8 +452,8 @@ func _noblock_and_config(module: DotModule) -> void:
 	module.call("_on_config_field", "crate_count", 12, "workbench")
 	_check(server.console.find_cvar("bfh_crates").get_string() == "12", "a workbench edit reaches the hand-written cvar",
 		server.console.find_cvar("bfh_crates").get_string())
-	var wb: DotGameWorkbench = module.get("workbench")
-	var amb: DotResult = wb.api.handle(DotGameWorkbench.LOCAL_ACTOR, {"op": "set", "kind": "ambience", "id": DotGameWorkbench.CVAR_SET_ID, "key": "bfh_ambient_volume", "value": 0.2})
+	var wb: GSGameWorkbench = module.get("workbench")
+	var amb: GSResult = wb.api.handle(GSGameWorkbench.LOCAL_ACTOR, {"op": "set", "kind": "ambience", "id": GSGameWorkbench.CVAR_SET_ID, "key": "bfh_ambient_volume", "value": 0.2})
 	_check(amb.ok and is_equal_approx(server.console.get_float("bfh_ambient_volume"), 0.2), "the bfh_ambient* cvars are a workbench set and an edit moves the cvar", "" if amb.ok else amb.error.message)
 	var _restore := server.console.set_cvar("bfh_ambient_volume", "0.3")
 	server.console.set_cvar("bfh_bus_mass", "2500")
@@ -493,9 +493,9 @@ func _test_the_bowl_vote() -> void:
 
 	_check(commands_there, "and registered dot-vote's vote, rtv and nominate")
 
-	# Hibernation: DotGameModule hands the director the server, the ballot's timer waits with
+	# Hibernation: GSGameModule hands the director the server, the ballot's timer waits with
 	# it, and waking starts both again from the top.
-	var director: DotVoteDirector = vote.get("director")
+	var director: GSVoteDirector = vote.get("director")
 	_check(server.hibernation_changed.is_connected(director.set_hibernating),
 		"the vote follows the server's hibernation without a line of this game's")
 	vote.set("_opened_this_map", true)
@@ -511,7 +511,7 @@ func _test_the_bowl_vote() -> void:
 
 	var ids: Array = []
 
-	for choice: DotVoteChoice in (vote.get("source") as DotVoteListSource).entries:
+	for choice: GSVoteChoice in (vote.get("source") as GSVoteListSource).entries:
 		ids.append(String(choice.id))
 
 	_check(ids.size() == BfhBowls.all(game.config).size() and ids.has("bfh_small_bowl"),
@@ -524,11 +524,11 @@ func _test_the_bowl_vote() -> void:
 		and server.console.find_cvar("sv_map_menu_flag").get_string() == "generic"
 		and (menu_half.get("change_fn") as Callable).is_valid(),
 		"the map menu is there, staff-only by default, changing the bowl now")
-	var staff := DotCmdContext.new()
-	staff.source = DotCmdContext.Source.CHAT
+	var staff := GSCmdContext.new()
+	staff.source = GSCmdContext.Source.CHAT
 	staff.permissions = PackedStringArray(["generic"])
-	var player := DotCmdContext.new()
-	player.source = DotCmdContext.Source.CHAT
+	var player := GSCmdContext.new()
+	player.source = GSCmdContext.Source.CHAT
 	var offered: Dictionary = menu_half.call("offer", player)
 	_check((offered["maps"] as Array).size() > 1 and not bool(offered["allowed"]) and bool(offered["vote"]),
 		"a player is offered every bowl, as a vote")
@@ -557,7 +557,7 @@ func _test_the_bowl_vote() -> void:
 	_check(director.is_voting() and options.has(wanted),
 		"the ballot opens on its own clock, with the nomination on it", str(options))
 	# The feed is polled each tick before the ballot timer opens one, so it sees it next tick.
-	(vote.get("feed") as DotVoteBallotFeed).poll()
+	(vote.get("feed") as GSVoteBallotFeed).poll()
 	var drawn: Dictionary = captured.back() if not captured.is_empty() else {}
 	_check(bool(drawn.get("open", false)) and str(drawn.get("command", "")) == "vote" \
 			and (drawn.get("options", []) as Array).size() == options.size(),
@@ -619,12 +619,12 @@ func _test_rotation_file() -> void:
 	print("rotation file")
 	var module := _module()
 	var vote: Node = module.get("vote") if module != null else null
-	var director: DotVoteDirector = vote.get("director") if vote != null else null
+	var director: GSVoteDirector = vote.get("director") if vote != null else null
 	var district := str(BfhDistricts.LIST[0]["id"])
 	var keep_a: Array = ["bfh_bowl", "bfh_small_bowl"]
 	var keep_b: Array = ["bfh_big_bowl", district]
 	var before := game.bowl_id
-	var parsed := DotMapRotationFile.from_trees([{"defaults": {
+	var parsed := GSMapRotationFile.from_trees([{"defaults": {
 		"rotation": "a",
 		"rotations": {"a": {"maps": keep_a, "mode": "random"}, "b": {"maps": keep_b, "mode": "cycle"}},
 		"commands": {"names": {"rtv": "rockit"}},
@@ -661,7 +661,7 @@ func _test_rotation_file() -> void:
 		vote.call("refresh_maps")
 		director.begin(game.bowl_id)
 		var ballot: Array = []
-		for choice in (vote.get("source") as DotVoteListSource).entries:
+		for choice in (vote.get("source") as GSVoteListSource).entries:
 			ballot.append(String(choice.id))
 		_check(ballot.has("bfh_small_bowl") and not ballot.has("bfh_big_bowl") and not ballot.has(district),
 			"never on a ballot", str(ballot))
@@ -704,7 +704,7 @@ func _test_rotation_file() -> void:
 			and keep_b.has(seen[0]) and keep_b.has(seen[1]), "a cycle walks the rotation in turn", str(seen))
 
 	var host := CommandHost.new()
-	var bound: DotResult = vote.call("install_commands", host) if vote != null else null
+	var bound: GSResult = vote.call("install_commands", host) if vote != null else null
 	_check(bound != null and bound.ok and host.added.has("rockit") and not host.added.has("rtv"),
 		"and a renamed rtv is registered under its new name", ", ".join(host.added.keys().slice(0, 6)))
 	host.free()

@@ -13,7 +13,7 @@ func _test_ambient_cvars_reach_the_client() -> void:
 	var mirror := Node.new()
 	mirror.name = name
 	side.add_child(mirror)
-	var link := DotClientLink.new()
+	var link := GSClientLink.new()
 	link.name = "Server"
 	link.player_name = "Ambient"
 	link.transport_preference = "udp"
@@ -27,8 +27,8 @@ func _test_ambient_cvars_reach_the_client() -> void:
 	link.connect_to_server("127.0.0.1:%d" % server.config.port)
 	var rules := BfhAmbience.make_rules()
 	var _followed := rules.follow_cvars(link)
-	var director := DotAmbienceDirector.new()
-	director.ambient = DotAmbience.new()
+	var director := GSAmbienceDirector.new()
+	director.ambient = GSAmbience.new()
 	director.follow_settings(null, rules)
 	var joined := await _until(func() -> bool: return link.replicated_cvar("bfh_ambient_volume", "") != "", 30.0)
 	_check(joined and link.replicated_cvar("bfh_ambient_dir", "x") == "x",
@@ -199,14 +199,14 @@ func _last_lines(text: String, count: int) -> String:
 
 
 ## [b]A runner behind its loading cover is not run over, and is once the cover lifts.[/b] A real
-## [DotClientLink] joins over the server's ENet socket and says nothing, as a client still loading
+## [GSClientLink] joins over the server's ENet socket and says nothing, as a client still loading
 ## its level does.
 func _test_loading_cover() -> void:
 	print("")
 	print("a client behind its loading cover is not harmed")
 
 	var module := _module()
-	var roster: DotGameRoster = module.get("roster") if module != null else null
+	var roster: GSGameRoster = module.get("roster") if module != null else null
 
 	var known: Dictionary = {}
 	for each in server.playing_sessions():
@@ -221,7 +221,7 @@ func _test_loading_cover() -> void:
 	var mirror := Node.new()
 	mirror.name = name
 	side.add_child(mirror)
-	var link := DotClientLink.new()
+	var link := GSClientLink.new()
 	link.name = "Server"
 	link.player_name = "Cover"
 	link.transport_preference = "udp"
@@ -258,7 +258,7 @@ func _test_loading_cover() -> void:
 	var userid: int = seat[0].userid
 	var key := StringName("u%d" % userid)
 	var runner: BfhPlayer = game.players[key]
-	var health: DotHealth = runner.health
+	var health: GSHealth = runner.health
 	health.invulnerable = false
 	health.cannot_die = false
 	health.invulnerable_until_tick = -1
@@ -272,10 +272,10 @@ func _test_loading_cover() -> void:
 	game._on_prop_exploded(at, 6.0, 5.0, 0.0, &"")
 	_check(health.health == before, "and neither does a barrel's blast", "%s -> %s" % [before, health.health])
 
-	game.combat.apply_damage(DotDamage.make(0, runner.entity_id, 1.0, null))
+	game.combat.apply_damage(GSDamage.make(0, runner.entity_id, 1.0, null))
 	_check(health.health < before, "an operator's damage still lands", "%s -> %s" % [before, health.health])
 
-	DotGameClient.report_cover(link, false)
+	GSGameClient.report_cover(link, false)
 	var lifted := false
 	for _i in 900:
 		await get_tree().physics_frame
@@ -310,7 +310,7 @@ func _test_loading_cover() -> void:
 ## A module-built world has stats, achievements and the death camera, and the operator can read them.
 func _test_stats_report() -> void:
 	print("stats_report")
-	var cv: DotConVar = server.console.find_cvar("stats_report")
+	var cv: GSConVar = server.console.find_cvar("stats_report")
 	var progress: Object = game.progress
 	_check(cv != null and cv.get_string() == "0", "stats_report is registered and off by default")
 	_check(progress != null and progress.stats != null and not progress.stats.report_to_backbone,
@@ -325,14 +325,14 @@ func _test_stats_report() -> void:
 	script.source_code = "extends Node\nfunc post_integration(_a = null, _b = null, _c = null): return null\n"
 	var _reloaded := script.reload()
 	client.set_script(script)
-	DotRegistry.register(&"dot_backbone_client", client)
+	GSRegistry.register(&"dot_backbone_client", client)
 	var _r0 := cv.set_value("0")
 	var _r1 := cv.set_value("1")
 	_check(progress.stats.report_to_backbone, "on with a backbone client makes the tracker report")
-	_check(progress.stats.get_node_or_null(DotGameStatsReport.TIMER_NAME) != null, "and adds the flush timer")
+	_check(progress.stats.get_node_or_null(GSGameStatsReport.TIMER_NAME) != null, "and adds the flush timer")
 	var _r2 := cv.set_value("0")
 	_check(not progress.stats.report_to_backbone, "off stops it again")
-	DotRegistry.unregister_instance(&"dot_backbone_client", client)
+	GSRegistry.unregister_instance(&"dot_backbone_client", client)
 	client.free()
 
 
@@ -352,12 +352,12 @@ func _test_progress_and_spectating() -> void:
 		_done()
 		return
 
-	var net: DotNetManager = module.get("net")
+	var net: GSNetManager = module.get("net")
 	var previous_send := net.send_fn
 	net.send_fn = func(_peer: int, _payload: PackedByteArray, _delivery: int) -> void:
 		pass
 
-	var session := DotClientSession.new()
+	var session := GSClientSession.new()
 	session.peer_id = 6161
 	session.userid = 616
 	session.display_name = "Tally"

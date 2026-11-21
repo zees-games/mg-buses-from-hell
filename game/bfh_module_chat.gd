@@ -1,4 +1,4 @@
-extends DotGameModule
+extends GSGameModule
 
 const BfhNetBridge := preload("net/bfh_net_bridge.gd")
 const BfhServices := preload("bfh_services.gd")
@@ -14,7 +14,7 @@ const BfhAmbience := preload("bfh_ambience.gd")
 ## The workbench kind of the ambience cvar set (saved to cfg/.../ambience/server.yml).
 const AMBIENT_KIND := "ambience"
 
-## Where the services keep punishments. Empty is [DotGameServices]'s own default,
+## Where the services keep punishments. Empty is [GSGameServices]'s own default,
 ## `user://buses_punishments.json` — the store a real server enforces.
 static var punishments_file: String = ""
 
@@ -36,7 +36,7 @@ func _wire_chat() -> void:
 	services.connect("command_entered", _on_chat_command)
 
 func _on_say_requested(peer_id: int, channel_id: StringName, text: String) -> void:
-	var said: DotResult = services.call("say", peer_id, channel_id, text)
+	var said: GSResult = services.call("say", peer_id, channel_id, text)
 
 	if said.ok:
 		return
@@ -55,12 +55,12 @@ func _on_chat_command(peer_id: int, command: String, args: PackedStringArray) ->
 		return
 
 	for reply in server.run_command_as_uid(
-		session.uid(), command, args, DotCmdContext.Source.CHAT
+		session.uid(), command, args, GSCmdContext.Source.CHAT
 	):
 		bridge.call("notice", peer_id, reply)
 
 ## The operator's own voice in the room. `bfh_say the server is restarting in a minute`.
-func _cmd_say(ctx: DotCmdContext) -> void:
+func _cmd_say(ctx: GSCmdContext) -> void:
 	var text := ctx.rest()
 
 	if text.strip_edges() == "":
@@ -73,7 +73,7 @@ func _cmd_say(ctx: DotCmdContext) -> void:
 
 	var announced: Variant = services.get("chat").call("announce", text, BfhServices.CH_ALL)
 
-	if announced is DotResult and not (announced as DotResult).ok:
+	if announced is GSResult and not (announced as GSResult).ok:
 		ctx.reply_error(announced)
 		return
 
@@ -110,18 +110,18 @@ func _platform_player(session_id: int) -> Object:
 	return held as Object if held is Object else null
 
 ## What a session looks like: what dot-platform resolved for them, or the stock person.
-func _avatar_for(session_id: int) -> DotAvatar:
+func _avatar_for(session_id: int) -> GSAvatar:
 	var held := _platform_player(session_id)
 
-	if held != null and held.get("avatar") is DotAvatar:
-		return held.get("avatar") as DotAvatar
+	if held != null and held.get("avatar") is GSAvatar:
+		return held.get("avatar") as GSAvatar
 
 	if identity != null and identity.has_method("avatar_for"):
 		return identity.call("avatar_for", String(BfhNetBridge.player_key(session_id)))
 
 	return null
 
-func _on_profile(event: DotEvent) -> void:
+func _on_profile(event: GSEvent) -> void:
 	var session_id := event.get_int("userid")
 	var session := server.session_by_userid(session_id) if server != null else null
 	var link := bridge as BfhNetBridge
@@ -133,7 +133,7 @@ func _on_profile(event: DotEvent) -> void:
 
 ## One player's session: the five numbers and what they have earned. With no argument, everybody
 ## counted, one line each.
-func _cmd_stats(ctx: DotCmdContext) -> void:
+func _cmd_stats(ctx: GSCmdContext) -> void:
 	var world := game as BfhGame
 
 	if world == null or world.progress == null:
@@ -152,7 +152,7 @@ func _cmd_stats(ctx: DotCmdContext) -> void:
 		if world.progress.key_of(id) == "":
 			continue
 		any = true
-		var values: DotStatsValues = world.progress.session_values(id)
+		var values: GSStatsValues = world.progress.session_values(id)
 		ctx.reply("%-8s %-20s flattened %d  survived %d  broken %d  in the way %d  %d s" % [
 			String(id).trim_prefix("u"),
 			(world.players[id] as BfhPlayer).display_name,
@@ -166,7 +166,7 @@ func _cmd_stats(ctx: DotCmdContext) -> void:
 	if not any:
 		ctx.reply("Nobody is being counted. Bots are not.")
 
-func _cmd_status(ctx: DotCmdContext) -> void:
+func _cmd_status(ctx: GSCmdContext) -> void:
 	var world := game as BfhGame
 
 	if world == null:
@@ -175,7 +175,7 @@ func _cmd_status(ctx: DotCmdContext) -> void:
 
 	ctx.reply_lines(world.describe_lines())
 
-func _cmd_net(ctx: DotCmdContext) -> void:
+func _cmd_net(ctx: GSCmdContext) -> void:
 	if bridge == null:
 		ctx.reply("No bridge; this server is not replicating anything.")
 		return

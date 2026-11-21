@@ -11,16 +11,16 @@ const DARK_MOODS: PackedStringArray = ["interior_horror", "cave_tunnel", "outdoo
 
 
 ## A config with this game's defaults: F, off while the sky is lit, on in a dark mood.
-static func make_config() -> DotFlashlightConfig:
-	var cfg := DotFlashlightConfig.new()
+static func make_config() -> GSFlashlightConfig:
+	var cfg := GSFlashlightConfig.new()
 	cfg.key = "F"
 	cfg.dark_moods = DARK_MOODS
 	return cfg
 
 
 ## The binder: `bfh_flashlight_<field>` cvars, `cfg/game/mg-buses-from-hell/flashlight/game.yml`, a workbench set.
-static func make_binder(cfg: DotFlashlightConfig) -> DotGameConfigBinder:
-	var b := DotGameConfigBinder.create(cfg, GAME_ID, "bfh_flashlight")
+static func make_binder(cfg: GSFlashlightConfig) -> GSGameConfigBinder:
+	var b := GSGameConfigBinder.create(cfg, GAME_ID, "bfh_flashlight")
 	b.profile_kind = "flashlight"
 	return b
 
@@ -34,5 +34,5 @@ static func mood_of(bowl_id: String) -> String:
 
 
 ## Whether a player starts a round with the light on: the bowl's mood against the config's dark moods.
-static func starts_on(cfg: DotFlashlightConfig, bowl_id: String, mood: String = "") -> bool:
-	return DotFlashlightRules.start_on(cfg, bowl_id, 1.0, mood if mood != "" else mood_of(bowl_id))
+static func starts_on(cfg: GSFlashlightConfig, bowl_id: String, mood: String = "") -> bool:
+	return GSFlashlightRules.start_on(cfg, bowl_id, 1.0, mood if mood != "" else mood_of(bowl_id))

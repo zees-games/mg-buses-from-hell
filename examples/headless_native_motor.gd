@@ -1,9 +1,9 @@
-extends DotGameCheckSuite
+extends GSGameCheckSuite
 
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhPlayer := preload("../game/bfh_player.gd")
 
-## A player's motor in dot-sim ([member DotFpsMotor.native_tick], on by default since dot-player-controller API 27) moves exactly as the script motor does: the same seeded inputs with this game's movement tunables,
+## A player's motor in dot-sim ([member GSFpsMotor.native_tick], on by default since dot-player-controller API 27) moves exactly as the script motor does: the same seeded inputs with this game's movement tunables,
 ## on a floor, ramp, step, wall and pillar, give the same bytes every tick, whole and in two halves. A web client runs the script while a native server and native clients run the library, so they must agree without a correction.
 ## Hit registration and lag compensation are not touched. With no library the native half is skipped; [code]GS_SIM_REQUIRE_NATIVE=1[/code] (CI) fails instead.
 
@@ -17,7 +17,7 @@ var _rate := 60
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	GSLog.set_level(GSLog.Level.ERROR)
 	_rate = int(ProjectSettings.get_setting("physics/common/physics_ticks_per_second", 60))
 	_run.call_deferred()
 
@@ -27,9 +27,9 @@ func _run() -> void:
 	print("")
 	_entered += 1
 	print("the motor is native by default, and the library is there")
-	_check(DotFpsMotor.native_tick, "DotFpsMotor.native_tick is on without the game turning it on")
-	_check(DotFpsMotor.native_full, "DotFpsMotor.native_full is on without the game turning it on")
-	var loaded := DotFpsPhysicsBody.native_full_available()
+	_check(GSFpsMotor.native_tick, "GSFpsMotor.native_tick is on without the game turning it on")
+	_check(GSFpsMotor.native_full, "GSFpsMotor.native_full is on without the game turning it on")
+	var loaded := GSFpsPhysicsBody.native_full_available()
 	if not loaded:
 		print("  dot-sim's motor module is not loaded: the native half is skipped")
 		_check((OS.get_environment("GS_SIM_REQUIRE_NATIVE") if OS.has_environment("GS_SIM_REQUIRE_NATIVE") else OS.get_environment("DOT_SIM_REQUIRE_NATIVE")) != "1", "the library is loaded (GS_SIM_REQUIRE_NATIVE=1)")
@@ -45,10 +45,10 @@ func _run() -> void:
 
 	_entered += 1
 	print("the whole tick in one native call against the script (%d Hz)" % _rate)
-	var before := DotFpsPhysicsBody.native_ticks
+	var before := GSFpsPhysicsBody.native_ticks
 	var script_run: Array[PackedByteArray] = await _replay(0, stream)
 	var full_run: Array[PackedByteArray] = await _replay(2, stream)
-	var native_calls := DotFpsPhysicsBody.native_ticks - before
+	var native_calls := GSFpsPhysicsBody.native_ticks - before
 	_check(native_calls > TICKS / 2, "most ticks ran in dot-sim", "%d native calls in %d ticks" % [native_calls, TICKS])
 	var first := _first_difference(script_run, full_run)
 	_check(first < 0, "every tick's state is the same bytes", "first differs at tick %d" % first)
@@ -61,14 +61,14 @@ func _run() -> void:
 	_check(first < 0, "every tick's state is the same bytes", "first differs at tick %d" % first)
 	_finished += 1
 
-	DotFpsMotor.native_tick = true
-	DotFpsMotor.native_full = true
+	GSFpsMotor.native_tick = true
+	GSFpsMotor.native_full = true
 	_report_sections(_entered, _finished, SECTIONS, CHECKS)
 
 
 ## The controller as the game's player builds it.
-func _make_controller() -> DotFpsController:
-	var controller := DotFpsController.new()
+func _make_controller() -> GSFpsController:
+	var controller := GSFpsController.new()
 	controller.tunables = BfhPlayer.tunables_for(BfhConfig.new())
 	controller.admin_abilities = true
 	return controller
@@ -96,10 +96,10 @@ func _box(at: Vector3, size: Vector3, rotation: Vector3) -> void:
 
 
 ## Seeded inputs that change every few ticks: any move, sprint, crouch, jump, and a turning view.
-func _stream(seed: int, ticks: int) -> Array[DotFpsCommand]:
+func _stream(seed: int, ticks: int) -> Array[GSFpsCommand]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
-	var out: Array[DotFpsCommand] = []
+	var out: Array[GSFpsCommand] = []
 	var move := Vector2.ZERO
 	var buttons := 0
 	var yaw := 0.0
@@ -108,13 +108,13 @@ func _stream(seed: int, ticks: int) -> Array[DotFpsCommand]:
 			move = Vector2(rng.randi_range(-1, 1), -1.0 if rng.randf() < 0.6 else float(rng.randi_range(-1, 1)))
 			buttons = 0
 			if rng.randf() < 0.5:
-				buttons |= DotFpsCommand.BUTTON_SPRINT
+				buttons |= GSFpsCommand.BUTTON_SPRINT
 			if rng.randf() < 0.15:
-				buttons |= DotFpsCommand.BUTTON_CROUCH
+				buttons |= GSFpsCommand.BUTTON_CROUCH
 			if rng.randf() < 0.2:
-				buttons |= DotFpsCommand.BUTTON_JUMP
+				buttons |= GSFpsCommand.BUTTON_JUMP
 		yaw = wrapf(yaw + rng.randf_range(-0.15, 0.15), -PI, PI)
-		var c := DotFpsCommand.new()
+		var c := GSFpsCommand.new()
 		c.move = move
 		c.buttons = buttons
 		c.yaw = yaw
@@ -123,12 +123,12 @@ func _stream(seed: int, ticks: int) -> Array[DotFpsCommand]:
 
 
 ## [param way] 0 all script, 1 the native halves, 2 the whole tick native: each tick's state as bytes.
-func _replay(way: int, stream: Array[DotFpsCommand]) -> Array[PackedByteArray]:
-	DotFpsMotor.native_tick = way > 0
-	DotFpsMotor.native_full = way == 2
+func _replay(way: int, stream: Array[GSFpsCommand]) -> Array[PackedByteArray]:
+	GSFpsMotor.native_tick = way > 0
+	GSFpsMotor.native_full = way == 2
 	var controller := _make_controller()
 	controller.tick_rate = _rate
-	controller.drive = DotFpsController.Drive.EXTERNAL
+	controller.drive = GSFpsController.Drive.EXTERNAL
 	var host := CharacterBody3D.new()
 	host.position = Vector3(0, 0.05, 4)
 	add_child(host)
@@ -138,7 +138,7 @@ func _replay(way: int, stream: Array[DotFpsCommand]) -> Array[PackedByteArray]:
 	var delta := 1.0 / float(_rate)
 	var out: Array[PackedByteArray] = []
 	for tick in range(stream.size()):
-		var c := DotFpsCommand.new()
+		var c := GSFpsCommand.new()
 		c.move = stream[tick].move
 		c.buttons = stream[tick].buttons
 		c.yaw = stream[tick].yaw

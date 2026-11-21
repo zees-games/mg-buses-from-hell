@@ -6,8 +6,8 @@
 | --- | --- |
 | `examples/headless_run` | the simulation offline: rounds, sides, props, buses, the map's rules at the shipped and minimum radii, every bot drive and route, the climbs, sounds, the HUD's overlays |
 | `examples/headless_net` | both ends over a loopback link (real encoders, bridge, events; no OS socket, dropping one snapshot in five where it matters): prediction, bodies and interpolation, spectating, identity, effects, the scoreboard, the remote workbench (`sv_workbench_remote`: an admin edit applies and replicates; cvar off, guest, non-admin and revoked admin are refused); and no engine error over the whole run (an `EngineErrors` logger: two minigames' suites printed `!is_inside_tree()` from a toy pulled after a mid-tick rebuild, green) |
-| `examples/headless_config` | `BfhConfig` through `DotGameConfigBinder`: every field a cvar, strict refusal of an unknown key, the diff, an exported `cfg/game/mg-buses-from-hell/config/game.yml` loading back as defaults, a workbench edit reaching the live config |
-| `examples/headless_workshop` | subscribed maps against a fixture `DotContentIndex`: the accepted kind is listed and playable in solo (ballot, map menu rows) as `Name [Pack]`, an unaccepted `map_kind` or a missing document is not, an online session lists none, the game's own ids win |
+| `examples/headless_config` | `BfhConfig` through `GSGameConfigBinder`: every field a cvar, strict refusal of an unknown key, the diff, an exported `cfg/game/mg-buses-from-hell/config/game.yml` loading back as defaults, a workbench edit reaching the live config |
+| `examples/headless_workshop` | subscribed maps against a fixture `GSContentIndex`: the accepted kind is listed and playable in solo (ballot, map menu rows) as `Name [Pack]`, an unaccepted `map_kind` or a missing document is not, an online session lists none, the game's own ids win |
 | `examples/dedicated` | as a server: the console, the live moderation tools, identity admission, and the source check for self-preloading messages |
 
 ## Rules the suites follow
@@ -36,7 +36,7 @@ Four of this game's bugs (flat lighting, no grid, the stacked HUD, the bus facin
 
 ## Visual QA: every figure, the bus and the hammer at 60 fps
 
-`tools/visual_qa.gd` is this game's half of dot-game's shared harness (`DotGameVisualQaCapture`): the six runners (atlases a b c e f k) and the driver on foot (j) idle, walk, run and jump; the hammer is the runner's own first-person arm and a runner holding and swinging it; the bus drives and turns; crate, barrel (and its blast) and bowl turn. Each clip is recorded at 60 fps from the eye (`fp`), behind (`tp`) and in front (`op`), with checks for floor contact, foot slide, pops and the bus's tyres on the floor.
+`tools/visual_qa.gd` is this game's half of dot-game's shared harness (`GSGameVisualQaCapture`): the six runners (atlases a b c e f k) and the driver on foot (j) idle, walk, run and jump; the hammer is the runner's own first-person arm and a runner holding and swinging it; the bus drives and turns; crate, barrel (and its blast) and bowl turn. Each clip is recorded at 60 fps from the eye (`fp`), behind (`tp`) and in front (`op`), with checks for floor contact, foot slide, pops and the bus's tyres on the floor.
 
 ```bash
 bash addons/dot_game/tools/dot_game_visual_qa.sh --shot tools/visual_qa_shot.sh            # everything

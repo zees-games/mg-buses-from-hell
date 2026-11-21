@@ -8,8 +8,8 @@ A bus with four wheels on the ground and 26 kN of engine force sat perfectly sti
 
 ## Vehicle wiring, the first week
 
-- **`DotVehicleRide` does not watch the spawner**: a bus removed under its driver left the ride believing they were aboard, and every later `enter` was refused for ever. And `occupants` is keyed by SEAT and valued by RIDER, so the first fix handed `exit` a seat name.
-- **The bus spawned facing the wall** at full throttle: `DotVehicleSpawner.spawn` orients with `Basis.IDENTITY` unless told, which faces -Z, seven metres of wall.
+- **`GSVehicleRide` does not watch the spawner**: a bus removed under its driver left the ride believing they were aboard, and every later `enter` was refused for ever. And `occupants` is keyed by SEAT and valued by RIDER, so the first fix handed `exit` a seat name.
+- **The bus spawned facing the wall** at full throttle: `GSVehicleSpawner.spawn` orients with `Basis.IDENTITY` unless told, which faces -Z, seven metres of wall.
 - **`spawn_interval` defaults to 1.0 s**, so only the first bus of a round appeared, silently (a refused spawn is a refusal, not an error). dot-props' limits had to be opened up the same way: the world is placing its own furniture, not a player spamming a key.
 
 ## The ramp went the wrong way
@@ -18,12 +18,12 @@ For nine days the ramp rose from under the deck to 7.8 m over the middle of the 
 
 ## Walking up a slope, and climbing a crate's side (both dot-player-controller's)
 
-- **No slope in the family had been walked up.** `DotFpsMotor._categorise_ground` treated moving upward faster than 0.1 m/s as not grounded, so walking up an 18-degree ramp at 6.5 m/s read as a jump and the runner stalled. Fixed in dot-player-controller (velocity along the ground normal), with the ground snap measuring "leaving" against the floor the tick started on; this game carried a test-only stand-in motor until then.
-- **A crate stack's side was a ladder.** Settled crates stand a few degrees off square, a corner stands proud of the face, and at the jump's apex the ground probe grazed it, `DotFpsPhysicsBody.sweep` guessed the contact normal as UP, and the runner was grounded on the side of the stack and jumped again (2.98 m of a 3 m face with a 1.15 m jump). Fixed in dot-player-controller (`[jumping-into-crate-1]`).
+- **No slope in the family had been walked up.** `GSFpsMotor._categorise_ground` treated moving upward faster than 0.1 m/s as not grounded, so walking up an 18-degree ramp at 6.5 m/s read as a jump and the runner stalled. Fixed in dot-player-controller (velocity along the ground normal), with the ground snap measuring "leaving" against the floor the tick started on; this game carried a test-only stand-in motor until then.
+- **A crate stack's side was a ladder.** Settled crates stand a few degrees off square, a corner stands proud of the face, and at the jump's apex the ground probe grazed it, `GSFpsPhysicsBody.sweep` guessed the contact normal as UP, and the runner was grounded on the side of the stack and jumped again (2.98 m of a 3 m face with a 1.15 m jump). Fixed in dot-player-controller (`[jumping-into-crate-1]`).
 
 ## Nothing drew a player (2026-09-24)
 
-Three things at once, none visible to any check because every check read the simulation: there was no body at all (first-person runners, drivers as buses); `DotNetManager.interpolate_frame` was never called, so `_net_interpolated` was written and reached by nothing and every remote body stepped at snapshot rate (the render-jitter class this family has paid for in three games); and a runner who joined a live round stood at the origin until the next one. The jitter probe in `tools/shot.sh --net` measured it: interpolated, no frame standing still; without, 58 of 147. The same probe found that dot-net counted its interpolation delay in snapshots and subtracted it from ticks, extrapolating every remote entity; that was dot-net's to fix ([bugs-found](../../../docs/bugs-found.md)).
+Three things at once, none visible to any check because every check read the simulation: there was no body at all (first-person runners, drivers as buses); `GSNetManager.interpolate_frame` was never called, so `_net_interpolated` was written and reached by nothing and every remote body stepped at snapshot rate (the render-jitter class this family has paid for in three games); and a runner who joined a live round stood at the origin until the next one. The jitter probe in `tools/shot.sh --net` measured it: interpolated, no frame standing still; without, 58 of 147. The same probe found that dot-net counted its interpolation delay in snapshots and subtracted it from ticks, extrapolating every remote entity; that was dot-net's to fix ([bugs-found](../../../docs/bugs-found.md)).
 
 ## A connected client predicted nothing (2026-09-25)
 
@@ -31,7 +31,7 @@ Three things at once, none visible to any check because every check read the sim
 
 ## The leak that was one line of a message
 
-`dedicated` passed every check and leaked the whole script graph at exit (160 objects, 102 resources, eight dummy textures). `--verbose` said what, not why. **Bisected rather than read**: a bare `DotGameModule` whose only difference was `preload("net/bfh_net_bridge.gd")`, never instantiated, reproduced it, and so did preloading `bfh_event.gd` or `bfh_request.gd` alone. Both began `extends DotNetMessage` and `const BfhEvent := preload("bfh_event.gd")` (for a typed `static func of()`). The trigger needs `DotNetMessage` as the base and first load at runtime by a module a running `DotServer` loads; a self-preload over other bases, a two-script cycle, or a load from a bare scene does not do it. The mechanism is inside Godot 4.7.2 and was not chased; the fix is to not have one, and `dedicated` checks the source. The other games carried the same line and were cleaned up after.
+`dedicated` passed every check and leaked the whole script graph at exit (160 objects, 102 resources, eight dummy textures). `--verbose` said what, not why. **Bisected rather than read**: a bare `GSGameModule` whose only difference was `preload("net/bfh_net_bridge.gd")`, never instantiated, reproduced it, and so did preloading `bfh_event.gd` or `bfh_request.gd` alone. Both began `extends GSNetMessage` and `const BfhEvent := preload("bfh_event.gd")` (for a typed `static func of()`). The trigger needs `GSNetMessage` as the base and first load at runtime by a module a running `GSServer` loads; a self-preload over other bases, a two-script cycle, or a load from a bare scene does not do it. The mechanism is inside Godot 4.7.2 and was not chased; the fix is to not have one, and `dedicated` checks the source. The other games carried the same line and were cleaned up after.
 
 ## Steering bugs whose symptom was a vanishing bus
 
@@ -51,7 +51,7 @@ Moving the scatter (start lanes, then the scaffold margin) made three drives fai
 
 ## The scoreboard's two bugs (2026-09-27)
 
-dot-match's side setup had drifted to the end of `_build_progress`, below two early returns, so a client world and any server with `track_progress` off kept dot-match's default pair and balancing; it is back in `_build_match`. And assigning `teams.teams` did not re-index `DotTeamManager`, so team 1 answered "Red" on every world; the ids matched, every rule worked, and the first render said Red and Blue. dot-match's setter re-indexes since (`[team-reindex-1]`); the explicit `reindex()` here is now belt and braces.
+dot-match's side setup had drifted to the end of `_build_progress`, below two early returns, so a client world and any server with `track_progress` off kept dot-match's default pair and balancing; it is back in `_build_match`. And assigning `teams.teams` did not re-index `GSTeamManager`, so team 1 answered "Red" on every world; the ids matched, every rule worked, and the first render said Red and Blue. dot-match's setter re-indexes since (`[team-reindex-1]`); the explicit `reindex()` here is now belt and braces.
 
 ## Other games' missing effects (cross-repo)
 
@@ -77,7 +77,7 @@ dot-vehicle handed Godot's wheels the brake in newtons where Godot reads an impu
 
 ## S was reverse thrust, and the handbrake never slid (2026-10-12)
 
-The key list said "Back (driving: brake and reverse)" and S was reverse thrust: 35 % of the engine, so a bus from 15 m/s took 21 m to stop on it against the foot brake's 7.6 m, and a person never had the foot brake at all (only the bot pressed it). S now goes through dot-vehicle's `DotVehicleCommand.brake_then_reverse` in `_drive_buses`: the foot brake while the bus rolls forward faster than 0.8 m/s, reverse after; 7.45 m to a stop, then reversing. Only a person's keys: the ramp turn's reverse legs ask for reverse while still rolling and mean it.
+The key list said "Back (driving: brake and reverse)" and S was reverse thrust: 35 % of the engine, so a bus from 15 m/s took 21 m to stop on it against the foot brake's 7.6 m, and a person never had the foot brake at all (only the bot pressed it). S now goes through dot-vehicle's `GSVehicleCommand.brake_then_reverse` in `_drive_buses`: the foot brake while the bus rolls forward faster than 0.8 m/s, reverse after; 7.45 m to a stop, then reversing. Only a person's keys: the ramp turn's reverse legs ask for reverse while still rolling and mean it.
 
 The handbrake (Ctrl) was only a brake. Godot's raycast vehicle never locks a wheel, so a bus at full lock from 12 m/s with Ctrl held turned 14 degrees and stopped, against 41 degrees without it. dot-vehicle's `handbrake_grip_fraction` lets the rear tyres go while it is held; on the bus 0.25 and 0.2 still turned less than no handbrake, 0.15 stepped the back end out (71 degrees in the second, 7.4 m/s left, the nose 12 degrees inside the line of travel) and 0.1 spun it. The price: the handbrake's straight stop went from 6.3 m to 16.35 m, because a sliding tyre brakes worse. S is the brake a person stops with now, so Ctrl is for turning.
 

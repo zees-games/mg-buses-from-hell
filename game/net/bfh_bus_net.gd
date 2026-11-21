@@ -1,14 +1,14 @@
 extends "bfh_prop_net.gd"
 
-## What a bus replicates, through [DotVehicleNetSync].
+## What a bus replicates, through [GSVehicleNetSync].
 
 const BfhBus := preload("../../props/bfh_bus.gd")
 
 ## The instance, on the authority only. Null on a client, where a bus is a body being
 ## drawn where the server says it is and nothing more.
-var vehicle: DotVehicleInstance = null
+var vehicle: GSVehicleInstance = null
 
-# The replicated properties, named by [DotVehicleNetSync]. Declared here because GDScript
+# The replicated properties, named by [GSVehicleNetSync]. Declared here because GDScript
 # has no dynamic properties: `specs()` says what to send, and these are what it sends.
 var net_x: float = 0.0
 var net_y: float = 0.0
@@ -22,8 +22,8 @@ var net_occupancy: int = 0
 
 ## Declared from the addon's own table.
 func _register_net_vars() -> void:
-	for spec in DotVehicleNetSync.specs():
-		var declaration := replicate(spec["property"], DotNetVar.Type[spec["type"]])
+	for spec in GSVehicleNetSync.specs():
+		var declaration := replicate(spec["property"], GSNetVar.Type[spec["type"]])
 
 		if int(spec["bits"]) > 0:
 			declaration.bits(int(spec["bits"]))
@@ -37,7 +37,7 @@ func pull() -> void:
 	if vehicle == null or not vehicle.is_alive():
 		return
 
-	DotVehicleNetSync.pull(vehicle, self)
+	GSVehicleNetSync.pull(vehicle, self)
 
 
 ## The vehicle layout's three floats, as the one vector everything else reads.
@@ -51,7 +51,7 @@ func _draw() -> void:
 	if identity != null and identity.is_authoritative:
 		return
 
-	DotVehicleNetSync.apply(prop, self)
+	GSVehicleNetSync.apply(prop, self)
 
 	# The wheels, which cannot be derived from anything else replicated: a client watching a bus come
 	# round a corner knows the body is turning and not which way the front wheels are pointed, and a
@@ -59,8 +59,8 @@ func _draw() -> void:
 	var body := prop as BfhBus
 
 	if body != null:
-		body.draw_steering(DotVehicleNetSync.dequantise_steering(net_steering))
-		# `net_speed` is km/h, which is what [DotVehicleNetSync] quantises a speedometer
+		body.draw_steering(GSVehicleNetSync.dequantise_steering(net_steering))
+		# `net_speed` is km/h, which is what [GSVehicleNetSync] quantises a speedometer
 		# into; everything in this game is metres and seconds, so it is converted here
 		# rather than a second unit being let into the game's own files.
 		body.draw_roll(float(net_speed) / 3.6)
@@ -76,4 +76,4 @@ func _draw() -> void:
 
 ## Whether a seat is taken, from the replicated mask. What a "get in" prompt reads.
 func seat_occupied(seat_index: int) -> bool:
-	return DotVehicleNetSync.is_seat_occupied(net_occupancy, seat_index)
+	return GSVehicleNetSync.is_seat_occupied(net_occupancy, seat_index)

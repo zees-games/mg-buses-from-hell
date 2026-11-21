@@ -1,6 +1,6 @@
-extends DotGameCheckSuite
+extends GSGameCheckSuite
 
-## BfhConfig through DotGameConfigBinder: fields, cvars, strict refusal, the diff and the workbench
+## BfhConfig through GSGameConfigBinder: fields, cvars, strict refusal, the diff and the workbench
 ## round trip.
 
 const BfhConfig := preload("../game/bfh_config.gd")
@@ -13,7 +13,7 @@ const CHECKS := 30
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.FATAL)
+	GSLog.set_level(GSLog.Level.FATAL)
 	_run.call_deferred()
 
 
@@ -40,9 +40,9 @@ func _run() -> void:
 	for k in ["round_seconds", "hammer_damage", "bus_mass", "bus_engine_force", "bus_steering_falloff", "horn_seconds", "bot_horn_range", "bus_pinned_seconds", "bot_ramp_speed", "crate_count", "gravity"]:
 		_check(keys.has(k), "%s is exposed" % k)
 
-	var console := DotConsole.new()
+	var console := GSConsole.new()
 	add_child(console)
-	binder.bind_cvars(console.cvar, DotConVar.FLAG_ARCHIVE, console.has_name)
+	binder.bind_cvars(console.cvar, GSConVar.FLAG_ARCHIVE, console.has_name)
 	console.set_cvar("bfh_crate_count", "7")
 	_check(config.crate_count == 7 and binder.source_of("crate_count") == "cvar", "a cvar writes the field")
 	_check(binder.diff_yaml().contains("crate_count: 7"), "the diff names the edit")
@@ -61,17 +61,17 @@ func _run() -> void:
 	_layers()
 	_templates(binder)
 
-	var wb := DotGameWorkbench.new()
+	var wb := GSGameWorkbench.new()
 	wb.panel_mode = 1
 	wb.config = {"enabled": false}
-	for set: DotProfileSet in binder.profile_sets():
+	for set: GSProfileSet in binder.profile_sets():
 		wb.add_set(set, set.rel_path)
 	add_child(wb)
 	_check(wb.start().ok, "the workbench starts")
 	binder.attach(wb.api.runtime)
 	var listed := PackedStringArray()
 	for kind: String in wb.api.kinds():
-		var got: DotResult = wb.api.handle(DotGameWorkbench.LOCAL_ACTOR, {"op": "get", "kind": kind, "id": binder.profile_id})
+		var got: GSResult = wb.api.handle(GSGameWorkbench.LOCAL_ACTOR, {"op": "get", "kind": kind, "id": binder.profile_id})
 		if got.ok:
 			listed.append_array(PackedStringArray((got.value as Dictionary).get("values", {}).keys()))
 	var missing := PackedStringArray()
@@ -79,7 +79,7 @@ func _run() -> void:
 		if not listed.has(k):
 			missing.append(k)
 	_check(missing.is_empty() and binder.profile_sets().size() == 3, "the workbench lists all %d keys over %d files" % [keys.size(), binder.profile_sets().size()], ",".join(missing))
-	var res: DotResult = wb.api.handle(DotGameWorkbench.LOCAL_ACTOR, {"op": "set", "kind": "config_round", "id": binder.profile_id, "key": "round_seconds", "value": 90.0})
+	var res: GSResult = wb.api.handle(GSGameWorkbench.LOCAL_ACTOR, {"op": "set", "kind": "config_round", "id": binder.profile_id, "key": "round_seconds", "value": 90.0})
 	_check(res.ok and config.round_seconds == 90.0, "a workbench edit reaches the live config")
 	var files: Dictionary = wb.exporter.call("collect")
 	var text: String = files.get("cfg/game/mg-buses-from-hell/config_round/game.yml", "")
@@ -97,9 +97,9 @@ func _probe() -> void:
 	binder.strict = true
 	binder.roots = PackedStringArray([ProjectSettings.globalize_path(ROOT)])
 	var loaded := binder.load_layers()
-	var console := DotConsole.new()
+	var console := GSConsole.new()
 	add_child(console)
-	binder.bind_cvars(console.cvar, DotConVar.FLAG_ARCHIVE, console.has_name)
+	binder.bind_cvars(console.cvar, GSConVar.FLAG_ARCHIVE, console.has_name)
 	print("PROBE ok=%s round=%s round_src=%s mass=%s mass_src=%s cvar=%s dmg=%s dmg_src=%s grav=%s grav_src=%s" % [
 		loaded.ok, config.round_seconds, binder.source_of("round_seconds"), config.bus_mass, binder.source_of("bus_mass"),
 		console.find_cvar("bfh_bus_mass").get_string(), config.hammer_damage, binder.source_of("hammer_damage"),
@@ -135,12 +135,12 @@ func _layers() -> void:
 	OS.unset_environment("BFH_BUS_MASS")
 	_write("game/%s/config_round/game.yml" % GAME, "bus_mass: 9000.0\n")
 	_check(_child().contains("PROBE ok=false"), "strict: a key in the wrong file is refused")
-	var removed := DotPaths.remove_tree(ProjectSettings.globalize_path(ROOT))
+	var removed := GSPaths.remove_tree(ProjectSettings.globalize_path(ROOT))
 	_check(removed.ok and not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(ROOT)), "the per-process cfg fixture directory is removed", ROOT if removed.ok else str(removed.error))
 
 
 ## The shipped cfg files hold every key, in step with BfhConfig, and change nothing as they are.
-func _templates(binder: DotGameConfigBinder) -> void:
+func _templates(binder: GSGameConfigBinder) -> void:
 	var files := binder.template_files()
 	_check(files.size() == 3, "three shipped cfg files", str(files.size()))
 	var stale := PackedStringArray()

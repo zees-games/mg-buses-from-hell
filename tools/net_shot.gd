@@ -23,8 +23,8 @@ const OPEN_FLOOR := Vector3(-18.0, 0.1, -12.0)
 
 var _server_game: BfhGame = null
 var _client_game: BfhGame = null
-var _server_net: DotNetManager = null
-var _client_net: DotNetManager = null
+var _server_net: GSNetManager = null
+var _client_net: GSNetManager = null
 var _server_bridge: BfhNetBridge = null
 var _client_bridge: BfhNetBridge = null
 var _to_client: Array = []
@@ -68,7 +68,7 @@ const WALK_RUN := 90
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	GSLog.set_level(GSLog.Level.ERROR)
 	Engine.max_fps = RENDER_FPS
 	_run.call_deferred()
 
@@ -139,7 +139,7 @@ func _build() -> void:
 	# This harness stamps every command itself (`_tick + INPUT_LEAD`), not from the client's clock, so
 	# the client must not ask for dot-net's input-lead report: steered by reports about commands it
 	# never stamped, the clock runs away from them (only dot-net's cap holds it).
-	var lead_bit := int((DotNetMessageRegistry as Script).get_script_constant_map().get("FEATURE_INPUT_LEAD", 0))
+	var lead_bit := int((GSNetMessageRegistry as Script).get_script_constant_map().get("FEATURE_INPUT_LEAD", 0))
 	_client_net.messages.features &= ~lead_bit
 
 	_server_bridge = BfhNetBridge.new()
@@ -195,8 +195,8 @@ func _make_game(server: bool, parent: Node) -> BfhGame:
 	return game
 
 
-func _make_manager(server: bool, peer_id: int, parent: Node, tick_rate: int) -> DotNetManager:
-	var manager := DotNetManager.new()
+func _make_manager(server: bool, peer_id: int, parent: Node, tick_rate: int) -> GSNetManager:
+	var manager := GSNetManager.new()
 	manager.name = "Server" if server else "Client"
 	manager.is_server = server
 	manager.local_peer_id = peer_id
@@ -204,7 +204,7 @@ func _make_manager(server: bool, peer_id: int, parent: Node, tick_rate: int) -> 
 	manager.auto_tick = false
 	manager.config_file = ""
 
-	var config := DotNetConfig.new()
+	var config := GSNetConfig.new()
 	config.tick_rate = tick_rate
 	config.snapshot_rate = BfhGame.NET_SNAPSHOT_RATE
 	config.enable_prediction = true
@@ -251,8 +251,8 @@ func _physics_process(delta: float) -> void:
 
 ## What this client's own keys say this tick: nothing, or with `--walk` the cycle in the
 ## class note.
-func _local_command() -> DotFpsCommand:
-	var command := DotFpsCommand.new()
+func _local_command() -> GSFpsCommand:
+	var command := GSFpsCommand.new()
 
 	if not _walk or not _running or _settle > 0:
 		return command
@@ -320,7 +320,7 @@ func _drive_runner() -> void:
 	elif offset < -5.0:
 		_heading = -90.0
 
-	var run := DotFpsCommand.new()
+	var run := GSFpsCommand.new()
 	run.move = Vector2(0.0, 1.0)
 	run.yaw = _heading
 	_runner.controller.apply_command(run)

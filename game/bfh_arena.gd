@@ -38,7 +38,7 @@ func build(p_radius: float) -> void:
 		_build_south_run()
 	_toy_spots = _find_toy_spots()
 
-	DotLog.info(
+	GSLog.info(
 		CHANNEL,
 		"arena built",
 		{
@@ -60,7 +60,7 @@ func build(p_radius: float) -> void:
 	# `headless_run` holds the shipped layout to BUS_GAP; a hook or a west lane set from a JSON file or
 	# the environment is not run through the suite, and a pair of drums closer than a bus is a.
 	if minf(narrowest_gap(), scaffold_clearance()) < BUS_GAP:
-		DotLog.warn(
+		GSLog.warn(
 			CHANNEL,
 			"a gap on this map is too tight for a bus",
 			{"tightest": "%.2f m" % narrowest_gap(), "scaffold": "%.2f m" % scaffold_clearance(),
@@ -123,7 +123,7 @@ func _build_light() -> void:
 	var holder := Node3D.new()
 	holder.name = "Lighting"
 	add_child(holder)
-	var sun := DotLightRig.apply(holder, DotLightDocument.from_dictionary(DAYLIGHT), light_profile())
+	var sun := GSLightRig.apply(holder, GSLightDocument.from_dictionary(DAYLIGHT), light_profile())
 	if sun != null:
 		sun.shadow_blur = 1.5
 	for node in holder.get_children():
@@ -135,8 +135,8 @@ func _build_light() -> void:
 				material.ground_bottom_color = material.sky_top_color
 
 ## What this machine draws of [constant DAYLIGHT]: dot-lighting's `painted()`.
-static func light_profile() -> DotLightProfile:
-	var p := DotLightProfile.painted()
+static func light_profile() -> GSLightProfile:
+	var p := GSLightProfile.painted()
 	p.sun_shadows = true
 	p.sky_below_horizon = true
 	return p
@@ -263,7 +263,7 @@ func _build_stacks() -> void:
 		# Said rather than skipped silently: a bowl configured small enough to lose a
 		# whole feature of the map should say which feature and why, or the next person
 		# to set `arena_radius` low is debugging a map that looks half-built.
-		DotLog.info(
+		GSLog.info(
 			CHANNEL,
 			"stacks left out, bowl too small",
 			{"radius": "%.0f m" % radius, "needs": "%.0f m" % STACK_MIN_RADIUS},
@@ -275,7 +275,7 @@ func _build_stacks() -> void:
 	add_child(stacks)
 
 	if not HOOK_LAYOUTS.has(hook_layout):
-		DotLog.warn(CHANNEL, "no hook by that name; building the default",
+		GSLog.warn(CHANNEL, "no hook by that name; building the default",
 			{"hook_layout": hook_layout, "default": HOOK_DEFAULT, "known": HOOK_LAYOUTS.keys()})
 	var layout := pillar_layout()
 	for i in range(layout.size()):
@@ -289,7 +289,7 @@ func _build_tanks() -> void:
 		# Said rather than skipped silently, for the reason the stacks say it: a bowl
 		# small enough to lose a whole half of the map should name the half and the
 		# number, or it reads as a map that was never finished.
-		DotLog.info(
+		GSLog.info(
 			CHANNEL,
 			"tank farm left out, bowl too small",
 			{"radius": "%.0f m" % radius, "needs": "%.0f m" % TANK_MIN_RADIUS},
@@ -469,7 +469,7 @@ func _build_building(parent: Node3D, node_name: String, building: Dictionary) ->
 ## [constant COLONNADE_WALK].
 func _build_colonnade() -> void:
 	if radius < COLONNADE_MIN_RADIUS:
-		DotLog.info(
+		GSLog.info(
 			CHANNEL,
 			"colonnade left out, bowl too small",
 			{"radius": "%.0f m" % radius, "needs": "%.0f m" % COLONNADE_MIN_RADIUS},

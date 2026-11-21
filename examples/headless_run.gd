@@ -3,7 +3,7 @@ extends "headless_run_flashlight.gd"
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	GSLog.set_level(GSLog.Level.ERROR)
 	_run.call_deferred()
 
 
@@ -84,8 +84,8 @@ func _test_settings() -> void:
 	var schema := BfhSettings.spec_for().make_schema()
 	# reduce_motion is read by the client when the winner reveal is presented, not pushed by the menu.
 	# ambient and ambient_volume are followed by the client's ambience director.
-	# LEFT_TO_THE_GAME keys are applied by DotGameClient (slide sounds, DotFxRenderQuality), as in dot-menu's selftest.
-	var applied := DotMenuApplier.APPLIES + DotMenuApplier.APPLIED_BY_MENU + DotMenuApplier.LEFT_TO_THE_GAME + [&"reduce_motion", &"ambient", &"ambient_volume"]
+	# LEFT_TO_THE_GAME keys are applied by GSGameClient (slide sounds, GSFxRenderQuality), as in dot-menu's selftest.
+	var applied := GSMenuApplier.APPLIES + GSMenuApplier.APPLIED_BY_MENU + GSMenuApplier.LEFT_TO_THE_GAME + [&"reduce_motion", &"ambient", &"ambient_volume"]
 	var unapplied := schema.keys().filter(func(k: StringName) -> bool: return not applied.has(k))
 	_check(
 		schema.validate().ok and unapplied.is_empty() and schema.has(&"ui_volume") and schema.has(&"shake_scale"),
@@ -96,14 +96,14 @@ func _test_settings() -> void:
 	var fov := schema.find(&"field_of_view")
 	var turn := schema.find(&"sensitivity")
 	_check(
-		turn != null and turn.scope == DotSettingsDef.Scope.ACCOUNT
-		and fov != null and fov.scope == DotSettingsDef.Scope.SERVER_CLAMPED
+		turn != null and turn.scope == GSSettingsDef.Scope.ACCOUNT
+		and fov != null and fov.scope == GSSettingsDef.Scope.SERVER_CLAMPED
 		and fov.min_value == 70.0 and fov.max_value == 120.0,
 		"sensitivity follows the person, and a server may cap the field of view"
 	)
 
 	# One launch saves...
-	var store := DotSettingsStoreMemory.new()
+	var store := GSSettingsStoreMemory.new()
 	var first := BfhSettings.new()
 	add_child(first)
 	var _first_built := first.setup(store, false)
@@ -115,12 +115,12 @@ func _test_settings() -> void:
 	first.free()
 
 	# ...and the next one loads, binds, and has changed nothing.
-	var look := DotFpsTunables.with_profile("legacy")
+	var look := GSFpsTunables.with_profile("legacy")
 	var camera := Camera3D.new()
 	add_child(camera)
-	var mixed := DotAudioManager.new()
+	var mixed := GSAudioManager.new()
 	mixed.register_as_service = false
-	mixed.catalogue = DotAudioCatalogue.new()
+	mixed.catalogue = GSAudioCatalogue.new()
 	add_child(mixed)
 	var _mixed := mixed.setup()
 
@@ -133,7 +133,7 @@ func _test_settings() -> void:
 
 	_check(
 		built.ok
-		and is_equal_approx(look.mouse_sensitivity, 4.0 * DotMenuApplier.DEGREES_PER_COUNT)
+		and is_equal_approx(look.mouse_sensitivity, 4.0 * GSMenuApplier.DEGREES_PER_COUNT)
 		and is_equal_approx(camera.fov, 110.0)
 		and is_equal_approx(mixed.mixer.master, 0.3),
 		"a saved setting reaches the sampler, the camera and the mixer on load, "
@@ -143,7 +143,7 @@ func _test_settings() -> void:
 
 	var _d := next.settings.set_value(&"sensitivity", 1.0)
 	_check(
-		is_equal_approx(look.mouse_sensitivity, DotMenuApplier.DEGREES_PER_COUNT),
+		is_equal_approx(look.mouse_sensitivity, GSMenuApplier.DEGREES_PER_COUNT),
 		"and one changed while playing is applied as it changes",
 		"%.4f" % look.mouse_sensitivity
 	)

@@ -9,11 +9,11 @@ const BfhVote := preload("bfh_vote.gd")
 var bowl_id: StringName = BfhBowls.DEFAULT
 
 ## The server's maps.yml, or null when there is none (every bowl rotates, as it always did).
-## dot-map's rotation file speaks DotMapDef; this game holds bowl records, so [member _defs]
+## dot-map's rotation file speaks GSMapDef; this game holds bowl records, so [member _defs]
 ## mirrors the ids and the file marks `in_rotation` on the mirror.
-var rotation_file: DotMapRotationFile = null
-var _defs: DotMapCatalogue = DotMapCatalogue.new()
-var _rotation: DotMapRotation = DotMapRotation.of(_defs)
+var rotation_file: GSMapRotationFile = null
+var _defs: GSMapCatalogue = GSMapCatalogue.new()
+var _rotation: GSMapRotation = GSMapRotation.of(_defs)
 
 ## Whether maps.yml names rotations, so that it decides which bowls rotate and in what order.
 func has_rotation_file() -> bool:
@@ -28,38 +28,38 @@ func apply_rotation() -> void:
 		offered.append(bowl["id"])
 
 		if _defs.get_map(bowl["id"]) == null:
-			var def := DotMapDef.new()
+			var def := GSMapDef.new()
 			def.id = bowl["id"]
 			def.scene_path = "bfh:%s" % bowl["id"]
 			def.display_name = str(bowl["name"])
 			var _added := _defs.add(def)
 
-	for def: DotMapDef in _defs.maps.duplicate():
+	for def: GSMapDef in _defs.maps.duplicate():
 		if not offered.has(def.id):
 			var _gone := _defs.remove(def.id)
 
 	if has_rotation_file():
-		rotation_file.fallback_in = func(_def: DotMapDef) -> bool: return true
+		rotation_file.fallback_in = func(_def: GSMapDef) -> bool: return true
 		var _applied := rotation_file.apply(_rotation)
 		return
 
 	_rotation.order = []
 
-	for def: DotMapDef in _defs.maps:
+	for def: GSMapDef in _defs.maps:
 		def.in_rotation = true
 
 ## Reads maps.yml (the `--config` directory first) and applies it. Called at boot and by
 ## `sv_map_rotation_file`. A file that is present and unreadable is an ERROR and changes nothing:
 ## rotating every bowl is a better failure than rotating none.
-func load_rotation() -> DotResult:
+func load_rotation() -> GSResult:
 	var stem := config.map_rotation_file
-	var dir := DotMapRotationFile.config_dir_arg()
-	var found := DotMapRotationFile.find(stem, dir)
+	var dir := GSMapRotationFile.config_dir_arg()
+	var found := GSMapRotationFile.find(stem, dir)
 
 	if found == "" and stem != "" and (dir != "" or stem != BfhConfig.new().map_rotation_file):
 		# The default name being absent is an install with no maps.yml; a name or a directory
 		# somebody chose that finds nothing is a typo they would otherwise never hear about.
-		DotLog.warn(CHANNEL, "the map rotation file was not found; every bowl rotates", {
+		GSLog.warn(CHANNEL, "the map rotation file was not found; every bowl rotates", {
 			"file": stem, "config_dir": dir,
 		})
 
@@ -68,10 +68,10 @@ func load_rotation() -> DotResult:
 	if found != "":
 		paths.append(found)
 
-	var read := DotMapRotationFile.load_files(paths, "mg-buses-from-hell")
+	var read := GSMapRotationFile.load_files(paths, "mg-buses-from-hell")
 
 	if not read.ok:
-		DotLog.error(CHANNEL, "the map rotation file could not be read; every bowl rotates", {
+		GSLog.error(CHANNEL, "the map rotation file could not be read; every bowl rotates", {
 			"why": read.error.message,
 		})
 		rotation_file = null
@@ -82,16 +82,16 @@ func load_rotation() -> DotResult:
 	apply_rotation()
 
 	if has_rotation_file():
-		DotLog.info(CHANNEL, "the map rotation file", {
+		GSLog.info(CHANNEL, "the map rotation file", {
 			"paths": ", ".join(rotation_file.sources), "active": rotation_file.active_name(),
 		})
 
 	return read
 
 ## `bfh_rotation <name>`: the live switch to another named rotation in the file.
-func switch_rotation(rotation_name: String) -> DotResult:
+func switch_rotation(rotation_name: String) -> GSResult:
 	if not has_rotation_file():
-		return DotResult.fail(DotError.CODE_STATE, "There is no maps.yml to switch rotations in.")
+		return GSResult.fail(GSError.CODE_STATE, "There is no maps.yml to switch rotations in.")
 
 	apply_rotation()
 	return rotation_file.switch(_rotation, rotation_name)
@@ -121,7 +121,7 @@ func rotating_ids() -> Array[StringName]:
 
 	var out: Array[StringName] = []
 
-	for def: DotMapDef in _rotation.pool(0):
+	for def: GSMapDef in _rotation.pool(0):
 		if every.has(def.id):
 			out.append(def.id)
 
@@ -153,7 +153,7 @@ func rotation_commands() -> Dictionary:
 ## Every bowl this server plays, as the map menu (M) lists them: `{id, name, detail, current}`, its
 ## size under the name. Solo the client's list, online the server's (the module hands it to dot-
 ## vote's map menu), so both say the same.
-func bowl_rows(index: DotContentIndex = null) -> Array:
+func bowl_rows(index: GSContentIndex = null) -> Array:
 	var out: Array = []
 	for bowl in BfhBowls.allowed(config):
 		var rotates := in_rotation(bowl["id"])
@@ -168,7 +168,7 @@ func bowl_rows(index: DotContentIndex = null) -> Array:
 ## The bowls a subscribed pack adds, each `{id, name, radius}`. A pack's `map` entry of an accepted
 ## `map_kind` names, in `scene`, a bowl document: JSON `{"radius": metres}`, clamped to what the
 ## arena's gap rule has been built and checked for.
-func workshop_bowls(index: DotContentIndex) -> Array[Dictionary]:
+func workshop_bowls(index: GSContentIndex) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if index == null:
 		return out

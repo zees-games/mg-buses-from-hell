@@ -1,6 +1,6 @@
 extends RefCounted
 
-## Every key this game reads, as one dot-menu [DotMenuBindings] table: the action, the setting that
+## Every key this game reads, as one dot-menu [GSMenuBindings] table: the action, the setting that
 ## stores it, the words a player sees, the default, and the card it goes on.
 
 const SCOREBOARD := &"bfh_scoreboard"
@@ -15,8 +15,8 @@ const CHAT := &"bfh_chat"
 const CHAT_TEAM := &"bfh_chat_team"
 
 
-static func make() -> DotMenuBindings:
-	var keys := DotMenuBindings.new()
+static func make() -> GSMenuBindings:
+	var keys := GSMenuBindings.new()
 	keys.add_movement("Movement", "Ctrl", "Crouch")
 	keys.add(&"dot_fps_forward", &"bind_forward", "Forward (driving: accelerate)", "W", "Movement")
 	keys.add(&"dot_fps_back", &"bind_back", "Back (driving: brake and reverse)", "S", "Movement")

@@ -1,4 +1,4 @@
-extends DotMenuGameSettings
+extends GSMenuGameSettings
 
 const BfhBindings := preload("bfh_bindings.gd")
 
@@ -26,8 +26,8 @@ func _init() -> void:
 
 
 ## The game's settings as data: names, field of view, extra settings, keys and the help screen's goal and rules.
-static func spec_for() -> DotMenuGameSpec:
-	var s := DotMenuGameSpec.new()
+static func spec_for() -> GSMenuGameSpec:
+	var s := GSMenuGameSpec.new()
 	s.schema_version = SCHEMA_VERSION
 	s.brand_name = "Buses from Hell"
 	s.settings_dir = SETTINGS_DIR
@@ -39,7 +39,7 @@ static func spec_for() -> DotMenuGameSpec:
 	s.not_applied = NOT_APPLIED
 	# The touch Menu button sits top left: the round status label owns the top right, and the thumbs the bottom.
 	s.menu_button_corner = &"top_left"
-	s.bindings_maker = func() -> DotMenuBindings: return BfhBindings.make()
+	s.bindings_maker = func() -> GSMenuBindings: return BfhBindings.make()
 	s.help_about = "Two players drive buses; everybody else runs. Drivers win by flattening every runner before the clock runs out; runners win if anybody is still standing when it does."
 	s.help_cards = [
 		["Running", "Your hammer cannot hurt a bus. Use it to break and shove crates into cover and walls, and keep moving. Barrels explode when anything hits them, throwing runners into the air and crates across the bowl. Concrete blocks never move."],

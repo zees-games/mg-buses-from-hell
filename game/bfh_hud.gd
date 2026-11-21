@@ -14,13 +14,13 @@ const BfhBindings := preload("bfh_bindings.gd")
 var game: BfhGame = null
 var player: BfhPlayer = null
 
-## The clock with the status line under it: dot-ui's [DotScoreStrip], clock alone (this
+## The clock with the status line under it: dot-ui's [GSScoreStrip], clock alone (this
 ## game's two sides keep their rounds-won on the scoreboard, not on the HUD).
-var strip: DotScoreStrip = null
-## Health: dot-ui's [DotVitals], bar and number on one plate, red at a quarter.
-var vitals: DotVitals = null
+var strip: GSScoreStrip = null
+## Health: dot-ui's [GSVitals], bar and number on one plate, red at a quarter.
+var vitals: GSVitals = null
 var _cover: Label = null
-var _crosshair: DotCrosshair = null
+var _crosshair: GSCrosshair = null
 var _root: Control = null
 
 ## An administrator's `blind`, over the world and under the four numbers.
@@ -41,7 +41,7 @@ const LOW_CLOCK_SEC := 10.0
 ## so a light or high-contrast theme can change them. Static so a render tool can use it.
 static func piece_theme() -> Theme:
 	var t := Theme.new()
-	var type := DotHudPiece.THEME_TYPE
+	var type := GSHudPiece.THEME_TYPE
 	t.set_color(&"plate_edge", type, Color(BfhArena.SAND, 0.3))
 	t.set_color(&"highlight", type, BfhArena.SAND)
 	t.set_color(&"good", type, BfhArena.PILLAR_COLOUR)
@@ -100,7 +100,7 @@ func _build() -> void:
 
 	var font_size := 22
 
-	# The glance pieces read their colours from the theme on the type DotHudPiece; set on
+	# The glance pieces read their colours from the theme on the type GSHudPiece; set on
 	# the root, every piece under it inherits them. See [method piece_theme].
 	_root.theme = piece_theme()
 	_follow()
@@ -108,7 +108,7 @@ func _build() -> void:
 	# The clock, and the status line ("waiting for both sides", whose eyes you are watching
 	# through, "blinded by an admin") as the line under it. Full width, because the strip
 	# centres itself on its own middle and the watching line is long.
-	strip = DotScoreStrip.new()
+	strip = GSScoreStrip.new()
 	strip.name = "Clock"
 	strip.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	strip.offset_top = 16.0
@@ -117,7 +117,7 @@ func _build() -> void:
 
 	# Bottom left, under the chat box, which starts 120 pixels off the bottom
 	# (`BfhClientChat`): the plate is 56 tall and ends 26 off it.
-	vitals = DotVitals.new()
+	vitals = GSVitals.new()
 	vitals.name = "Vitals"
 	vitals.bar_end = 220.0
 	vitals.fill_colour = BfhArena.PILLAR_COLOUR
@@ -140,7 +140,7 @@ func _build() -> void:
 
 	# A dot rather than a cross: the hammer has a reach of two metres and no spread,
 	# so what a player needs is "the point I will hit", not a spread indicator.
-	var dot := DotCrosshair.new()
+	var dot := GSCrosshair.new()
 	dot.name = "Crosshair"
 	dot.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dot.length = 0.0
@@ -151,7 +151,7 @@ func _build() -> void:
 	dot.dot_radius = 3.0
 	dot.colour = Color(1.0, 1.0, 1.0, 0.75)
 	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if DotAddonApi.build_level("dot_ui") >= 14:
+	if GSAddonApi.build_level("dot_ui") >= 14:
 		dot.set(&"alive_source", func() -> bool: return player == null or game == null or game.spectate == null or not game.spectate.is_spectating(player.player_id))
 	_root.add_child(dot)
 	_crosshair = dot
@@ -182,10 +182,10 @@ func _process(delta: float) -> void:
 
 	var left := maxf(game.config.round_seconds - game.round_elapsed, 0.0)
 	# Red for the last ten seconds: the runners are nearly through it.
-	strip.show_clock(DotScoreStrip.clock_text(left), left <= LOW_CLOCK_SEC, _status_line())
+	strip.show_clock(GSScoreStrip.clock_text(left), left <= LOW_CLOCK_SEC, _status_line())
 
 	if player != null and player.health != null:
-		# Red at a quarter (DotVitals.low_fraction), which is one bus bump from gone.
+		# Red at a quarter (GSVitals.low_fraction), which is one bus bump from gone.
 		vitals.show_vitals(player.health.health, player.health.max_health)
 
 	_cover.text = "%d cover   %d alive" % [game.crates_left(), game.alive_runners()]
@@ -248,7 +248,7 @@ func _watching_cached() -> String:
 		var who: BfhPlayer = game.players.get(key_target)
 		key_name = who.display_name if who != null else ""
 		key_bus = who != null and game.team_of(key_target) == BfhGame.TEAM_DRIVERS
-	var touch := DotPlatform.has_touch()
+	var touch := GSPlatform.has_touch()
 	if _wl_text.is_empty() or key_target != _wl_target or key_mode != _wl_mode or key_roam != _wl_roam \
 			or key_can != _wl_can or key_name != _wl_name or key_bus != _wl_bus or touch != _wl_touch:
 		_wl_target = key_target
@@ -271,7 +271,7 @@ static func watching_line(p_game: BfhGame, own: BfhPlayer) -> String:
 
 	var roam_key: String = BfhBindings.key_name(BfhBindings.ROAM)
 
-	var touch := DotPlatform.has_touch()
+	var touch := GSPlatform.has_touch()
 
 	if p_game.spectate.is_roaming(own.player_id):
 		if touch:
@@ -286,11 +286,11 @@ static func watching_line(p_game: BfhGame, own: BfhPlayer) -> String:
 		name = "%s's bus" % name
 
 	match p_game.spectate.mode_of(own.player_id):
-		DotSpectatorView.Mode.DEATH_CAM:
+		GSSpectatorView.Mode.DEATH_CAM:
 			return "down — run over by %s" % name
-		DotSpectatorView.Mode.FREEZE_CAM:
+		GSSpectatorView.Mode.FREEZE_CAM:
 			return "down — %s, from the cab" % name
-		DotSpectatorView.Mode.FIXED:
+		GSSpectatorView.Mode.FIXED:
 			return "down — next round"
 
 	var roam_hint := (" · %s: free camera" % roam_key) if p_game.spectate.can_roam(own.player_id) else ""

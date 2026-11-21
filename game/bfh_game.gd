@@ -42,20 +42,20 @@ signal earned(player_id: StringName, title: String, points: int)
 ## dot-player-controller's `mp_forceview`: whether a player may switch to third person (0), or is
 ## held in first (1) or third (2). Bound by the module (REPLICATED) and followed by a client through
 ## its link.
-var view_rules: DotPlayerViewRules = DotPlayerViewRules.new()
+var view_rules: GSPlayerViewRules = GSPlayerViewRules.new()
 
 ## The ambience cvars (`bfh_ambient*`): bound by the module (REPLICATED), followed by a client through its link.
-var ambient_rules: DotAmbienceRules = BfhAmbience.make_rules()
+var ambient_rules: GSAmbienceRules = BfhAmbience.make_rules()
 
 ## Binds [member config] to cvars, the cfg/ yml layers and the workbench; made by the server scene or the client.
-var config_binder: DotGameConfigBinder = null
+var config_binder: GSGameConfigBinder = null
 
 ## The workbench's profile rows, made on first ask: the bridge's profile link must exist before the netcode seals, the workbench after.
-var profile_runtime: DotProfileRuntime = null
+var profile_runtime: GSProfileRuntime = null
 
-func ensure_runtime() -> DotProfileRuntime:
+func ensure_runtime() -> GSProfileRuntime:
 	if profile_runtime == null:
-		profile_runtime = DotProfileRuntime.new()
+		profile_runtime = GSProfileRuntime.new()
 		profile_runtime.permit = func(actor: Variant, _flag: String) -> bool:
 			return typeof(actor) == TYPE_STRING_NAME and actor == &"local"
 	return profile_runtime
@@ -64,9 +64,9 @@ func ensure_runtime() -> DotProfileRuntime:
 ## and used once. Empty keeps this one.
 var next_bowl_id: StringName = &""
 
-## The Workshop index a solo client points this at (`DotContentIndex.shared()`), so a
+## The Workshop index a solo client points this at (`GSContentIndex.shared()`), so a
 ## subscribed bowl can be chosen. Null on a server, which plays only its own.
-var workshop_index: DotContentIndex = null
+var workshop_index: GSContentIndex = null
 
 var _layout_seed: int = 0
 
@@ -79,7 +79,7 @@ func _ready() -> void:
 		# FATAL is reserved in this family for "the process cannot continue", and a
 		# configuration that contradicts itself is not that: the right answer is to
 		# say so loudly and refuse to run a round, not to take the server down.
-		DotLog.error(CHANNEL, "the configuration is not usable", {"why": valid.error.message})
+		GSLog.error(CHANNEL, "the configuration is not usable", {"why": valid.error.message})
 		return
 
 	_layout_seed = config.arena_seed
@@ -98,26 +98,26 @@ func _ready() -> void:
 	_build_progress()
 
 	if register_service:
-		DotRegistry.register(SERVICE, self)
+		GSRegistry.register(SERVICE, self)
 
 	if authoritative:
 		var _rotation_read := load_rotation()
 
-	DotLog.info(CHANNEL, "world ready", config.describe())
+	GSLog.info(CHANNEL, "world ready", config.describe())
 
 func _exit_tree() -> void:
 	# By instance, never by name. Unregistering the NAME from a world that lost the
 	# race to register it takes the other world's entry out with it, and the symptom is
 	# a module that cannot find a game that is sitting in the tree.
 	if register_service:
-		DotRegistry.unregister_instance(SERVICE, self)
+		GSRegistry.unregister_instance(SERVICE, self)
 
 ## Puts this world's physics space on the gravity the game was tuned for.
 func _apply_gravity() -> void:
 	var world := get_world_3d()
 
 	if world == null:
-		DotLog.warn(CHANNEL, "no world to set gravity on", {})
+		GSLog.warn(CHANNEL, "no world to set gravity on", {})
 		return
 
 	PhysicsServer3D.area_set_param(
@@ -125,7 +125,7 @@ func _apply_gravity() -> void:
 	)
 
 func _build_random() -> void:
-	random = DotRandomManager.new()
+	random = GSRandomManager.new()
 	random.name = "Random"
 	# [b]Off, and the addon's own comment says why.[/b] A registry name is global to the process, so
 	# the last manager to register wins — and two worlds in one process is not exotic here: it is a
@@ -149,10 +149,10 @@ func _build_arena() -> void:
 	arena.build(config.arena_radius)
 
 func _build_props() -> void:
-	props = DotPropSpawner.new()
+	props = GSPropSpawner.new()
 	props.name = "Props"
 	props.catalogue = BfhContent.props(config)
-	props.limits = DotPropLimits.new()
+	props.limits = GSPropLimits.new()
 	# The bowl's furniture is spawned by the world rather than by a player, so the per-player budget
 	# and the cooldown are not what is being defended against here — the world cap is, and it has to be
 	# above what a round lays out or the last few crates silently never appear.
@@ -163,19 +163,19 @@ func _build_props() -> void:
 	props.authoritative = authoritative
 	add_child(props)
 
-	prop_damage = DotPropDamage.new()
+	prop_damage = GSPropDamage.new()
 	prop_damage.name = "PropDamage"
 	prop_damage.authoritative = authoritative
 	props.add_child(prop_damage)
 	prop_damage.exploded.connect(_on_prop_exploded)
 	prop_damage.broken.connect(_on_prop_broken)
 
-	carry = DotPropCarry.new()
+	carry = GSPropCarry.new()
 	carry.name = "PropCarry"
 	props.add_child(carry)
 
 func _build_vehicles() -> void:
-	vehicles = DotVehicleSpawner.new()
+	vehicles = GSVehicleSpawner.new()
 	vehicles.name = "Vehicles"
 	vehicles.catalogue = BfhContent.vehicles(config)
 	vehicles.authoritative = authoritative
@@ -186,52 +186,52 @@ func _build_vehicles() -> void:
 	vehicles.world_budget = 16
 	add_child(vehicles)
 
-	# [b]The SPAWNER'S ride, not a second one.[/b] `DotVehicleSpawner` builds one in its own `_init`
+	# [b]The SPAWNER'S ride, not a second one.[/b] `GSVehicleSpawner` builds one in its own `_init`
 	# and uses it for three things: evacuating a vehicle that is destroyed with people in it, answering
 	# `vehicle_of_rider`, and reporting how many riders there are.
 	ride = vehicles.ride
 	ride.carry_rider_nodes = false
-	ride.on_seated = func(rider_id: StringName, v: DotVehicleInstance, _s: DotVehicleSeat) -> void:
+	ride.on_seated = func(rider_id: StringName, v: GSVehicleInstance, _s: GSVehicleSeat) -> void:
 		_set_riding(rider_id, true, Vector3.ZERO, v)
 	ride.on_unseated = func(
-		rider_id: StringName, _v: DotVehicleInstance, _s: DotVehicleSeat, at: Vector3
+		rider_id: StringName, _v: GSVehicleInstance, _s: GSVehicleSeat, at: Vector3
 	) -> void:
 		_set_riding(rider_id, false, at)
 
 func _build_combat() -> void:
-	combat = DotCombatManager.new()
+	combat = GSCombatManager.new()
 	combat.name = "Combat"
 	combat.is_authority = authoritative
 
 	# [b]Said out loud, because the inherited default says the opposite of what this game does.[/b]
-	# [DotDamageRules] defaults `friendly_fire` to false, and a reader who found that here would
+	# [GSDamageRules] defaults `friendly_fire` to false, and a reader who found that here would
 	# conclude that a runner cannot hurt another runner.
-	var rules := DotDamageRules.new()
+	var rules := GSDamageRules.new()
 	rules.friendly_fire = true
 	combat.rules = rules
 
 	add_child(combat)
 
 ## The intermission is the pause plus the killcam the clients play inside it, so the server never waits on one.
-func apply_intermission(rules: DotMatchRules = null) -> void:
-	var target: DotMatchRules = rules if rules != null else (match_node.rules if match_node != null else null)
+func apply_intermission(rules: GSMatchRules = null) -> void:
+	var target: GSMatchRules = rules if rules != null else (match_node.rules if match_node != null else null)
 	if target == null:
 		return
 	var pause := config.intermission_seconds
 	target.intermission_sec = pause + (config.killcam_seconds if pause > 0.0 else 0.0)
 
 func _build_match() -> void:
-	match_node = DotMatch.new()
+	match_node = GSMatch.new()
 	match_node.name = "Match"
 	match_node.register_service = false
 
-	var match_config := DotMatchConfig.new()
+	var match_config := GSMatchConfig.new()
 	match_config.tick_rate = tick_rate
 	match_config.auto_start = false
 	match_config.log_transitions = false
 	match_node.config = match_config
 
-	var rules := DotRulesElimination.make(config.round_seconds)
+	var rules := GSRulesElimination.make(config.round_seconds)
 	apply_intermission(rules)
 	rules.warmup_sec = config.warmup_seconds
 	rules.countdown_sec = 0.0
@@ -241,7 +241,7 @@ func _build_match() -> void:
 	# server to be doing, and the alternative is a server that sits in warmup for ever.
 	rules.min_players = 1
 	# [b]The rule asks the game who is alive, and that is the seam dot-match is built around.[/b] Being
-	# alive is a `DotHealth`, which lives in dot-combat, which dot-match deliberately does not depend
+	# alive is a `GSHealth`, which lives in dot-combat, which dot-match deliberately does not depend
 	# on.
 	rules.alive_fn = _is_alive
 	match_node.rules = rules
@@ -254,9 +254,9 @@ func _build_match() -> void:
 	# So a client's world kept dot-match's default pair, "Red" and "Blue" — nothing read them until the
 	# scoreboard asked for a side's name — and so would a server with `track_progress` off or whose
 	# tracker failed to attach, with dot-match's balancing and its one-ahead cap back on, which is the.
-	var teams: Array[DotTeam] = [
-		DotTeam.make(TEAM_DRIVERS, "Drivers", Color(0.92, 0.74, 0.17)),
-		DotTeam.make(TEAM_RUNNERS, "Runners", Color(0.35, 0.62, 0.88)),
+	var teams: Array[GSTeam] = [
+		GSTeam.make(TEAM_DRIVERS, "Drivers", Color(0.92, 0.74, 0.17)),
+		GSTeam.make(TEAM_RUNNERS, "Runners", Color(0.35, 0.62, 0.88)),
 	]
 	match_node.teams.teams = teams
 	# [b]And re-indexed, because assigning the list does not.[/b] dot-match fills in its standard pair
@@ -280,10 +280,10 @@ func _build_spectate() -> void:
 	spectate.name = "Spectate"
 	add_child(spectate)
 
-	var built: DotResult = spectate.setup_world(self, authoritative, tick_rate)
+	var built: GSResult = spectate.setup_world(self, authoritative, tick_rate)
 
 	if not built.ok:
-		DotLog.warn(CHANNEL, "spectating is off", {"why": built.error.message})
+		GSLog.warn(CHANNEL, "spectating is off", {"why": built.error.message})
 		remove_child(spectate)
 		spectate.free()
 		spectate = null
@@ -297,16 +297,16 @@ func _build_progress() -> void:
 	progress.name = "Progress"
 	add_child(progress)
 
-	var attached: DotResult = progress.attach(self)
+	var attached: GSResult = progress.attach(self)
 
 	if not attached.ok:
-		DotLog.warn(CHANNEL, "progress is off", {"why": attached.error.message})
+		GSLog.warn(CHANNEL, "progress is off", {"why": attached.error.message})
 		remove_child(progress)
 		progress.free()
 		progress = null
 		return
 
-	progress.unlocked.connect(func(player_id: StringName, achievement: DotAchievement) -> void:
+	progress.unlocked.connect(func(player_id: StringName, achievement: GSAchievement) -> void:
 		earned.emit(player_id, achievement.display_name, achievement.points)
 	)
 
@@ -354,11 +354,11 @@ func _on_round_started(number: int) -> void:
 		spectate.on_round_began()
 
 	round_began.emit(number)
-	DotLog.info(CHANNEL, "round began", {"number": number, "seed": _layout_seed})
+	GSLog.info(CHANNEL, "round began", {"number": number, "seed": _layout_seed})
 
 func _on_round_ended(number: int, winner: int, _outcome: int) -> void:
 	round_over.emit(number, winner)
-	DotLog.info(CHANNEL, "round over", {"number": number, "winner": winner})
+	GSLog.info(CHANNEL, "round over", {"number": number, "winner": winner})
 
 	if config.rounds_before_swap > 0 and number % config.rounds_before_swap == 0:
 		_swap_sides()
@@ -375,7 +375,7 @@ func _swap_sides() -> void:
 			break
 
 	if not person_driving:
-		DotLog.debug(CHANNEL, "sides not swapped: nobody driving is a person", {"round": round_number})
+		GSLog.debug(CHANNEL, "sides not swapped: nobody driving is a person", {"round": round_number})
 		return
 
 	for id: StringName in sides:
@@ -388,7 +388,7 @@ func _swap_sides() -> void:
 		# of the server's life: the drivers ran the new runners down and every such round was.
 		var switched := match_node.switch_team(String(id), now, _tick)
 		if not switched.ok:
-			DotLog.error(CHANNEL, "dot-match refused a side swap", {
+			GSLog.error(CHANNEL, "dot-match refused a side swap", {
 				"id": String(id), "team": now, "why": switched.error.message,
 			})
 
@@ -399,18 +399,18 @@ func _swap_sides() -> void:
 			player.hammer = null
 
 	sides_swapped.emit(round_number)
-	DotLog.info(CHANNEL, "sides swapped", {"round": round_number})
+	GSLog.info(CHANNEL, "sides swapped", {"round": round_number})
 
 func _clear_bowl() -> void:
 	for prop in props.all_props():
-		props.remove(prop.instance_id, DotPropSpawner.REASON_CLEANUP)
+		props.remove(prop.instance_id, GSPropSpawner.REASON_CLEANUP)
 
 	for instance_id in _bus_ids:
 		var bus := vehicles.get_vehicle(instance_id)
 		if bus == null:
 			continue
 
-		# [b]Riders out before the bus goes, and nothing else does this for us.[/b] `DotVehicleRide` is a
+		# [b]Riders out before the bus goes, and nothing else does this for us.[/b] `GSVehicleRide` is a
 		# RefCounted holding its own rider index and it does not watch the spawner — so a bus removed
 		# underneath somebody leaves the ride still believing they are aboard, and every later `enter` is.
 		for rider_id: StringName in bus.occupants.values():
@@ -433,17 +433,17 @@ func _clear_bowl() -> void:
 ## The map menu's change: [param id] now, not after this round. The next bowl is set and a
 ## fresh round begins in it (dot-match's `begin_round_now`: the round called off has no
 ## winner); with no match running yet it is simply built. Authority only.
-func change_bowl_now(id: StringName) -> DotResult:
+func change_bowl_now(id: StringName) -> GSResult:
 	if not authoritative:
-		return DotResult.fail(DotError.CODE_STATE, "Only the server changes the bowl.")
+		return GSResult.fail(GSError.CODE_STATE, "Only the server changes the bowl.")
 	if not BfhBowls.allowed(config).any(func(b: Dictionary) -> bool: return b["id"] == id) \
 			and not workshop_bowls(workshop_index).any(func(b: Dictionary) -> bool: return b["id"] == id):
-		return DotResult.fail(DotError.CODE_INVALID, "There is no bowl called '%s' here." % id)
+		return GSResult.fail(GSError.CODE_INVALID, "There is no bowl called '%s' here." % id)
 	next_bowl_id = id
 	if match_node == null or not match_node.begin_round_now(_tick):
 		_change_bowl()
-	DotLog.info(CHANNEL, "bowl changed from the map menu", {"bowl": String(id)})
-	return DotResult.success(id)
+	GSLog.info(CHANNEL, "bowl changed from the map menu", {"bowl": String(id)})
+	return GSResult.success(id)
 
 ## The bowl the players voted for, built between one round's props going and the next's
 ## arriving. Once: [member next_bowl_id] is cleared whether or not it was used, and a bowl
@@ -479,7 +479,7 @@ func _change_bowl() -> void:
 				offered = true
 
 	if not offered or chosen.is_empty():
-		DotLog.warn(CHANNEL, "the voted bowl is not one this server offers; keeping this one",
+		GSLog.warn(CHANNEL, "the voted bowl is not one this server offers; keeping this one",
 			{"wanted": String(wanted), "keeping": String(bowl_id)})
 		return
 
@@ -489,7 +489,7 @@ func _change_bowl() -> void:
 	arena.district = String(chosen.get("district", ""))
 	arena.build(float(chosen["radius"]))
 	bowl_changed.emit(bowl_id)
-	DotLog.info(CHANNEL, "the bowl changed", {"bowl": String(bowl_id), "radius": "%.0f m" % arena.radius})
+	GSLog.info(CHANNEL, "the bowl changed", {"bowl": String(bowl_id), "radius": "%.0f m" % arena.radius})
 
 func _lay_out_bowl() -> void:
 	var stream := random.stream(&"bowl")
@@ -552,7 +552,7 @@ func _place_buses() -> void:
 		var bus := vehicles.spawn(BfhContent.BUS, at, &"world", orientation)
 
 		if bus == null:
-			DotLog.warn(CHANNEL, "a bus could not be spawned", {"index": i})
+			GSLog.warn(CHANNEL, "a bus could not be spawned", {"index": i})
 			continue
 
 		_bus_ids.append(bus.instance_id)
@@ -682,7 +682,7 @@ func sides_are_playable() -> bool:
 
 ## Something dot-props broke. A crate is a sound; a barrel's sound is its blast, which
 ## [signal barrel_exploded] already carries, and a block cannot break.
-func _on_prop_broken(prop: DotPropInstance, at: Vector3, _by: StringName) -> void:
+func _on_prop_broken(prop: GSPropInstance, at: Vector3, _by: StringName) -> void:
 	if prop != null and prop.def != null and prop.def.id == BfhContent.CRATE:
 		noise.emit(BfhSounds.CRATE_BREAK, at)
 

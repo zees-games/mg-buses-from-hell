@@ -1,4 +1,4 @@
-extends DotGameVisualQaCapture
+extends GSGameVisualQaCapture
 
 ## Buses from Hell's visual QA capture (docs/testing.md, "Visual QA"; the loop is dot-game's docs/visual-qa.md).
 ## Each item is recorded frame by frame at --fps in three views (f first person, t behind-right, o in front):
@@ -134,7 +134,7 @@ func _atlas_of(letter: String) -> String:
 	return BfhFigure.DRIVER_ATLAS if _letter(BfhFigure.DRIVER_ATLAS) == letter else ""
 
 
-func _stage(item: String, clip: String) -> DotResult:
+func _stage(item: String, clip: String) -> GSResult:
 	_clear()
 	views.behind_offset = Vector3(1.6, 1.6, 3.2)
 	views.behind_look_height = 1.0
@@ -144,7 +144,7 @@ func _stage(item: String, clip: String) -> DotResult:
 	if item.begins_with("person_"):
 		var atlas := _atlas_of(item.trim_prefix("person_"))
 		if atlas == "":
-			return DotResult.fail(DotError.CODE_INVALID, "no atlas for %s" % item)
+			return GSResult.fail(GSError.CODE_INVALID, "no atlas for %s" % item)
 		_kind = "person"
 		_stand(atlas)
 	elif item == "hammer":
@@ -160,12 +160,12 @@ func _stage(item: String, clip: String) -> DotResult:
 		first_person.add_child(_model)
 		_model.show_for(true)
 		_model.set_process(false)
-		var _tagged := DotGameVisualQaViews.tag_layers(_model, VIEW_LAYER)
+		var _tagged := GSGameVisualQaViews.tag_layers(_model, VIEW_LAYER)
 	elif item == "bus":
 		_kind = "bus"
 		var scene := load(BfhContent.BUS_SCENE) as PackedScene
 		if scene == null:
-			return DotResult.fail(DotError.CODE_INVALID, "the bus scene would not load: %s" % BfhContent.BUS_SCENE)
+			return GSResult.fail(GSError.CODE_INVALID, "the bus scene would not load: %s" % BfhContent.BUS_SCENE)
 		_bus = scene.instantiate() as VehicleBody3D
 		_bus.freeze = true
 		_holder.add_child(_bus)
@@ -178,7 +178,7 @@ func _stage(item: String, clip: String) -> DotResult:
 		var path := BfhContent.CRATE_SCENE if item == "crate" else BfhContent.BARREL_SCENE
 		var scene := load(path) as PackedScene
 		if scene == null:
-			return DotResult.fail(DotError.CODE_INVALID, "%s would not load" % path)
+			return GSResult.fail(GSError.CODE_INVALID, "%s would not load" % path)
 		_prop = Node3D.new()
 		_holder.add_child(_prop)
 		var body := scene.instantiate() as RigidBody3D
@@ -212,8 +212,8 @@ func _stage(item: String, clip: String) -> DotResult:
 		views.opponent_offset = Vector3(20.0, 12.0, -30.0)
 		views.opponent_look_height = 2.0
 	else:
-		return DotResult.fail(DotError.CODE_INVALID, "no item %s" % item)
-	return DotResult.success(clip)
+		return GSResult.fail(GSError.CODE_INVALID, "no item %s" % item)
+	return GSResult.success(clip)
 
 
 func _stand(atlas: String) -> void:
@@ -329,7 +329,7 @@ func _grounded(_item: String, clip: String, t: float) -> bool:
 
 func _before_draw(_item: String, _clip: String, _frame: int) -> void:
 	if _figure != null:
-		var _tagged := DotGameVisualQaViews.tag_layers(_figure, BODY_LAYER)
+		var _tagged := GSGameVisualQaViews.tag_layers(_figure, BODY_LAYER)
 
 
 ## The hammer: the runner's own eye with the view model on it. The bus: the cab eye the game spectates a driver from.

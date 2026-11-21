@@ -26,13 +26,13 @@ const BUS := &"bus"
 
 
 ## Everything that gets scattered in the bowl.
-static func props(config: BfhConfig) -> DotPropCatalogue:
-	var catalogue := DotPropCatalogue.new()
+static func props(config: BfhConfig) -> GSPropCatalogue:
+	var catalogue := GSPropCatalogue.new()
 
-	var crate := DotPropDef.make(CRATE, CRATE_SCENE)
+	var crate := GSPropDef.make(CRATE, CRATE_SCENE)
 	crate.display_name = "Crate"
 	crate.category = &"cover"
-	crate.size = DotPropDef.Size.SMALL
+	crate.size = GSPropDef.Size.SMALL
 	crate.mass = 30.0
 	crate.rideable = true
 	crate.max_health = 100.0
@@ -41,10 +41,10 @@ static func props(config: BfhConfig) -> DotPropCatalogue:
 	crate.break_impact_speed = 5.0
 	catalogue.add(crate)
 
-	var barrel := DotPropDef.make(BARREL, BARREL_SCENE)
+	var barrel := GSPropDef.make(BARREL, BARREL_SCENE)
 	barrel.display_name = "Barrel"
 	barrel.category = &"hazard"
-	barrel.size = DotPropDef.Size.SMALL
+	barrel.size = GSPropDef.Size.SMALL
 	barrel.mass = 45.0
 	barrel.rideable = true
 	# A third of a crate's health, because the point of a barrel is that everything
@@ -59,10 +59,10 @@ static func props(config: BfhConfig) -> DotPropCatalogue:
 	# [b]The one thing in the bowl that is not a toy.[/b] A round where every piece of cover can be
 	# removed is a round that ends the same way every time: the drivers flatten the crates and then the
 	# runners have nowhere to be.
-	var block := DotPropDef.make(BLOCK, CRATE_SCENE)
+	var block := GSPropDef.make(BLOCK, CRATE_SCENE)
 	block.display_name = "Concrete block"
 	block.category = &"cover"
-	block.size = DotPropDef.Size.MEDIUM
+	block.size = GSPropDef.Size.MEDIUM
 	block.mass = 4000.0
 	block.rideable = false
 	block.max_health = 0.0
@@ -74,7 +74,7 @@ static func props(config: BfhConfig) -> DotPropCatalogue:
 
 
 ## The bus feel numbers from the config onto [param tunables]; also run again on a live edit.
-static func apply_bus_feel(tunables: DotVehicleTunables, config: BfhConfig) -> void:
+static func apply_bus_feel(tunables: GSVehicleTunables, config: BfhConfig) -> void:
 	tunables.mass = config.bus_mass
 	tunables.engine_force = config.bus_engine_force
 	tunables.top_speed = config.bus_top_speed
@@ -92,25 +92,25 @@ static func apply_bus_feel(tunables: DotVehicleTunables, config: BfhConfig) -> v
 
 
 ## The bus, and nothing else.
-static func vehicles(config: BfhConfig) -> DotVehicleCatalogue:
-	var catalogue := DotVehicleCatalogue.new()
+static func vehicles(config: BfhConfig) -> GSVehicleCatalogue:
+	var catalogue := GSVehicleCatalogue.new()
 
-	var bus := DotVehicleDef.new()
+	var bus := GSVehicleDef.new()
 	bus.id = BUS
 	bus.display_name = "Bus"
 	bus.category = &"vehicle"
 	bus.scene_path = BUS_SCENE
-	bus.kind = DotVehicleDef.Kind.WHEELED
+	bus.kind = GSVehicleDef.Kind.WHEELED
 	bus.max_health = 0.0
 
-	var tunables := DotVehicleTunables.new()
+	var tunables := GSVehicleTunables.new()
 	apply_bus_feel(tunables, config)
 	# Newtons since dot-vehicle 4f4afaf (they were an impulse per step, and the bus stopped from 15 m/s
 	# in 1.9 m on the foot brake and 4.5 m on the handbrake). 30 kN is 15 m/s², three quarters of this
 	# bowl's gravity: 7.6 m from 15 m/s.
 	bus.tunables = tunables
 
-	var seat := DotVehicleSeat.new()
+	var seat := GSVehicleSeat.new()
 	seat.id = &"driver"
 	seat.display_name = "Driver"
 	seat.drives = true

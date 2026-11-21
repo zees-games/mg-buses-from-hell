@@ -4,7 +4,7 @@ Long comment blocks cut to the three-line rule by the comments gate burn-down, k
 
 ### examples/dedicated.gd (was line 15)
 
-Boots a real [DotServer], loads this game into it as a module, and runs the commands an operator would actually type.
+Boots a real [GSServer], loads this game into it as a module, and runs the commands an operator would actually type.
 
 [codeblock] godot --headless --path . res://examples/dedicated.tscn [/codeblock]
 
@@ -22,7 +22,7 @@ Everything this run writes, and it is deleted on the way in and on the way out.
 
 Takes the server down before quitting, and this run does not end without it.
 
-[b]`get_tree().quit()` on a booted [DotServer] does not end the process.[/b] The listener is open, stdin console input is on and the transport is holding the main loop, so the run prints its results, reports success, and hangs — which in a CI job is a timeout on a suite that passed, and on a developer's machine is a terminal that has to be interrupted. Measured here: 33 passed, 0 failed, killed at 110 seconds.
+[b]`get_tree().quit()` on a booted [GSServer] does not end the process.[/b] The listener is open, stdin console input is on and the transport is holding the main loop, so the run prints its results, reports success, and hangs — which in a CI job is a timeout on a suite that passed, and on a developer's machine is a terminal that has to be interrupted. Measured here: 33 passed, 0 failed, killed at 110 seconds.
 
 ### examples/dedicated.gd (was line 171)
 
@@ -34,7 +34,7 @@ Profiles, names and faces on a real server: dot-platform's identity layer, its m
 
 The loaded module, looked up rather than kept.
 
-[b]Looked up every time, because the last section unloads it.[/b] A field would be a dangling reference the moment it did. Typed [DotModule] rather than as its own class, because `bfh_module.gd` has NO `class_name` — it is loaded by path, which is the shape a module delivered in a dot-cloud pack must have.
+[b]Looked up every time, because the last section unloads it.[/b] A field would be a dangling reference the moment it did. Typed [GSModule] rather than as its own class, because `bfh_module.gd` has NO `class_name` — it is loaded by path, which is the shape a module delivered in a dot-cloud pack must have.
 
 ### examples/dedicated.gd (was line 307)
 
@@ -46,7 +46,7 @@ Runs a line the way the console does and captures what came back.
 
 [b]The one line that made this suite leak its whole script graph at exit.[/b]
 
-A script that `extends DotNetMessage` and preloads ITSELF, first loaded from a module a running [DotServer] loads — which is how every deployed server loads this game — left 111 scripts, the grid textures in `bfh_textures.gd`'s static cache and eight texture RIDs alive at exit, on 4.7.2. `bfh_event.gd` and `bfh_request.gd` both did it, for a typed `of()` factory. `headless_run` and `headless_net` preload the same files at scene load and never saw it.
+A script that `extends GSNetMessage` and preloads ITSELF, first loaded from a module a running [GSServer] loads — which is how every deployed server loads this game — left 111 scripts, the grid textures in `bfh_textures.gd`'s static cache and eight texture RIDs alive at exit, on 4.7.2. `bfh_event.gd` and `bfh_request.gd` both did it, for a typed `of()` factory. `headless_run` and `headless_net` preload the same files at scene load and never saw it.
 
 [b]Asserted on the source, because the symptom is where no check can reach.[/b] The leak is reported after `quit()`, by the engine, as warnings a CI filter already treats as noise; an assertion here runs before any of it exists. So this checks the cause instead: every message script in `game/`, read as text.
 
@@ -96,13 +96,13 @@ The seats fill themselves, because this game has nothing for one side alone.
 
 ### examples/dedicated.gd (was line 1101)
 
-[b]A person who takes a seat takes it from a bot, and leaving gives it back[/b]: DotBotQuota's fill mode, counted in driving seats. One bot in two seats leaves one free, so a person added through the bridge (peer zero, the way a test's player is) joins into it as a driver, once somebody is already on foot: the first person on a server runs, because a bot cannot. The roster check is called rather than waited for, so nothing else moves under the count.
+[b]A person who takes a seat takes it from a bot, and leaving gives it back[/b]: GSBotQuota's fill mode, counted in driving seats. One bot in two seats leaves one free, so a person added through the bridge (peer zero, the way a test's player is) joins into it as a driver, once somebody is already on foot: the first person on a server runs, because a bot cannot. The roster check is called rather than waited for, so nothing else moves under the count.
 
 ### examples/dedicated.gd (was line 1191)
 
 Chat, voice and moderation, as a module actually builds them.
 
-[b]The netcode suite drives the routers directly; this is the other half.[/b] What is being checked here is that [DotGameModule] found the layer, that [DotGameServices] built all three in the right order, and that the operator's own surface — `bfh_say`, an admission check, a describe line — is there. The ordering is the part with a bug behind it: moderation publishes the mute source both routers look up when they START, and a chat router built first enforces no gag for the life of the server.
+[b]The netcode suite drives the routers directly; this is the other half.[/b] What is being checked here is that [GSGameModule] found the layer, that [GSGameServices] built all three in the right order, and that the operator's own surface — `bfh_say`, an admission check, a describe line — is there. The ordering is the part with a bug behind it: moderation publishes the mute source both routers look up when they START, and a chat router built first enforces no gag for the life of the server.
 
 ### examples/dedicated.gd (was line 1251)
 
@@ -118,7 +118,7 @@ Each body is looked at the moment the command returns, not after a frame. A lone
 
 A module reload must leave ONE link under the server, still named for the client's route, and a real client must still be sent to over it.
 
-[b]Over a real socket, because the loopback cannot see it.[/b] Before the bridge opened its link through [DotGameLink], every load added another under the server, Godot renamed the live one `@Node@n`, and an RPC to a real client found no node at that path and vanished without an error. Reloaded twice here, before the client joins.
+[b]Over a real socket, because the loopback cannot see it.[/b] Before the bridge opened its link through [GSGameLink], every load added another under the server, Godot renamed the live one `@Node@n`, and an RPC to a real client found no node at that path and vanished without an error. Reloaded twice here, before the client joins.
 
 ### examples/dedicated.gd (was line 1643)
 
@@ -144,11 +144,11 @@ Every leak line is the engine's, and the engine writes them to stderr; both are 
 
 ### examples/dedicated.gd (was line 1794)
 
-[b]A runner behind its loading cover is not run over, and is once the cover lifts.[/b] A real [DotClientLink] joins over the server's ENet socket and says nothing, as a client still loading its level does. A bus hit and a barrel's blast must do nothing to it; an operator's damage (a slay or slap goes straight to dot-combat) still lands. The client then sends `game.cover` on the real wire and the same hits land.
+[b]A runner behind its loading cover is not run over, and is once the cover lifts.[/b] A real [GSClientLink] joins over the server's ENet socket and says nothing, as a client still loading its level does. A bus hit and a barrel's blast must do nothing to it; an operator's damage (a slay or slap goes straight to dot-combat) still lands. The client then sends `game.cover` on the real wire and the same hits land.
 
 ### examples/headless_config.gd (was line 3)
 
-BfhConfig through DotGameConfigBinder: fields, cvars, strict refusal, the diff and the workbench round trip.
+BfhConfig through GSGameConfigBinder: fields, cvars, strict refusal, the diff and the workbench round trip.
 
 [codeblock] godot --headless --path . res://examples/headless_config.tscn [/codeblock]
 
@@ -166,7 +166,7 @@ game-buses-from-hell over the wire: a real server, a real client, and a lossy lo
 
 [codeblock] godot --headless --path . res://examples/headless_net.tscn [/codeblock]
 
-[b]Everything here is the real path minus the socket.[/b] Two [BfhGame]s, two [DotNetManager]s, two [BfhNetBridge]s and two links, with [member BfhNetLink.loopback] standing in for the RPC — which means the encoders, the schema seal, the snapshot build, the interest decision, the prediction and the reconciliation all run. What it cannot test is Godot's own RPC routing, and that is what `dedicated.gd` and a real client are for.
+[b]Everything here is the real path minus the socket.[/b] Two [BfhGame]s, two [GSNetManager]s, two [BfhNetBridge]s and two links, with [member BfhNetLink.loopback] standing in for the RPC — which means the encoders, the schema seal, the snapshot build, the interest decision, the prediction and the reconciliation all run. What it cannot test is Godot's own RPC routing, and that is what `dedicated.gd` and a real client are for.
 
 [b]The client world lives in its own [World3D], and that is a finding rather than tidiness.[/b] Both halves are in one scene tree, so without it they share one physics space: the client's mirrored crates are frozen bodies sitting exactly where the server's real ones are, and every server crate spends the round being pushed out of a copy of itself. Nothing errors — the positions just stop agreeing, which reads as the replication being wrong when it is the test harness that is wrong.
 
@@ -184,7 +184,7 @@ A mirrored body has to be where the server says, and it has to have got there fr
 
 ### examples/headless_net.gd (was line 510)
 
-[b]Off the replicated layout, not off the node.[/b] A bus goes over the wire through [DotVehicleNetSync] — three floats, a quantised quaternion, a speed and a steering angle — and NOT through the `net_position` a crate uses. Reading the wrong one gets the zero the property was constructed with, which is a mirror that looks like it is parked at the origin.
+[b]Off the replicated layout, not off the node.[/b] A bus goes over the wire through [GSVehicleNetSync] — three floats, a quantised quaternion, a speed and a steering angle — and NOT through the `net_position` a crate uses. Reading the wrong one gets the zero the property was constructed with, which is a mirror that looks like it is parked at the origin.
 
 ### examples/headless_net.gd (was line 547)
 
@@ -214,7 +214,7 @@ Through `issue`, with the SUBJECT spelling dot-moderation uses — `key_for_peer
 
 ### examples/headless_net.gd (was line 1247)
 
-A snapshot bigger than [member DotNetConfig.mtu] arrives in parts, through this game's own link and bridge, and every body ends up where the server's is.
+A snapshot bigger than [member GSNetConfig.mtu] arrives in parts, through this game's own link and bridge, and every body ends up where the server's is.
 
 [b]The round's spawn is the snapshot that needed it.[/b] A full bowl is about 88 crates, barrels and buses, all new and all falling at once, at about 16.6 bytes each: 1450 to 1478 bytes, over the 1392 that Godot's ENet peer carries in one unreliable packet, so ENet fragmented it and a native client lost it whenever it lost either fragment. This suite's bowl is ten crates, so the MTU is lowered to give the same shape here: every body thrown up at once, more state than one packet holds.
 
@@ -228,7 +228,7 @@ An administrator's blind and beacon, through this game's real handlers, over a l
 
 Another runner has a body, it is where the server has them, and it moves every frame.
 
-[b]Nothing on a networked client drew anybody else until 2026-09-24,[/b] and two things were missing at once: there was no body to draw (a runner is first person and a driver is a bus, so no person had ever been on screen), and `DotNetManager.interpolate_frame` was never called — so even a body would have moved only when a snapshot landed, a third of the ticks here. Every section above passed throughout, because every one of them reads the simulation and none reads the screen.
+[b]Nothing on a networked client drew anybody else until 2026-09-24,[/b] and two things were missing at once: there was no body to draw (a runner is first person and a driver is a bus, so no person had ever been on screen), and `GSNetManager.interpolate_frame` was never called — so even a body would have moved only when a snapshot landed, a third of the ticks here. Every section above passed throughout, because every one of them reads the simulation and none reads the screen.
 
 Driven through `BfhClient.present_frame`, the function the real client's `_process` calls, so a client that stops interpolating or stops building bodies fails here rather than in a screenshot. Who somebody is reaches every client: the face they were seated with, and a new name and face when the server learns them — which is what dot-platform's admission, a wardrobe change and an operator's rename all end in.
 
@@ -420,7 +420,7 @@ Every way up the bowl, measured against what a runner can actually do, and then 
 
 [b]The family's reach question, asked of this game, and two of its routes were never possible.[/b] The ramp to the ledge was built backwards on the first day — it rose from under the deck to 7.8 m over the middle of the bowl — so the ledge had no way up at all. And the barrel, documented as "the one way onto a crate stack", lifted a runner 7 cm: its upward velocity was added to somebody the motor still had on the ground, and the ground snap ate it. Nothing checked either, because nothing here had ever driven a runner anywhere; every section placed them by hand.
 
-The arithmetic is [code]DotFpsTunables[/code]'s, reached through [code]bfh_reach.gd[/code], over the tunables a real runner gets. The routes are declared by the map and measured off the colliders. Then three of them are driven, because arithmetic that agrees with itself is not a runner on a crate.
+The arithmetic is [code]GSFpsTunables[/code]'s, reached through [code]bfh_reach.gd[/code], over the tunables a real runner gets. The routes are declared by the map and measured off the colliders. Then three of them are driven, because arithmetic that agrees with itself is not a runner on a crate.
 
 ### examples/headless_run.gd (was line 1815)
 
@@ -548,7 +548,7 @@ How far the bus is from touching anything on a drive started [param out_by] metr
 
 ### examples/headless_run.gd (was line 3267)
 
-Gravity LEFT ON, and the first version of this check turned it off. A crate with no gravity still takes the player's weight — that is the whole point of `DotPropCarry.stand` — so it accelerates downward out from under them and they are carried for about four ticks. The floor is what holds a crate up; removing gravity removes the floor's half of that and measures the bug it was written to catch.
+Gravity LEFT ON, and the first version of this check turned it off. A crate with no gravity still takes the player's weight — that is the whole point of `GSPropCarry.stand` — so it accelerates downward out from under them and they are carried for about four ticks. The floor is what holds a crate up; removing gravity removes the floor's half of that and measures the bug it was written to catch.
 
 ### examples/headless_run.gd (was line 3704)
 
@@ -578,7 +578,7 @@ So the check that matters is not "does it drive" but "is it standing on its whee
 
 How far a bus takes to stop, three ways, from 15 m/s on the south straight, and that S then reverses.
 
-[b]Distances, because "it stopped" passed for the bug.[/b] dot-vehicle handed Godot's wheels the brake in newtons where Godot reads an impulse per step, so the handbrake (Ctrl) stopped a 2 t bus from 15 m/s in about a metre and the bot's foot brake almost as hard: a bus that can stop dead is a bus a runner cannot read. Since dot-vehicle 4f4afaf they are forces. A person's S was reverse thrust until 2026-10-12 and took 21 m; it is the foot brake now until the bus has stopped (`DotVehicleCommand.brake_then_reverse`), so it is measured as the foot brake and then as reverse.
+[b]Distances, because "it stopped" passed for the bug.[/b] dot-vehicle handed Godot's wheels the brake in newtons where Godot reads an impulse per step, so the handbrake (Ctrl) stopped a 2 t bus from 15 m/s in about a metre and the bot's foot brake almost as hard: a bus that can stop dead is a bus a runner cannot read. Since dot-vehicle 4f4afaf they are forces. A person's S was reverse thrust until 2026-10-12 and took 21 m; it is the foot brake now until the bus has stopped (`GSVehicleCommand.brake_then_reverse`), so it is measured as the foot brake and then as reverse.
 
 ### examples/headless_run.gd (was line 3962)
 
@@ -654,7 +654,7 @@ The same rule `dot-server-deploy/tools/check.sh` counts, asked here because that
 
 ### examples/headless_workshop.gd (was line 8)
 
-What a subscribed map pack does to this game's lists, against a fixture [DotContentIndex] and never the process's shared one: a solo map is listed (ballot and map menu) as Name [Pack], an online session lists none, a map kind the game does not accept is left out, and the game's own ids win. A pack's bowl is a JSON document {radius} named in `scene`; a pack entry whose document is missing is not listed at all.
+What a subscribed map pack does to this game's lists, against a fixture [GSContentIndex] and never the process's shared one: a solo map is listed (ballot and map menu) as Name [Pack], an online session lists none, a map kind the game does not accept is left out, and the game's own ids win. A pack's bowl is a JSON document {radius} named in `scene`; a pack entry whose document is missing is not listed at all.
 
 [codeblock] godot --headless --path . res://examples/headless_workshop.tscn [/codeblock]
 
@@ -1134,7 +1134,7 @@ Every stat is read with `SUM`, because every stat in `BfhStats` is a counter; th
 
 ### game/bfh_bindings.gd (was line 3)
 
-Every key this game reads, as one dot-menu [DotMenuBindings] table: the action, the setting that stores it, the words a player sees, the default, and the card it goes on.
+Every key this game reads, as one dot-menu [GSMenuBindings] table: the action, the setting that stores it, the words a player sees, the default, and the card it goes on.
 
 [b]A table, because four things read it:[/b] the client matches events against the actions, the settings document stores one binding per row, the menu's Controls page draws a key per row, and the help screen (H) lists them with the key each is on now. Until 2026-10-11 the board's Tab and the spectator's Space were keycodes and the rest were nobody's, so the help screen had nothing to list and the Escape menu had no Help.
 
@@ -1172,7 +1172,7 @@ Builds the box, the client and the microphone over an attached bridge.
 
 The microphone, which is allowed to be absent.
 
-[b]A machine with no input device is the normal case on a server and a common one on a desktop, and it must not be an error.[/b] `DotVoiceManager` reports it, listening still works, and what a player gets is a game where they can hear everybody and say nothing — which is exactly what somebody with no microphone should get.
+[b]A machine with no input device is the normal case on a server and a common one on a desktop, and it must not be an error.[/b] `GSVoiceManager` reports it, listening still works, and what a player gets is a game where they can hear everybody and say nothing — which is exactly what somebody with no microphone should get.
 
 ### game/bfh_client_chat.gd (was line 129)
 
@@ -1192,7 +1192,7 @@ Push to talk, polled rather than driven by events.
 
 ### game/bfh_client_chat.gd (was line 218)
 
-[b]The server's own lines arrive on the shell's client link, not on the bridge.[/b] A vote between games, "Ada joined the game." and an admin's `say` are dot-server's chat manager, sent as `chat.line` on `DotClientLink`; this box read only the bridge and never showed one. Only those kinds are drawn (dot-game's `DotGameChatClient.draw_server_line`): what players say comes over the bridge, and drawing it from both would be every line twice. A method callable, so the connection goes with this node when a game switch frees it.
+[b]The server's own lines arrive on the shell's client link, not on the bridge.[/b] A vote between games, "Ada joined the game." and an admin's `say` are dot-server's chat manager, sent as `chat.line` on `GSClientLink`; this box read only the bridge and never showed one. Only those kinds are drawn (dot-game's `GSGameChatClient.draw_server_line`): what players say comes over the bridge, and drawing it from both would be every line twice. A method callable, so the connection goes with this node when a game switch frees it.
 
 ### game/bfh_client_chat.gd (was line 260)
 
@@ -1206,15 +1206,15 @@ One local player, a camera and a HUD over a [BfhGame] — offline, or against a 
 
 [b]One client for both, and the offline half is not a demo mode.[/b] It is the same world class with `authoritative` true and nothing else different: the same bowl, the same bot bus, the same rules. What changes is where the answers come from, and the whole of that difference is [BfhNetBridge]. A separate "single player" build would be a second game to keep in step, and the family has watched two copies of one thing drift more than once.
 
-[b]Which half runs is decided by whether there is a link in the registry.[/b] A dot-server client publishes a [DotClientLink] under `dot_client_link` before the game scene loads; no link means nobody connected us to anything, and the honest answer to that is a playable bowl rather than an error. `--offline` forces it.
+[b]Which half runs is decided by whether there is a link in the registry.[/b] A dot-server client publishes a [GSClientLink] under `dot_client_link` before the game scene loads; no link means nobody connected us to anything, and the honest answer to that is a playable bowl rather than an error. `--offline` forces it.
 
 ### game/bfh_client.gd (was line 156)
 
-[b]Here, in `_ready`, which runs INSIDE `DotClientLink._load_scene`.[/b] The link adds this scene and tells the server it has loaded on the next line, so the netcode is up before the server has been told there is anybody to send to — which is the order that leaves nothing to be missed. Measured against a real server in a second process: the join completes and the first snapshot arrives with the bowl already replicated.
+[b]Here, in `_ready`, which runs INSIDE `GSClientLink._load_scene`.[/b] The link adds this scene and tells the server it has loaded on the next line, so the netcode is up before the server has been told there is anybody to send to — which is the order that leaves nothing to be missed. Measured against a real server in a second process: the join completes and the first snapshot arrives with the bowl already replicated.
 
 ### game/bfh_client.gd (was line 168)
 
-The load gate is [member DotGameClient.gate]: covered, and the local body and the input still, until the bowl stands, the local player exists and its camera is current.
+The load gate is [member GSGameClient.gate]: covered, and the local body and the input still, until the bowl stands, the local player exists and its camera is current.
 
 [b]Covered also means the round does not run.[/b] Offline the world ticks itself, so the bot bus, the round clock and the barrels would all act on the runner in front of a picture; [member BfhGame.hold_clock] steps only the bodies then, which settle onto the sand under the cover with their input off. Connected, the server owns the round; what is left to hold is this end's sampling and keys, which wait on [method _covered]. The vendored art is loaded exactly as before: the gate only waits for it.
 
@@ -1284,13 +1284,13 @@ Puts [param eye] where a runner who is out is looking. Returns whether it did.
 
 Everything a frame draws that a tick does not, in this order: the netcode's interpolation, then every player's body, then every beacon. Returns how many bodies are shown. Static so the net suite drives exactly this and not a copy of it.
 
-[b]The interpolation was never called in this game, and that is half of why nobody else was visible.[/b] `DotNetManager.interpolate_frame` is what blends two snapshots and hands the result to `BfhPlayerNet._net_interpolated` and `BfhPropNet._net_interpolated` — both written, documented, and reached by nothing. So every remote runner, every crate and both buses moved only when a snapshot landed, twenty times a second on a 60-tick server: the render-jitter class this family has now paid for in three games. The other half was that a remote runner had no body to move (see [BfhFigure]).
+[b]The interpolation was never called in this game, and that is half of why nobody else was visible.[/b] `GSNetManager.interpolate_frame` is what blends two snapshots and hands the result to `BfhPlayerNet._net_interpolated` and `BfhPropNet._net_interpolated` — both written, documented, and reached by nothing. So every remote runner, every crate and both buses moved only when a snapshot landed, twenty times a second on a 60-tick server: the render-jitter class this family has now paid for in three games. The other half was that a remote runner had no body to move (see [BfhFigure]).
 
 [param alpha] is the fraction through the current tick; -1 derives it from the engine, which is what a real frame wants. A suite passes it explicitly, because a suite's frames are not an engine's.
 
 ### game/bfh_client.gd (was line 893)
 
-Your own runner is drawn at the clock's render alpha, not the engine's fraction: the clock stretches and shrinks its ticks while it settles on the server, so a physics frame now and then runs no tick or two, and drawn at the engine's fraction the eye stood still on one frame and moved double on the next. `DotFpsController.render_state` reads it from `render_clock` (dot-player-controller); by name both ways, so a shell older than either draws as before. Null offline, where every physics frame is one tick.
+Your own runner is drawn at the clock's render alpha, not the engine's fraction: the clock stretches and shrinks its ticks while it settles on the server, so a physics frame now and then runs no tick or two, and drawn at the engine's fraction the eye stood still on one frame and moved double on the next. `GSFpsController.render_state` reads it from `render_clock` (dot-player-controller); by name both ways, so a shell older than either draws as before. Null offline, where every physics frame is one tick.
 
 ### game/bfh_client.gd (was line 925)
 
@@ -1306,7 +1306,7 @@ The free camera, once a frame: WASD along the view, Space and Ctrl up and down, 
 
 ### game/bfh_config.gd (was line 3)
 
-Every cvar this game has, layered like every other [DotConfig] in the family.
+Every cvar this game has, layered like every other [GSConfig] in the family.
 
 [code]exported defaults < JSON file < environment < command line[/code], identically to dot-server, dot-cloud and the other four games. Nothing here reads [code]OS.get_cmdline_args[/code] itself.
 
@@ -1362,7 +1362,7 @@ Seconds a bus may ask for throttle and go nowhere before whatever is under it is
 
 ### game/bfh_config.gd (was line 222)
 
-The file that says which bowls this server ROTATES: `cfg/maps.yml` (dot-map's `DotMapRotationFile`: named rotations, `random` or `cycle`, wildcards, command names), looked for in the `--config` directory. Empty, or no such file, rotates every bowl. A bowl it leaves out stays installed (the map menu loads it); it is only never drawn, balloted or nominated. `sv_map_rotation_file`.
+The file that says which bowls this server ROTATES: `cfg/maps.yml` (dot-map's `GSMapRotationFile`: named rotations, `random` or `cycle`, wildcards, command names), looked for in the `--config` directory. Empty, or no such file, rotates every bowl. A bowl it leaves out stays installed (the map menu loads it); it is only never drawn, balloted or nominated. `sv_map_rotation_file`.
 
 ### game/bfh_config.gd (was line 232)
 
@@ -1394,7 +1394,7 @@ The clear floor of the tank farm's courtyard's west lane, in metres: its 4.4 m d
 
 Seed for where they land.
 
-[b]A seed rather than a fixed layout, and it is reproducible on purpose.[/b] Two servers on the same seed lay the same round out, which is what makes a bug report about "the crate by the north wall" mean anything — and what lets the suite assert a layout at all. [DotRandom] rather than [code]randi()[/code], for the family's reason: the global RNG is shared with everything else in the process.
+[b]A seed rather than a fixed layout, and it is reproducible on purpose.[/b] Two servers on the same seed lay the same round out, which is what makes a bug report about "the crate by the north wall" mean anything — and what lets the suite assert a layout at all. [GSRandom] rather than [code]randi()[/code], for the family's reason: the global RNG is shared with everything else in the process.
 
 ### game/bfh_config.gd (was line 382)
 
@@ -1406,7 +1406,7 @@ The signature carries the parent's `redact_sensitive` even though nothing here i
 
 The two catalogues: what can be in the bowl, and what can be driven at it.
 
-[b]Three props and one vehicle, and the whole game is in their numbers.[/b] A crate is breakable by a hammer and by a bus and is something to stand on; a barrel is breakable by anything and takes whoever is near it with it; a block is neither and exists so there is somewhere a bus cannot follow. Every one of those is a field on [DotPropDef] rather than a script, which is what lets a server retune the game by editing JSON — and what lets the suite assert the design instead of the code.
+[b]Three props and one vehicle, and the whole game is in their numbers.[/b] A crate is breakable by a hammer and by a bus and is something to stand on; a barrel is breakable by anything and takes whoever is near it with it; a block is neither and exists so there is somewhere a bus cannot follow. Every one of those is a field on [GSPropDef] rather than a script, which is what lets a server retune the game by editing JSON — and what lets the suite assert the design instead of the code.
 
 ### game/bfh_content.gd (was line 15)
 
@@ -1466,7 +1466,7 @@ What somebody ELSE looks like: a Kenney blocky character, scaled to the runner's
 
 [b]A child of the player's node, and so placed by whatever places that node.[/b] On a remote player that is the interpolator once a frame (`BfhPlayerNet._net_interpolated`, reached from `BfhClient.present_frame`), which is the whole reason a figure moves smoothly rather than at the snapshot rate. Nothing here computes a position.
 
-[b]One of the family's animated people[/b] (dot-player-char's `DotHumanoidFigure`, the style every game's players, bots and NPCs share): which one a runner is still comes from the blocky kit's atlas their avatar names (`DotHumanoidLook.from_letter`), and a driver on foot wears the uniform's colours. It animates from how far its node moved each frame (`auto_animate`), because the interpolator moves the node and nothing here knows a speed.
+[b]One of the family's animated people[/b] (dot-player-char's `GSHumanoidFigure`, the style every game's players, bots and NPCs share): which one a runner is still comes from the blocky kit's atlas their avatar names (`GSHumanoidLook.from_letter`), and a driver on foot wears the uniform's colours. It animates from how far its node moved each frame (`auto_animate`), because the interpolator moves the node and nothing here knows a speed.
 
 ### game/bfh_fx.gd (was line 5)
 
@@ -1536,13 +1536,13 @@ dot-player-controller's `mp_forceview`: whether a player may switch to third per
 
 What the server last said about the numbers a client cannot count for itself.
 
-[b]Negative means "count it yourself", which is what a server and an offline client do.[/b] A client does not run the prop spawner — its crates are mirrored bodies with no [DotPropInstance] behind them — so `crates_left()` there would count zero and the HUD would tell every networked player that all the cover was gone. See `BfhEvents.Kind.CLOCK`.
+[b]Negative means "count it yourself", which is what a server and an offline client do.[/b] A client does not run the prop spawner — its crates are mirrored bodies with no [GSPropInstance] behind them — so `crates_left()` there would count zero and the HUD would tell every networked player that all the cover was gone. See `BfhEvents.Kind.CLOCK`.
 
 ### game/bfh_game.gd (was line 241)
 
-Every world object this game has an id for. See [DotEntityTable].
+Every world object this game has an id for. See [GSEntityTable].
 
-Replaces a `_next_entity_id` counter that was correct and did two things this is not: it had no reverse index, so finding out who an attacker was walked every player on the server ([method _on_player_died]); and nothing ever closed anything, so `DotCombatManager` kept a `DotHealth` for every player who had ever joined -- nodes that were freed with their player, leaving the manager holding references to deleted objects for the life of the process. `forget()` is called now, from the one place that knows a player has gone.
+Replaces a `_next_entity_id` counter that was correct and did two things this is not: it had no reverse index, so finding out who an attacker was walked every player on the server ([method _on_player_died]); and nothing ever closed anything, so `GSCombatManager` kept a `GSHealth` for every player who had ever joined -- nodes that were freed with their player, leaving the manager holding references to deleted objects for the life of the process. `forget()` is called now, from the one place that knows a player has gone.
 
 ### game/bfh_game.gd (was line 260)
 
@@ -1566,13 +1566,13 @@ The buses are put out by the world at the top of a round, not requested by playe
 
 ### game/bfh_game.gd (was line 435)
 
-[b]The SPAWNER'S ride, not a second one.[/b] `DotVehicleSpawner` builds one in its own `_init` and uses it for three things: evacuating a vehicle that is destroyed with people in it, answering `vehicle_of_rider`, and reporting how many riders there are. This game used to construct its own beside it, so those three read an index that was always empty — `describe()` said nobody was driving while somebody was, and a destroyed bus released nobody, which is the "stuck aboard a bus that no longer exists" failure this game already had once from the other direction.
+[b]The SPAWNER'S ride, not a second one.[/b] `GSVehicleSpawner` builds one in its own `_init` and uses it for three things: evacuating a vehicle that is destroyed with people in it, answering `vehicle_of_rider`, and reporting how many riders there are. This game used to construct its own beside it, so those three read an index that was always empty — `describe()` said nobody was driving while somebody was, and a destroyed bus released nobody, which is the "stuck aboard a bus that no longer exists" failure this game already had once from the other direction.
 
 It is a [RefCounted] rather than a Node, and dot-vehicle made it one deliberately: seating a rider means stopping their controller and reparenting their node, and neither is something that addon can do without naming dot-player-controller — which would make it fail to parse in a project that does not have it. The two callables below are that seam, and this game is the half that knows what a player is.
 
 ### game/bfh_game.gd (was line 463)
 
-[b]Said out loud, because the inherited default says the opposite of what this game does.[/b] [DotDamageRules] defaults `friendly_fire` to false, and a reader who found that here would conclude that a runner cannot hurt another runner. A runner very much can: [method _on_prop_exploded] filters a barrel blast on dead-or-riding and on nothing else, and a blast that asked whose side you were on would not be a blast.
+[b]Said out loud, because the inherited default says the opposite of what this game does.[/b] [GSDamageRules] defaults `friendly_fire` to false, and a reader who found that here would conclude that a runner cannot hurt another runner. A runner very much can: [method _on_prop_exploded] filters a barrel blast on dead-or-riding and on nothing else, and a blast that asked whose side you were on would not be a blast.
 
 [b]And `team_of` stays unset deliberately.[/b] dot-combat decides friendly fire through a `team_of` [Callable] and treats a missing one as "nobody is anybody's team mate" — which is a real trap, and cost another game in this family a round where friendly fire was on in a game whose rules said it was off. It is not a trap HERE, because the one damage path that could hit your own side already does the side test itself before it calls in: a bus skips every driver by key, so a bus cannot run over a driver even after its own driver has been evacuated onto foot. Wiring `team_of` now would not fix anything; it would silently start refusing the barrel splash that is meant to be indiscriminate.
 
@@ -1582,7 +1582,7 @@ It is a [RefCounted] rather than a Node, and dot-vehicle made it one deliberatel
 
 ### game/bfh_game.gd (was line 515)
 
-[b]The rule asks the game who is alive, and that is the seam dot-match is built around.[/b] Being alive is a `DotHealth`, which lives in dot-combat, which dot-match deliberately does not depend on. Left unset this falls back to a score and a clock — and the tell is specific and visible in the first round played: the round runs to the full clock instead of ending on the last kill.
+[b]The rule asks the game who is alive, and that is the seam dot-match is built around.[/b] Being alive is a `GSHealth`, which lives in dot-combat, which dot-match deliberately does not depend on. Left unset this falls back to a score and a clock — and the tell is specific and visible in the first round played: the round runs to the full clock instead of ending on the last kill.
 
 ### game/bfh_game.gd (was line 528)
 
@@ -1632,7 +1632,7 @@ Which side somebody new goes on.
 
 ### game/bfh_game.gd (was line 767)
 
-Before the node goes. dot-combat keyed a `DotHealth` on this entity and NOTHING in this game had ever told it to let go -- so every player who had ever joined left a health record behind, pointing at a node freed with them. The manager's own documentation says what that costs; what made it invisible is that a stale entity is never asked about, because nothing traces against a player who left.
+Before the node goes. dot-combat keyed a `GSHealth` on this entity and NOTHING in this game had ever told it to let go -- so every player who had ever joined left a health record behind, pointing at a node freed with them. The manager's own documentation says what that costs; what made it invisible is that a stale entity is never asked about, because nothing traces against a player who left.
 
 ### game/bfh_game.gd (was line 797)
 
@@ -1666,7 +1666,7 @@ Swaps every player's side.
 
 ### game/bfh_game.gd (was line 1045)
 
-[b]Riders out before the bus goes, and nothing else does this for us.[/b] `DotVehicleRide` is a RefCounted holding its own rider index and it does not watch the spawner — so a bus removed underneath somebody leaves the ride still believing they are aboard, and every later `enter` is refused with "You are already in a vehicle." Permanently: there is no bus left to get out of. The symptom is a driver who is put on the ledge at the top of round two and never gets into anything again, which reads as the seating being broken rather than as a round having cleaned up in the wrong order. `occupants` is keyed by SEAT id and valued by rider id, which is the direction `seat_of()` reads it in. Iterating the keys hands `exit` a seat name where it wants a rider, and it answers "You are not in that vehicle" — truthfully, about a rider called "driver" who does not exist — so the real rider is never released and is stuck aboard a bus that no longer exists.
+[b]Riders out before the bus goes, and nothing else does this for us.[/b] `GSVehicleRide` is a RefCounted holding its own rider index and it does not watch the spawner — so a bus removed underneath somebody leaves the ride still believing they are aboard, and every later `enter` is refused with "You are already in a vehicle." Permanently: there is no bus left to get out of. The symptom is a driver who is put on the ledge at the top of round two and never gets into anything again, which reads as the seating being broken rather than as a round having cleaned up in the wrong order. `occupants` is keyed by SEAT id and valued by rider id, which is the direction `seat_of()` reads it in. Iterating the keys hands `exit` a seat name where it wants a rider, and it answers "You are not in that vehicle" — truthfully, about a rider called "driver" who does not exist — so the real rider is never released and is stuck aboard a bus that no longer exists.
 
 ### game/bfh_game.gd (was line 1227)
 
@@ -1728,11 +1728,11 @@ S brakes while the bus is still rolling forward and reverses once it has (nearly
 
 Drives a bot's bus at whoever is nearest.
 
-[b]`set_target` each tick rather than a route, and that is what makes a bot bus readable.[/b] [DotVehicleDriver] will follow a waypoint list, which is the right shape for traffic and the wrong one here: a runner's entire game is reading where a bus has committed to and stepping out of it, and a bus on rails is not committing to anything about them. Re-aimed every tick it behaves like a person who has picked a target — it overshoots, it has to come round again, and the gap while it does is the opening the round is played in.
+[b]`set_target` each tick rather than a route, and that is what makes a bot bus readable.[/b] [GSVehicleDriver] will follow a waypoint list, which is the right shape for traffic and the wrong one here: a runner's entire game is reading where a bus has committed to and stepping out of it, and a bus on rails is not committing to anything about them. Re-aimed every tick it behaves like a person who has picked a target — it overshoots, it has to come round again, and the gap while it does is the opening the round is played in.
 
 ### game/bfh_game.gd (was line 1697)
 
-Wider than the default, because a bus is nine metres long: a waypoint radius tighter than the vehicle means it can never be "at" its target and it circles the spot for ever. [b]Tiny, because arriving is the one thing this driver must never do.[/b] `DotVehicleDriver` slows down inside `arrive_radius` and stops at the waypoint, which is right for traffic and exactly wrong for a chase: at 6 m the bus coasted to a halt beside the runner and sat there with the throttle at zero. A bus is not trying to reach a person, it is trying to be where they are at speed.
+Wider than the default, because a bus is nine metres long: a waypoint radius tighter than the vehicle means it can never be "at" its target and it circles the spot for ever. [b]Tiny, because arriving is the one thing this driver must never do.[/b] `GSVehicleDriver` slows down inside `arrive_radius` and stops at the waypoint, which is right for traffic and exactly wrong for a chase: at 6 m the bus coasted to a halt beside the runner and sat there with the throttle at zero. A bus is not trying to reach a person, it is trying to be where they are at speed.
 
 ### game/bfh_game.gd (was line 1708)
 
@@ -1752,11 +1752,11 @@ And round the stacks, because the driver has no idea they are there. A bus aimed
 
 ### game/bfh_game.gd (was line 1793)
 
-[b]And never the point the bus is already standing on.[/b] `steer_around` hands a bus the point beside a pillar across its line; a bus that stops there with the pillar still (just) across it -- level with it, centimetres ahead -- is handed the same point again, which `DotVehicleDriver` calls arrived: it brakes with the throttle at zero, and `_unstick` only answers a bus asking to go, so it was parked for the rest of the round with the runner in plain view (measured 2026-10-01 from the spawn lane, chasing a runner on the deck). Level with a pillar is past it, so a bus at a standstill on its waypoint drives on along its line to the quarry. Only at a standstill: done at speed, inside `steer_around`, it threw the stacks' pillar drive off its line onto the next pillar in the row. `headless_run`'s "no bot bus ... is ever parked" holds it.
+[b]And never the point the bus is already standing on.[/b] `steer_around` hands a bus the point beside a pillar across its line; a bus that stops there with the pillar still (just) across it -- level with it, centimetres ahead -- is handed the same point again, which `GSVehicleDriver` calls arrived: it brakes with the throttle at zero, and `_unstick` only answers a bus asking to go, so it was parked for the rest of the round with the runner in plain view (measured 2026-10-01 from the spawn lane, chasing a runner on the deck). Level with a pillar is past it, so a bus at a standstill on its waypoint drives on along its line to the quarry. Only at a standstill: done at speed, inside `steer_around`, it threw the stacks' pillar drive off its line onto the next pillar in the row. `headless_run`'s "no bot bus ... is ever parked" holds it.
 
 ### game/bfh_game.gd (was line 1822)
 
-[b]A point beside an obstacle is passed THROUGH, not arrived at.[/b] As the only waypoint it was the last one, and `DotVehicleDriver` slows into its last waypoint and brakes hard once inside `arrive_radius`: a bus coming round a stacks pillar at 15 m/s stood on the brake for two ticks beside it, lost its line, and put its front corner into the next pillar of the row, every time (measured 2026-10-07, round pillar 5: 4.6 s for a 27 m line, against 3.0 s as a route). So the detour is the first of two waypoints and the point past the quarry the second, which the driver passes at `waypoint_radius` with no slowing. Not up the ramp, whose line-up points are meant to be arrived at slowly and are tuned for it.
+[b]A point beside an obstacle is passed THROUGH, not arrived at.[/b] As the only waypoint it was the last one, and `GSVehicleDriver` slows into its last waypoint and brakes hard once inside `arrive_radius`: a bus coming round a stacks pillar at 15 m/s stood on the brake for two ticks beside it, lost its line, and put its front corner into the next pillar of the row, every time (measured 2026-10-07, round pillar 5: 4.6 s for a 27 m line, against 3.0 s as a route). So the detour is the first of two waypoints and the point past the quarry the second, which the driver passes at `waypoint_radius` with no slowing. Not up the ramp, whose line-up points are meant to be arrived at slowly and are tuned for it.
 
 ### game/bfh_game.gd (was line 1842)
 
@@ -1770,7 +1770,7 @@ A bot bus that has to face the other way to get up the ramp turns round in legs,
 
 ### game/bfh_game.gd (was line 1977)
 
-A bot bus bound up the ramp that cannot simply drive at it (back to it, or climbing off the middle) turns or backs down and lines up again. Null when neither applies and the ordinary line-up drives. Planned against the floor that is there, where [method _turn_for_the_ramp] is planned against the clock: it drives to [method BfhArena.ramp_turn_point], ends each leg when the end it moves towards is about to run out of floor ([method _end_blocked]) or off the centreline ([constant RAMP_TURN_ACROSS]), turns to the ramp's fixed axis, and hands over only when it will arrive ON the centreline ([constant RAMP_LINE_RADIUS], [constant RAMP_LINED_X]). A bus on the ramp heading for its edge backs down it. Done here, not in `DotVehicleDriver`, and only for the ramp. See docs/bots.md.
+A bot bus bound up the ramp that cannot simply drive at it (back to it, or climbing off the middle) turns or backs down and lines up again. Null when neither applies and the ordinary line-up drives. Planned against the floor that is there, where [method _turn_for_the_ramp] is planned against the clock: it drives to [method BfhArena.ramp_turn_point], ends each leg when the end it moves towards is about to run out of floor ([method _end_blocked]) or off the centreline ([constant RAMP_TURN_ACROSS]), turns to the ramp's fixed axis, and hands over only when it will arrive ON the centreline ([constant RAMP_LINE_RADIUS], [constant RAMP_LINED_X]). A bus on the ramp heading for its edge backs down it. Done here, not in `GSVehicleDriver`, and only for the ramp. See docs/bots.md.
 
 ### game/bfh_game.gd (was line 2124)
 
@@ -1856,7 +1856,7 @@ Thrown, and a barrel is the only thing in the game that throws a runner UPWARD �
 
 ### game/bfh_game.gd (was line 2746)
 
-[b]And off the ground, or none of that survives the tick.[/b] A velocity added to a runner the motor still has as GROUND is snapped back onto the sand before it moves them — which is what this did for nine days, and a barrel lifted people 7 cm. The motor's own launch path does exactly these two lines; see `DotFpsMotor.add_modifier`.
+[b]And off the ground, or none of that survives the tick.[/b] A velocity added to a runner the motor still has as GROUND is snapped back onto the sand before it moves them — which is what this did for nine days, and a barrel lifted people 7 cm. The motor's own launch path does exactly these two lines; see `GSFpsMotor.add_modifier`.
 
 ### game/bfh_game.gd (was line 2760)
 
@@ -1864,7 +1864,7 @@ The fall a death gets: dot-player-char's reaction rule over the server's weights
 
 ### game/bfh_game.gd (was line 2775)
 
-One dictionary read. This walked every player on the server comparing ints, which is the reverse index [DotEntityTable] keeps so nobody has to -- and it ran on every death, which on this game is a lot of them.
+One dictionary read. This walked every player on the server comparing ints, which is the reverse index [GSEntityTable] keeps so nobody has to -- and it ran on every death, which on this game is a lot of them.
 
 An attacker of 0 is dot-combat's "the world" -- a bus that nobody was driving, a fall -- and the table returns an empty key for it, which is the same answer the scan gave and means the same thing.
 
@@ -1886,7 +1886,7 @@ The only weapon in the game, and it does not hurt people.
 
 [b]A hammer that cannot kill is the whole balance of the runners' side.[/b] The obvious version of this game gives the runners something to shoot the drivers with, and that version is a deathmatch in a bowl: the buses stop mattering, the crates stop mattering, and the round is decided by aim. What the hammer does instead is change the map — break a crate somebody else is hiding behind, shove one into a bus's line, open a path, close one. Every use of it is about geometry, which is the only thing a person on foot has against a vehicle.
 
-[b]It is not a [DotWeapon] and there is no dot-loadout here.[/b] Both addons exist and both are about choosing between things; there is exactly one thing. A catalogue of one is a catalogue that will be wrong the moment somebody adds a second entry and forgets the rules that went with it, so this is a plain object that swings.
+[b]It is not a [GSWeapon] and there is no dot-loadout here.[/b] Both addons exist and both are about choosing between things; there is exactly one thing. A catalogue of one is a catalogue that will be wrong the moment somebody adds a second entry and forgets the rules that went with it, so this is a plain object that swings.
 
 ### game/bfh_hammer.gd (was line 59)
 
@@ -1894,7 +1894,7 @@ Swing from [param origin] along [param direction].
 
 [b]Given an origin and a direction rather than a camera.[/b] The same rule dot-props' own tools follow: a tool that owned a camera could not be swung by a bot, by a replay, or by a headless test, and all three are things this game's suite does.
 
-Returns whether the swing happened at all — false means it was still on cooldown, which is different from a swing that missed. A swing's weight against a toy, as a shot's damage (dot-props' `DotPropBodyBox.shot`): a beach ball goes off at its nine metres a second, a barrel rolls.
+Returns whether the swing happened at all — false means it was still on cooldown, which is different from a swing that missed. A swing's weight against a toy, as a shot's damage (dot-props' `GSPropBodyBox.shot`): a beach ball goes off at its nine metres a second, a barrel rolls.
 
 ### game/bfh_hud.gd (was line 8)
 
@@ -1938,11 +1938,11 @@ What a runner who is out is told about the camera they are looking through.
 
 ### game/bfh_killcam.gd (was line 5)
 
-The killcam at a round's end. Client side: every frame drawn goes into dot-replay's [DotKillcamBuffer], every decisive moment (a runner going under a bus) is noted, and when the round ends [DotKillcam] replays the last one from the eyes of whoever caused it. The length is `mp_killcam_time`; 0 skips straight to [signal over].
+The killcam at a round's end. Client side: every frame drawn goes into dot-replay's [GSKillcamBuffer], every decisive moment (a runner going under a bus) is noted, and when the round ends [GSKillcam] replays the last one from the eyes of whoever caused it. The length is `mp_killcam_time`; 0 skips straight to [signal over].
 
 ### game/bfh_module.gd (was line 17)
 
-Where the services keep punishments. Empty is [DotGameServices]'s own default, `user://buses_punishments.json` — the store a real server enforces.
+Where the services keep punishments. Empty is [GSGameServices]'s own default, `user://buses_punishments.json` — the store a real server enforces.
 
 [b]Static, because nothing holds this module before it exists[/b]: dot-server constructs it from a path inside `load_module`, so there is no instance for a host to set a field on first. `examples/dedicated.tscn` points it at a directory of its own; before it could, every run appended the live tools' audit warnings to the real store, 134 of them by the time anybody counted.
 
@@ -1950,15 +1950,15 @@ Where the services keep punishments. Empty is [DotGameServices]'s own default, `
 
 This game, as a module a dedicated server loads.
 
-[b]The first game to subclass [DotGameModule].[/b] The netcode, the bridge, the seal, the identity layer, the roster, the tick and the teardown are the base's; this file is only what is this game's.
+[b]The first game to subclass [GSGameModule].[/b] The netcode, the bridge, the seal, the identity layer, the roster, the tick and the teardown are the base's; this file is only what is this game's.
 
-[b]No `class_name`, and that is a requirement rather than a style.[/b] [method DotModuleHost.load_module] takes a PATH and constructs the module itself — it must, because that is the shape that lets an operator name one in a config file — and a module delivered inside a dot-cloud pack cannot have a `class_name` at all: a mounted pack's globals are not registered in the host.
+[b]No `class_name`, and that is a requirement rather than a style.[/b] [method GSModuleHost.load_module] takes a PATH and constructs the module itself — it must, because that is the shape that lets an operator name one in a config file — and a module delivered inside a dot-cloud pack cannot have a `class_name` at all: a mounted pack's globals are not registered in the host.
 
 [codeblock] server.modules.load_module("res://game/bfh_module.gd") [/codeblock]
 
 ### game/bfh_module.gd (was line 48)
 
-[b]No `const CHANNEL` here, and its absence is the point.[/b] [DotGameModule] already declares one and GDScript refuses to let a subclass redeclare it — which is the right refusal: a module logs through [method DotModule.log_info], which stamps the module's own name, so a second channel would split one module's records across two places an operator has to know to turn up separately.
+[b]No `const CHANNEL` here, and its absence is the point.[/b] [GSGameModule] already declares one and GDScript refuses to let a subclass redeclare it — which is the right refusal: a module logs through [method GSModule.log_info], which stamps the module's own name, so a second channel would split one module's records across two places an operator has to know to turn up separately.
 
 ### game/bfh_module.gd (was line 71)
 
@@ -1972,19 +1972,19 @@ Tick rate from the world, so `sv_tickrate` reaches it: the server sets the engin
 
 ### game/bfh_module.gd (was line 99)
 
-Chat, voice and moderation, over [DotGameServices].
+Chat, voice and moderation, over [GSGameServices].
 
-[b]The bridge is handed over as the link, and that is the whole of the wiring.[/b] A chat line goes out through `send_chat` and a voice frame through `send_voice`, both on this game's own wire — see [BfhNetLink]. [DotGameModule] does the rest: it assigns the bridge's `voice_relay_fn`, checks `check_admission` before seating anybody, and tells the roster to follow this layer so a leaver is forgotten by the rate limiter and the voice router together.
+[b]The bridge is handed over as the link, and that is the whole of the wiring.[/b] A chat line goes out through `send_chat` and a voice frame through `send_voice`, both on this game's own wire — see [BfhNetLink]. [GSGameModule] does the rest: it assigns the bridge's `voice_relay_fn`, checks `check_admission` before seating anybody, and tells the roster to follow this layer so a leaver is forgotten by the rate limiter and the voice router together.
 
 ### game/bfh_module.gd (was line 114)
 
-Profiles, avatars and admission: dot-platform's [DotPlatformIdentity] over this game's one-slot schema. [DotGameModule] builds it before the services and loads dot-platform's own module beside it.
+Profiles, avatars and admission: dot-platform's [GSPlatformIdentity] over this game's one-slot schema. [GSGameModule] builds it before the services and loads dot-platform's own module beside it.
 
 [b]Authentication is not here and was never this game's.[/b] Whether a player is proven to be somebody is the host's `dot_auth_server`, the same for every game it runs; what this layer does is everything after — a scoped profile, the name on it, a face, and a key their numbers outlive the connection under.
 
 ### game/bfh_module.gd (was line 204)
 
-[b]How many is dot-server's [DotBotQuota], so `bot_quota` and `bot_quota_mode` mean the same thing on every server in the family[/b] — counted in DRIVING SEATS here, because a bot only ever drives. The people it is given are the people driving, not everybody on the server: counting runners would stand a bus down for a person who joined on foot, and two people joining inside one check would leave both on foot with no bus at all, which is a round that never starts. The default is the seat count in fill mode, the rule this game ran before the policy was shared: every seat nobody is driving has a bot in it, and a person who takes a seat (the sides swap every few rounds) takes it from a bot. `bfh_drivers` is still how many seats there are and caps whatever the quota says.
+[b]How many is dot-server's [GSBotQuota], so `bot_quota` and `bot_quota_mode` mean the same thing on every server in the family[/b] — counted in DRIVING SEATS here, because a bot only ever drives. The people it is given are the people driving, not everybody on the server: counting runners would stand a bus down for a person who joined on foot, and two people joining inside one check would leave both on foot with no bus at all, which is a round that never starts. The default is the seat count in fill mode, the rule this game ran before the policy was shared: every seat nobody is driving has a bot in it, and a person who takes a seat (the sides swap every few rounds) takes it from a bot. `bfh_drivers` is still how many seats there are and caps whatever the quota says.
 
 ### game/bfh_module.gd (was line 224)
 
@@ -2016,7 +2016,7 @@ One cvar, its default taken from the configuration rather than written twice.
 
 ### game/bfh_module.gd (was line 489)
 
-[b]Nothing to undo.[/b] The commands are the module's own and [DotModule] removes them; the netcode, the bridge and the roster are [DotGameModule]'s and it tears them down in the reverse order it built them. The world is NOT this module's to free: it was in the tree before the module loaded and a server can unload and reload a game module without the bowl going away, which is what `module reload` is for.
+[b]Nothing to undo.[/b] The commands are the module's own and [GSModule] removes them; the netcode, the bridge and the roster are [GSGameModule]'s and it tears them down in the reverse order it built them. The world is NOT this module's to free: it was in the tree before the module loaded and a server can unload and reload a game module without the bowl going away, which is what `module reload` is for.
 
 ### game/bfh_module.gd (was line 531)
 
@@ -2038,7 +2038,7 @@ Joins the bridge's two chat seams to the services layer's router.
 
 [b]Here rather than in either of them, because this is the only object that holds both.[/b] The bridge knows what arrived on the wire and nothing about what a line means; the services layer knows the rules and nothing about the wire. That separation is the reason a client cannot send a line with somebody else's name on it: what crosses is a channel id and a string, and everything else is decided on this side. The players' vote for the next bowl, over dot-vote: `!vote`, `!rtv`, `!nominate`.
 
-[b]Opened [member BfhVote.open_after_sec] into every round and applied when it ends[/b], because the bowl is rebuilt only between rounds; see [code]game/bfh_vote.gd[/code] and [code]game/bfh_bowls.gd[/code]. A server owner turns it off or reshapes it in `user://cfg/buses_vote.json` or `game.yml`'s `metadata: bowl_vote:`, keyed as dot-vote's [DotVoteRules]. A vote that cannot be built is a WARN and the server's own bowl, never a server that will not start.
+[b]Opened [member BfhVote.open_after_sec] into every round and applied when it ends[/b], because the bowl is rebuilt only between rounds; see [code]game/bfh_vote.gd[/code] and [code]game/bfh_bowls.gd[/code]. A server owner turns it off or reshapes it in `user://cfg/buses_vote.json` or `game.yml`'s `metadata: bowl_vote:`, keyed as dot-vote's [GSVoteRules]. A vote that cannot be built is a WARN and the server's own bowl, never a server that will not start.
 
 ### game/bfh_module.gd (was line 772)
 
@@ -2166,7 +2166,7 @@ And it takes the config because it used to ignore it: `runner_speed` and `runner
 
 ### game/bfh_player.gd (was line 278)
 
-[b]`ground_id` is the whole mechanism, and it is deliberately not simulation state.[/b] `DotFpsState` documents it as a local physics handle whose value differs between machines — which is exactly right for this: riding is resolved per frame from a handle each machine has, rather than becoming another predicted field two machines would have to agree about. They could not agree about it; rigid bodies do not simulate the same way twice, which is why props are not predicted at all.
+[b]`ground_id` is the whole mechanism, and it is deliberately not simulation state.[/b] `GSFpsState` documents it as a local physics handle whose value differs between machines — which is exactly right for this: riding is resolved per frame from a handle each machine has, rather than becoming another predicted field two machines would have to agree about. They could not agree about it; rigid bodies do not simulate the same way twice, which is why props are not predicted at all.
 
 ### game/bfh_player.gd (was line 292)
 
@@ -2196,7 +2196,7 @@ Draws [member beacon], and says when it pings. Client side, once a frame, from `
 
 [b]Only while alive.[/b] The flag outlives a death — dot-moderation re-applies it at the next round, which is this game's respawn — but a runner who is out is out until then, and a column over where they fell points everybody at an empty patch of sand.
 
-[param own_view] is whether this is the player the camera belongs to; see [DotFxBeacon].
+[param own_view] is whether this is the player the camera belongs to; see [GSFxBeacon].
 
 ### game/bfh_player.gd (was line 400)
 
@@ -2218,7 +2218,7 @@ What a player's round was worth: dot-stats counts it, dot-achievements decides w
 
 [b]It listens and nothing calls it.[/b] Every reading is a world signal: `run_over`, `swung`, `bus_struck`, dot-props' `broken`, the round's own two. A counter fed from call sites inside the simulation is a counter that misses the one call site somebody added later.
 
-[b]The link between the two trackers is [DotAchievementStatsLink], not a `connect`.[/b] dot-stats' `recorded` carries a SESSION total and an achievement is about a lifetime; wiring one straight into the other adds the running total to itself on every reading. The link differences them, and that is its whole job.
+[b]The link between the two trackers is [GSAchievementStatsLink], not a `connect`.[/b] dot-stats' `recorded` carries a SESSION total and an achievement is about a lifetime; wiring one straight into the other adds the running total to itself on every reading. The link differences them, and that is its whole job.
 
 [b]A signed-in player is filed under their scoped profile key[/b] (2026-10-03), which [member durable_key_fn] supplies from dot-platform and which can never carry a site account id. Everybody else — a guest, or anybody on a server with no platform — is still `bfh-u<session>`, and THAT is why this stays in memory and unreported: a session id is handed out again by the next boot, so a file store would give one guest's lifetime to whoever next got their number, and a report would file it under a name that means nobody. Turning either on is one line each the day guests are not counted at all.
 
@@ -2244,11 +2244,11 @@ The round is over. Every runner still standing survived it.
 
 What a runner can get onto, as arithmetic over the movement they actually have.
 
-[b]Asked of the controller's own tunables, not of a copy.[/b] The two games that answered this question first carry the three movement numbers as constants in their map classes, because a map there is content that must load with no player in the tree, and a check that the copies agree. The bowl here is built by the world that owns the configuration, so every function below takes the [DotFpsTunables] that [code]BfhPlayer.tunables_for(config)[/code] builds for a real runner. There is nothing to drift.
+[b]Asked of the controller's own tunables, not of a copy.[/b] The two games that answered this question first carry the three movement numbers as constants in their map classes, because a map there is content that must load with no player in the tree, and a check that the copies agree. The bowl here is built by the world that owns the configuration, so every function below takes the [GSFpsTunables] that [code]BfhPlayer.tunables_for(config)[/code] builds for a real runner. There is nothing to drift.
 
 [b]`jump_height` is the APEX of a standing jump, not the height of something you can climb onto.[/b] Measured at this game's numbers and 60 ticks a second, a runner's feet rise 1.094 m of a nominal 1.15; landing ON something at exactly the apex needs the tick to fall right. So a climb is held to [constant CLIMB_MARGIN] of the apex, which is the same margin the family's other two answers use.
 
-[b]The arithmetic is the controller's.[/b] [method climb_limit] and [method jump_reach] delegate to [DotFpsTunables]; this file keeps the names, the declared climbs and the refusals, which are this game's.
+[b]The arithmetic is the controller's.[/b] [method climb_limit] and [method jump_reach] delegate to [GSFpsTunables]; this file keeps the names, the declared climbs and the refusals, which are this game's.
 
 [codeblock] var t := BfhPlayer.tunables_for(config) BfhReach.climb_limit(t)       # 1.035 m: the highest top face a runner jumps onto BfhReach.jump_reach(t, 1.0)   # clear air crossed while landing a metre higher [/codeblock]
 
@@ -2260,7 +2260,7 @@ One way up the bowl expects a runner to take, measured off the geometry.
 
 ### game/bfh_reach.gd (was line 110)
 
-The clear air a runner at full ground speed crosses in one jump, landing [param rise] metres higher than they left. [method DotFpsTunables.jump_reach] at `max_speed`.
+The clear air a runner at full ground speed crosses in one jump, landing [param rise] metres higher than they left. [method GSFpsTunables.jump_reach] at `max_speed`.
 
 [b]The landing height is the point.[/b] The airtime people write down is the time to fall back to where you jumped FROM, and it is the wrong number for anything that climbs: one sized a jump course in this family 30% long and nobody could finish it. Returns 0 for a rise no jump reaches.
 
@@ -2284,7 +2284,7 @@ The score, and who is on which side: held on Tab, and up on its own between roun
 
 [b]What dot-match scores in this game is rounds, per side.[/b] Its per-player records — kills, deaths, score — are never reported to (a runner cannot kill and a driver cannot die, so they would be one number and a column of zeros; see "What a player's numbers are" in docs/services.md). The tallies are [method BfhGame.rounds_won], which is dot-match's `rounds_won` on the authority and what the last CLOCK said on a client.
 
-[b]Drawn by dot-menu's `DotMenuScoreboard` since 2026-10-09[/b]; this file is what is this game's: the sides, the statuses, the tallies, the line about the round, and being up on its own after one. It drew its own two `DotTableView`s before, and had to give each an explicit size because a table in a container is drawn zero pixels tall; the menu's board is containers all the way down. Online the rows are the server's roster — names, pings and time connected, which no client knew for anybody else — with the side and the status joined in by id.
+[b]Drawn by dot-menu's `GSMenuScoreboard` since 2026-10-09[/b]; this file is what is this game's: the sides, the statuses, the tallies, the line about the round, and being up on its own after one. It drew its own two `GSTableView`s before, and had to give each an explicit size because a table in a container is drawn zero pixels tall; the menu's board is containers all the way down. Online the rows are the server's roster — names, pings and time connected, which no client knew for anybody else — with the side and the status joined in by id.
 
 ### game/bfh_scoreboard.gd (was line 201)
 
@@ -2294,7 +2294,7 @@ Drivers by name. Runners who are up first, then by name: the living are the part
 
 ### game/bfh_server.gd (was line 6)
 
-What a [DotServer] loads as its game scene. Never a client.
+What a [GSServer] loads as its game scene. Never a client.
 
 [b]Small on purpose.[/b] Everything a dedicated server does is in `bfh_module.gd`; this exists because dot-server loads a SCENE and the game needs one, and because the world has to be in the tree — registered under [constant BfhGame.SERVICE] — before the module looks for it. dot-server loads the scene and then the module, in that order, for exactly this reason.
 
@@ -2316,7 +2316,7 @@ The family's `defaults < JSON < environment < argv` chain, on the server too. It
 
 Chat, voice and moderation — and the moderator's live tools — wired to this game's two sides.
 
-[b]Sixty lines, because [DotGameServices] holds the other five hundred.[/b] The five games written before this one each carry their own copy — 557 to 718 lines, differing in the channels, the rules and a voice range — and this is the first game to take the base instead. What is left here is what is genuinely this game's: who can hear whom, and where a player is standing.
+[b]Sixty lines, because [GSGameServices] holds the other five hundred.[/b] The five games written before this one each carry their own copy — 557 to 718 lines, differing in the channels, the rules and a voice range — and this is the first game to take the base instead. What is left here is what is genuinely this game's: who can hear whom, and where a player is standing.
 
 [b]The sides are the whole design, so the sides are the channels.[/b] Two drivers against everybody else is a game about two conversations that must not overhear each other: the drivers arranging who takes which half of the bowl, and the runners saying which way one is coming. `team` is therefore the channel that matters here — in a deathmatch it is a convenience and here it is the game — and it is what VOICE defaults to, which no other game in this family does.
 
@@ -2338,7 +2338,7 @@ The same rules, as a static a CLIENT can ask for without building a services lay
 
 The voice format, which both ends must agree on exactly.
 
-Static, because the CLIENT builds one too and a sample rate that differs between two peers is a stream of packets the router refuses for being the wrong length, counted and said to nobody. [method DotVoiceConfig.format_fingerprint] exists for that reason.
+Static, because the CLIENT builds one too and a sample rate that differs between two peers is a stream of packets the router refuses for being the wrong length, counted and said to nobody. [method GSVoiceConfig.format_fingerprint] exists for that reason.
 
 ### game/bfh_services.gd (was line 140)
 
@@ -2358,7 +2358,7 @@ Which side somebody is on, for the team channel and for team voice.
 
 ### game/bfh_services.gd (was line 201)
 
-What the admin set means here, one callable per ability. See `DotGameServices`.
+What the admin set means here, one callable per ability. See `GSGameServices`.
 
 [b]What is refused is refused for a reason about THIS game, and says so.[/b] Respawn is the one worth reading: a runner who is out stays out until the next round, and an admin who put one back mid-round would be deciding who won. Give and strip are refused because there is one thing anybody holds here and it is not a weapon. Anything that moves a body is refused for a driver while they drive, because the bus is what is moving and the body is a passenger in it.
 
@@ -2376,7 +2376,7 @@ Toggles that outlive a new body here, beyond dot-moderation's own god and buddha
 
 The team seam dot-chat and dot-voice both ask for, which the base cannot wire.
 
-[DotGameServices] knows nothing about teams — a lobby has none — so the two `team_fn` hooks are set here, after the base has built each router.
+[GSGameServices] knows nothing about teams — a lobby has none — so the two `team_fn` hooks are set here, after the base has built each router.
 
 ### game/bfh_services.gd (was line 413)
 
@@ -2388,7 +2388,7 @@ A player's own settings and the menu that changes them: how fast the view turns,
 
 [codeblock] var settings := BfhSettings.new() add_child(settings) settings.setup()                    # loads, and pushes every value at what reads it settings.bind_look(sampler.tunables) settings.bind_camera(camera) settings.bind_audio(audio.manager) settings.open()                     # Escape does this in the client [/codeblock]
 
-[b]dot-menu's `DotMenuSettings` with this game's schema[/b] (2026-10-09). This was the original of a 250-line file — a manager, a `match` over four keys and a bare settings screen — that five other games copied. What is left here is what is this game's: where the document lives, and the stock keys it has nothing to apply to.
+[b]dot-menu's `GSMenuSettings` with this game's schema[/b] (2026-10-09). This was the original of a 250-line file — a manager, a `match` over four keys and a bare settings screen — that five other games copied. What is left here is what is this game's: where the document lives, and the stock keys it has nothing to apply to.
 
 [b]The scopes are the family's, not this game's.[/b] `sensitivity` is ACCOUNT under the shared `tmc_account` namespace — a person's hand, the same number in every game here. `field_of_view` is SERVER_CLAMPED: a wide view is an advantage a server may cap, and dot-settings gives a server no way to READ it. The volumes are this machine's.
 
@@ -2406,7 +2406,7 @@ What this game makes a noise about, as a document, and which stand-in voice says
 
 Where the sound files would be, under this game's own root.
 
-[b]Through the root, because a delivered pack is not at `res://`.[/b] A path written as `res://audio/…` inside a mounted pack resolves against the HOST project, where it names nothing — or, worse, another game's file of the same name, which `DotAudioSinkGodot` would load and play in preference to the stand-in. [param root] is for a check: built in, [method BfhPaths.root] is `res://` and every path is trivially under it, so the suite asks with a mount prefix instead. See [method BfhPaths.rebase_onto] for why.
+[b]Through the root, because a delivered pack is not at `res://`.[/b] A path written as `res://audio/…` inside a mounted pack resolves against the HOST project, where it names nothing — or, worse, another game's file of the same name, which `GSAudioSinkGodot` would load and play in preference to the stand-in. [param root] is for a check: built in, [method BfhPaths.root] is `res://` and every path is trivially under it, so the suite asks with a mount prefix instead. See [method BfhPaths.rebase_onto] for why.
 
 ### game/bfh_sounds.gd (was line 122)
 
@@ -2426,9 +2426,9 @@ Where a runner who has been run down looks until the next round.
 
 [codeblock] spectate.setup(world, authoritative, tick_rate) spectate.on_death(&"u7", where, &"u900000", tick)   # the world does this spectate.request(&"u7", BfhSpectate.ASK_NEXT)       # the player's click camera.global_transform = spectate.camera_for(&"u7") [/codeblock]
 
-[b]The server decides and the client draws, and they are two instances of this.[/b] The authority's [DotSpectatorManager] runs the chain — a death camera on the bus that did it, a freeze on its cab, then somebody to follow — and answers every click. A connected client's copy is a MIRROR: told its own view as per-player state (`BfhPlayerNet.net_watch`, owner-only), it computes the camera from the positions it is already drawing, and it decides nothing. An offline client is an authority, so it is the same code as a server.
+[b]The server decides and the client draws, and they are two instances of this.[/b] The authority's [GSSpectatorManager] runs the chain — a death camera on the bus that did it, a freeze on its cab, then somebody to follow — and answers every click. A connected client's copy is a MIRROR: told its own view as per-player state (`BfhPlayerNet.net_watch`, owner-only), it computes the camera from the positions it is already drawing, and it decides nothing. An offline client is an authority, so it is the same code as a server.
 
-[b]The policy, and why it is the loosest one in the family.[/b] - [b]Anybody may be watched, a bus included[/b] (`force_camera` 0). The obvious worry —   a dead runner calling out where the bus is — is not one this game can defend against   with a camera: every player and every bus is ALWAYS relevant here (`BfhNetBridge`   replicates everything to everybody, because the bowl is a disc with nothing tall in   it), so any client already has every position the camera could show it. A policy that   forbade the bus would protect nothing from a modified client and deny an honest one the   most watchable thing on the server. And "own side only" would mean a runner may watch   runners — the half of the round that is not being chased by anything. - [b]No delay[/b], for the same reason: a delay that only a client enforces, over data   the client already has, is theatre. (A mirror records its own history since   2026-09-25, so it would draw — but only what this client already has.) - [b]Roaming is on, as everywhere in the family[/b] (decided 2026-10-21; `mp_freeroam 0`   or `mp_forcecamera` 1 or 2 switches it off). The worry that kept it off, a map of the   bowl above the tanks, is the same one as the positions above: this server replicates   everything to everybody, so a modified client has the map whatever the camera shows,   and an honest runner who is out is owed something better than three minutes of one bus.   The camera is the client's ([code]DotSpectatorFreeCam[/code]); the server holds only the   mode. - [b]The living do not watch.[/b] A runner who is up is playing; a driver cannot be out.
+[b]The policy, and why it is the loosest one in the family.[/b] - [b]Anybody may be watched, a bus included[/b] (`force_camera` 0). The obvious worry —   a dead runner calling out where the bus is — is not one this game can defend against   with a camera: every player and every bus is ALWAYS relevant here (`BfhNetBridge`   replicates everything to everybody, because the bowl is a disc with nothing tall in   it), so any client already has every position the camera could show it. A policy that   forbade the bus would protect nothing from a modified client and deny an honest one the   most watchable thing on the server. And "own side only" would mean a runner may watch   runners — the half of the round that is not being chased by anything. - [b]No delay[/b], for the same reason: a delay that only a client enforces, over data   the client already has, is theatre. (A mirror records its own history since   2026-09-25, so it would draw — but only what this client already has.) - [b]Roaming is on, as everywhere in the family[/b] (decided 2026-10-21; `mp_freeroam 0`   or `mp_forcecamera` 1 or 2 switches it off). The worry that kept it off, a map of the   bowl above the tanks, is the same one as the positions above: this server replicates   everything to everybody, so a modified client has the map whatever the camera shows,   and an honest runner who is out is owed something better than three minutes of one bus.   The camera is the client's ([code]GSSpectatorFreeCam[/code]); the server holds only the   mode. - [b]The living do not watch.[/b] A runner who is up is playing; a driver cannot be out.
 
 [b]A bus's "eyes" are its cab.[/b] A driver's own position is where they sat down — nothing moves a rider (see [member BfhPlayer.ridden]) — so a camera on a driver's body would sit on the sand watching an empty patch while the bus they are steering chases somebody else. [method pose_of] answers with the bus.
 
@@ -2460,7 +2460,7 @@ A mirror is told its own view. [param target] is who [method target_of] would an
 
 Every per-player number this game counts, declared once.
 
-[b]The ids are the contract three ways.[/b] The same strings name a stat in the [DotStatsSchema] below, a requirement in `BfhAwards`' achievement rules, and what `BfhProgress` records. Three places that never import each other agree because they all read these constants, which is the only reason a rename cannot leave two of them counting different things under one name.
+[b]The ids are the contract three ways.[/b] The same strings name a stat in the [GSStatsSchema] below, a requirement in `BfhAwards`' achievement rules, and what `BfhProgress` records. Three places that never import each other agree because they all read these constants, which is the only reason a rename cannot leave two of them counting different things under one name.
 
 [b]Five numbers, and each is one side's half of the game.[/b] A driver's is people flattened. A runner's are rounds survived and seconds survived, which are the clock the runners win on, and the two things they do to the bowl: crates broken, and crates put where a bus then drove into them. What is deliberately NOT here is a kill count and a death count. A runner cannot kill anybody, and a driver cannot die: a symmetric game's two most-read numbers would be one number and a column of zeros.
 
@@ -2472,7 +2472,7 @@ Crates a runner's hammer moved that a bus then drove into.
 
 ### game/bfh_stats.gd (was line 51)
 
-The schema a [DotStatsTracker] is given.
+The schema a [GSStatsTracker] is given.
 
 [b]All five are counters.[/b] A delta is "add 3", never "now has 40", and every one of these is a thing that happened some number of times. `publish` is on for all five because every one is a number a player page would show — but nothing here reports anywhere yet (see `BfhProgress`), so the flag is the answer for the day it does.
 
@@ -2488,15 +2488,15 @@ A generated grid, because a flat colour has no speed in it.
 
 The players choose the next bowl.
 
-[DotVoteDirector] over a [DotVoteListSource] of this server's bowls, and the only thing this file decides is WHEN: a ballot opens [member open_after_sec] into every bowl and is applied when the round ends, because the bowl is rebuilt only between rounds — the next round starts in whatever was chosen. The bowls are [code]BfhBowls[/code]: this game has no map files, its map is a radius, and a bowl is a name for one. Everything about the ballot itself (how many options, the counting method, the tie-break, rock the vote, nominations, cooldowns) is dot-vote's settings and none of it is restated here; [method _rules] only says which of them a one-bowl-per-round game wants by default.
+[GSVoteDirector] over a [GSVoteListSource] of this server's bowls, and the only thing this file decides is WHEN: a ballot opens [member open_after_sec] into every bowl and is applied when the round ends, because the bowl is rebuilt only between rounds — the next round starts in whatever was chosen. The bowls are [code]BfhBowls[/code]: this game has no map files, its map is a radius, and a bowl is a name for one. Everything about the ballot itself (how many options, the counting method, the tie-break, rock the vote, nominations, cooldowns) is dot-vote's settings and none of it is restated here; [method _rules] only says which of them a one-bowl-per-round game wants by default.
 
 [b]`trigger` is MANUAL, not ROUND_END, and that is the point of this file.[/b] dot-vote's ROUND_END opens a ballot at a round's end and applies it at the NEXT round's end, which is right for a game that plays several rounds on a map and one round late here. Opening it during the round and applying it at the end (`apply: END_OF_ROUND`) puts the choice on the very next round.
 
-[b]Server side only.[/b] A client draws the ballot from the notice [member ballot_fn] sends (the client shell's [DotBallotPanel]), and never holds a director: a client that applied a result would be deciding what it plays.
+[b]Server side only.[/b] A client draws the ballot from the notice [member ballot_fn] sends (the client shell's [GSBallotPanel]), and never holds a director: a client that applied a result would be deciding what it plays.
 
 ### game/bfh_vote.gd (was line 43)
 
-The file a server owner configures the vote in, keyed exactly as [DotVoteRules]. Layered: [code]_rules() < game.yml metadata bowl_vote: < this file < DOT_VOTE_* < --vote-*[/code]. Empty skips the file. [code]{"enabled": false}[/code] turns the vote off and the rotation the server's own bowl stays.
+The file a server owner configures the vote in, keyed exactly as [GSVoteRules]. Layered: [code]_rules() < game.yml metadata bowl_vote: < this file < DOT_VOTE_* < --vote-*[/code]. Empty skips the file. [code]{"enabled": false}[/code] turns the vote off and the rotation the server's own bowl stays.
 
 ### game/bfh_vote.gd (was line 134)
 
@@ -2510,15 +2510,15 @@ The file a server owner configures the vote in, keyed exactly as [DotVoteRules].
 
 The server woke from hibernation: the bowl ballot is owed again, from the top.
 
-The director restarts itself ([member DotVoteRules.wake_restart]); this is the half that is this game's — the seconds into the bowl at which the ballot opens.
+The director restarts itself ([member GSVoteRules.wake_restart]); this is the half that is this game's — the seconds into the bowl at which the ballot opens.
 
 ### game/bfh_vote.gd (was line 306)
 
-The ballot's own timer waits with the director's clock while the server hibernates (DotGameModule hands the director the server's hibernation). Counted on, it ran past open_after_sec over an empty room, the ballot was refused for want of voters, and the first player in never got one on this bowl.
+The ballot's own timer waits with the director's clock while the server hibernates (GSGameModule hands the director the server's hibernation). Counted on, it ran past open_after_sec over an empty room, the ballot was refused for want of voters, and the first player in never got one on this bowl.
 
 ### game/net/bfh_bus_net.gd (was line 3)
 
-What a bus replicates, through [DotVehicleNetSync].
+What a bus replicates, through [GSVehicleNetSync].
 
 [b]It extends the prop behaviour rather than sitting beside it.[/b] A bus is another body the server moves and the client draws, so the bridge keeps ONE table of replicated bodies and one `pull` loop over it; a second parallel table is a second thing that can disagree about which of them exists. What is overridden is the three halves that differ: what is declared, what is copied out of the authority, and what is drawn on the mirror.
 
@@ -2528,7 +2528,7 @@ What a bus replicates, through [DotVehicleNetSync].
 
 Declared from the addon's own table.
 
-[b]The type is resolved from a STRING, and that is why the table is written the way it is.[/b] [DotVehicleNetSync] never mentions a dot-net `class_name`, because a script naming a class the project does not have fails to parse and takes every script that references it down with it — so a game without dot-net can still use dot-vehicle. Resolving `DotNetVar.Type[spec.type]` is the game's half of that bargain and can only be done here.
+[b]The type is resolved from a STRING, and that is why the table is written the way it is.[/b] [GSVehicleNetSync] never mentions a dot-net `class_name`, because a script naming a class the project does not have fails to parse and takes every script that references it down with it — so a game without dot-net can still use dot-vehicle. Resolving `GSNetVar.Type[spec.type]` is the game's half of that bargain and can only be done here.
 
 ### game/net/bfh_bus_net.gd (was line 76)
 
@@ -2536,7 +2536,7 @@ The wheels, which cannot be derived from anything else replicated: a client watc
 
 ### game/net/bfh_event.gd (was line 18)
 
-[b]Built with [code]new(kind, body)[/code], and this file does not preload itself.[/b] It used to, for a typed [code]static func of() -> BfhEvent[/code] factory, and that one line leaked the whole script graph at exit — 111 scripts, the grid textures in [code]bfh_textures.gd[/code]'s static cache and eight texture RIDs — whenever the file was first loaded from a module a [DotServer] loads at runtime, which is how every deployed server loads it. Measured on 4.7.2 with a two-line reproduction: a script that [code]extends DotNetMessage[/code] and preloads ITSELF is enough, whether the base is named or given by path; a self-preload over [code]RefCounted[/code], [DotResult] or [DotNetBehaviour] is not, nor is a two-script cycle through [DotNetMessage]. The registry decodes with a bare [code]new()[/code], which is why both arguments default. See docs/history.md, "The leak that was one line of a message".
+[b]Built with [code]new(kind, body)[/code], and this file does not preload itself.[/b] It used to, for a typed [code]static func of() -> BfhEvent[/code] factory, and that one line leaked the whole script graph at exit — 111 scripts, the grid textures in [code]bfh_textures.gd[/code]'s static cache and eight texture RIDs — whenever the file was first loaded from a module a [GSServer] loads at runtime, which is how every deployed server loads it. Measured on 4.7.2 with a two-line reproduction: a script that [code]extends GSNetMessage[/code] and preloads ITSELF is enough, whether the base is named or given by path; a self-preload over [code]RefCounted[/code], [GSResult] or [GSNetBehaviour] is not, nor is a two-script cycle through [GSNetMessage]. The registry decodes with a bare [code]new()[/code], which is why both arguments default. See docs/history.md, "The leak that was one line of a message".
 
 ### game/net/bfh_events.gd (was line 6)
 
@@ -2604,7 +2604,7 @@ Where a barrel went off and how far it reached.
 
 ### game/net/bfh_events.gd (was line 488)
 
-One routed line, in [DotChatMessage]'s own wire shape.
+One routed line, in [GSChatMessage]'s own wire shape.
 
 [b]Field by field rather than `var_to_bytes`, like every other message here.[/b] A dictionary serialised whole is a dictionary whose contents are whatever the sender put in it — including keys a client will happily read — and the widths below are the validation. `x.p` is the one meta field this game carries: the speaker's session id, so a client can colour a line by whose it is.
 
@@ -2630,9 +2630,9 @@ What a spectator asked for: `BfhSpectate.ASK_NEXT`, `ASK_PREVIOUS`, `ASK_VIEW` o
 
 ### game/net/bfh_net_bridge.gd (was line 18)
 
-Joins a [BfhGame] to a [DotNetManager]. The netcode seam, and the only file in this project that names both.
+Joins a [BfhGame] to a [GSNetManager]. The netcode seam, and the only file in this project that names both.
 
-[codeblock] # server bridge.attach(game, net)          # dot-game's DotGameNetcode does this bridge.open_link(server)          # and this bridge.add_player(peer_id, userid, "Ada") bridge.server_tick(tick)          # instead of the game's own loop
+[codeblock] # server bridge.attach(game, net)          # dot-game's GSGameNetcode does this bridge.open_link(server)          # and this bridge.add_player(peer_id, userid, "Ada") bridge.server_tick(tick)          # instead of the game's own loop
 
 # client bridge.attach(game, net) bridge.open_link(client_link) bridge.ask_ready() bridge.client_tick(tick, command) [/codeblock]
 
@@ -2654,13 +2654,13 @@ How often the round clock and the cover count go out, in ticks.
 
 Somebody pressed Enter. Server side, and the only thing this bridge does with chat.
 
-[b]The bridge carries chat and decides nothing about it.[/b] Who may say what, on which channel, how often and who hears it are [DotChatRouter]'s, and the router is the services layer's.
+[b]The bridge carries chat and decides nothing about it.[/b] Who may say what, on which channel, how often and who hears it are [GSChatRouter]'s, and the router is the services layer's.
 
 ### game/net/bfh_net_bridge.gd (was line 110)
 
 Where the clock learns how long the link is, in milliseconds.
 
-dot-net never touches a transport and cannot measure it; dot-server's heartbeat already does ([method DotClientLink.ping_ms]). A client that feeds nothing has a clock that assumes an instant connection and stamps every command for a tick the server has already simulated — and the symptom is every command being discarded as late. Two games in this family shipped without a sample and read a median of an empty set.
+dot-net never touches a transport and cannot measure it; dot-server's heartbeat already does ([method GSClientLink.ping_ms]). A client that feeds nothing has a clock that assumes an instant connection and stamps every command for a tick the server has already simulated — and the symptom is every command being discarded as late. Two games in this family shipped without a sample and read a median of an empty set.
 
 ### game/net/bfh_net_bridge.gd (was line 133)
 
@@ -2682,7 +2682,7 @@ Server: peers whose READY came before their seat ([method add_player]). A client
 
 Opens the link under [param parent], whose NAME is half the RPC routing.
 
-A [DotServer] on one end and a [DotClientLink] on the other, both called `Server`, with this node under each: Godot routes an RPC by the receiver's node path, so a link opened anywhere else is addressed by a path the other end does not have and every message lands nowhere, with no error on either side.
+A [GSServer] on one end and a [GSClientLink] on the other, both called `Server`, with this node under each: Godot routes an RPC by the receiver's node path, so a link opened anywhere else is addressed by a path the other end does not have and every message lands nowhere, with no error on either side.
 
 ### game/net/bfh_net_bridge.gd (was line 274)
 
@@ -2728,7 +2728,7 @@ Every player's side, one message each.
 
 The other end of [method watch_state]: a client is told its own view. Client side.
 
-[b]Only for the player this client is, by session id — not by `DotNetIdentity.is_owner`.[/b] Every other entity's pair is the zero it was declared with, and adopting that would build a spectator view per remote player that says nothing.
+[b]Only for the player this client is, by session id — not by `GSNetIdentity.is_owner`.[/b] Every other entity's pair is the zero it was declared with, and adopting that would build a spectator view per remote player that says nothing.
 
 The session id is the better key: the server keys the view by it, and it is right from the moment HELLO lands, where `is_owner` is right only once the entity is claimed.
 
@@ -2740,7 +2740,7 @@ Belt and braces: `net.server_tick` drives the entities, and the first player beh
 
 One player's hammer, from the buttons their command carried.
 
-[b]A button and not a request, and the difference is what a swing is aimed with.[/b] Swinging is per-tick and continuous — you hold the button and it swings at its own interval — so it rides in [member DotFpsCommand.buttons] beside jump and crouch, and it is resolved against the position and view the same command produced. Sent as a reliable request it would arrive a round trip later, be resolved against a different position, and break the crate the player was no longer looking at.
+[b]A button and not a request, and the difference is what a swing is aimed with.[/b] Swinging is per-tick and continuous — you hold the button and it swings at its own interval — so it rides in [member GSFpsCommand.buttons] beside jump and crouch, and it is resolved against the position and view the same command produced. Sent as a reliable request it would arrive a round trip later, be resolved against a different position, and break the crate the player was no longer looking at.
 
 [b]And the SERVER swings it, not the client that asked.[/b] A client's own crates are frozen mirrors; it could not break one if it tried. The hammer's cooldown is enforced here too, so a modified client holding the button down gets the same rate as everybody else.
 
@@ -2754,11 +2754,11 @@ Text for one player: a refusal, a rate limit, a command's reply.
 
 A voice frame off [method BfhNetLink.send_voice], in whichever direction.
 
-[b]Not a [BfhEvent].[/b] Voice is fifty packets a second and every event here is reliable, so a talk spurt would put a hundred retransmittable messages in front of a crate breaking. It also does not go through [DotNetManager]: the message registry seals a message set and hashes it, and adding a fifty-hertz opaque blob buys nothing — the packet has its own header, sequence and validation in [DotVoicePacket].
+[b]Not a [BfhEvent].[/b] Voice is fifty packets a second and every event here is reliable, so a talk spurt would put a hundred retransmittable messages in front of a crate breaking. It also does not go through [GSNetManager]: the message registry seals a message set and hashes it, and adding a fifty-hertz opaque blob buys nothing — the packet has its own header, sequence and validation in [GSVoicePacket].
 
 ### game/net/bfh_net_bridge.gd (was line 1001)
 
-[b]One path or the other, never both.[/b] [DotGameModule] assigns `voice_relay_fn` to the services layer's `relay_voice`; a game that ALSO connected `voice_requested` to the same router would relay every frame twice — which is a doubled talk spurt, a doubled rate limit, and a sequence number the jitter buffer sees go backwards. The signal is the seam for a game with no services layer, so it fires only when nothing else is listening.
+[b]One path or the other, never both.[/b] [GSGameModule] assigns `voice_relay_fn` to the services layer's `relay_voice`; a game that ALSO connected `voice_requested` to the same router would relay every frame twice — which is a doubled talk spurt, a doubled rate limit, and a sequence number the jitter buffer sees go backwards. The signal is the seam for a game with no services layer, so it fires only when nothing else is listening.
 
 ### game/net/bfh_net_bridge.gd (was line 1077)
 
@@ -2858,25 +2858,25 @@ A client's copy of "that player is driving".
 
 ### game/net/bfh_net_command.gd (was line 3)
 
-One tick of a player's intent, on the wire: a [DotFpsCommand] and nothing else.
+One tick of a player's intent, on the wire: a [GSFpsCommand] and nothing else.
 
 [b]The same command drives a runner and a bus, and that is this game's design rather than a saving.[/b] A driver's forward key is the throttle and their strafe keys are the wheel — nobody has to learn a second set of controls for the half of the game they play every third round — so there is one thing to send either way and the server decides which of the two it means. A client that sent "throttle" would be telling the server it was in a bus.
 
-The hammer rides in [member DotFpsCommand.buttons] for the same reason a jump does: it is per-tick, it is held rather than pressed once, and it has to be ordered against the movement it was aimed with. Sending it as a request would put every swing a round trip behind the mouse and reorder it against the step the player took while swinging.
+The hammer rides in [member GSFpsCommand.buttons] for the same reason a jump does: it is per-tick, it is held rather than pressed once, and it has to be ordered against the movement it was aimed with. Sending it as a request would put every swing a round trip behind the mouse and reorder it against the step the player took while swinging.
 
 ### game/net/bfh_net_link.gd (was line 3)
 
 The four remote calls this game needs, on one node that exists on both ends.
 
-A copy of the other games' links in shape — deliberately, per the family rule that a game copies what it needs rather than growing a shared dependency — because it encodes the one thing that cost this family a day: Godot refuses an RPC unless both ends declare the same set of `@rpc` methods, and routes it by the receiver's NODE PATH. Using the same script on both ends makes the checksum identical by construction; naming the node the same on both ends and parenting it to a node that is itself named the same ([DotServer] on one side and [DotClientLink] on the other, both called `Server`) is the whole of the routing.
+A copy of the other games' links in shape — deliberately, per the family rule that a game copies what it needs rather than growing a shared dependency — because it encodes the one thing that cost this family a day: Godot refuses an RPC unless both ends declare the same set of `@rpc` methods, and routes it by the receiver's NODE PATH. Using the same script on both ends makes the checksum identical by construction; naming the node the same on both ends and parenting it to a node that is itself named the same ([GSServer] on one side and [GSClientLink] on the other, both called `Server`) is the whole of the routing.
 
-[codeblock] Server            <- DotServer, or DotClientLink named to match   Buses           <- this, on both [/codeblock]
+[codeblock] Server            <- GSServer, or GSClientLink named to match   Buses           <- this, on both [/codeblock]
 
 ### game/net/bfh_net_link.gd (was line 29)
 
 Voice, and only voice.
 
-[constant DotTransport.Channel.EVENT] is what dot-server reserves for chat and events, and this game's chat rides `event` on the state channel with everything else — so this one is free. Voice gets it to itself for the reason the state channel exists at all: a burst of snapshots must not sit behind a talk spurt, and a talk spurt must not sit behind a snapshot.
+[constant GSTransport.Channel.EVENT] is what dot-server reserves for chat and events, and this game's chat rides `event` on the state channel with everything else — so this one is free. Voice gets it to itself for the reason the state channel exists at all: a burst of snapshots must not sit behind a talk spurt, and a talk spurt must not sit behind a snapshot.
 
 ### game/net/bfh_net_link.gd (was line 44)
 
@@ -2896,7 +2896,7 @@ Whether anything this end sends can actually go anywhere.
 
 One routed chat line, to one peer.
 
-[b]A chat line is an EVENT on this game's own wire, not dot-server's chat manager.[/b] [DotChatRouter] has the rules — the channels, the gag, the rate limit, who may hear whom — and a second path through the server's own chat would be a second set of rules to keep in step, with the one that skipped the filter being the one that leaked admin chat.
+[b]A chat line is an EVENT on this game's own wire, not dot-server's chat manager.[/b] [GSChatRouter] has the rules — the channels, the gag, the rate limit, who may hear whom — and a second path through the server's own chat would be a second set of rules to keep in step, with the one that skipped the filter being the one that leaked admin chat.
 
 ### game/net/bfh_net_link.gd (was line 156)
 
@@ -2910,7 +2910,7 @@ One encoded voice packet, in whichever direction this end is.
 
 A voice frame, either way.
 
-`any_peer`, so on the server the sender is a claim until the transport is asked. [method DotVoiceRouter.relay] is handed the id the TRANSPORT reported and stamps it over whatever the packet's own speaker field said — without that any client can put words in any other player's mouth.
+`any_peer`, so on the server the sender is a claim until the transport is asked. [method GSVoiceRouter.relay] is handed the id the TRANSPORT reported and stamps it over whatever the packet's own speaker field said — without that any client can put words in any other player's mouth.
 
 ### game/net/bfh_net_link.gd (was line 250)
 
@@ -2922,7 +2922,7 @@ What the other end's [member loopback] calls. It goes through the same counters 
 
 What a networked player replicates: the movement state, their health, their side, and whether they are driving.
 
-[b]The movement half is dot-player-controller's own table and is not written here.[/b] [DotFpsNetSync.state_specs] is what the controller says its state is, in the quantisation it says it wants; a game that listed the fields itself would be a second copy to drift, and the type names in that table are STRINGS precisely so the addon can describe a dot-net layout without naming dot-net.
+[b]The movement half is dot-player-controller's own table and is not written here.[/b] [GSFpsNetSync.state_specs] is what the controller says its state is, in the quantisation it says it wants; a game that listed the fields itself would be a second copy to drift, and the type names in that table are STRINGS precisely so the addon can describe a dot-net layout without naming dot-net.
 
 [b]The two game fields are not derivable from the movement.[/b] Health decides whether a body is drawn at all, and riding decides whether the client predicts them; a client that worked either out for itself would be running a second copy of the rules.
 
@@ -2942,7 +2942,7 @@ The net id of the bus they are driving, or 0 on foot.
 
 ### game/net/bfh_player_net.gd (was line 67)
 
-`DotSpectatorView.Mode` of the view the server has them in; 0 when they are playing.
+`GSSpectatorView.Mode` of the view the server has them in; 0 when they are playing.
 
 [b]Owner-only, and state rather than an event, like the blind.[/b] Nobody else's screen is drawn from it, so nobody else is sent it. And the death camera is three timed modes handing over to each other on the SERVER's clock: a client told each hand-over by an event it might miss would be left on a freeze camera until the round ended, where a client told the state gets the next snapshot's answer.
 
@@ -2988,7 +2988,7 @@ The consequence a player feels is that a crate they hit with the hammer starts m
 
 Where this body is, for anything that does not care what kind of body it is.
 
-[b]A method and not a property read, because a bus does not use [member net_position].[/b] [BfhBusNet] replicates through [DotVehicleNetSync], whose layout is three separate floats — so code that read `net_position` off a mirrored bus got the zero it was constructed with, and a joining player was told every bus in the bowl was at the origin. It was the announcement to a late joiner that had it, which is the one path a suite that joins first never takes.
+[b]A method and not a property read, because a bus does not use [member net_position].[/b] [BfhBusNet] replicates through [GSVehicleNetSync], whose layout is three separate floats — so code that read `net_position` off a mirrored bus got the zero it was constructed with, and a joining player was told every bus in the bowl was at the origin. It was the announcement to a late joiner that had it, which is the one path a suite that joins first never takes.
 
 ### game/net/bfh_request.gd (was line 5)
 
@@ -2998,13 +2998,13 @@ Anything a client asks the authority for. Reliable, rare, to the server only.
 
 ### game/net/bfh_request.gd (was line 21)
 
-[b]Built with [code]new(kind, body)[/code], and this file does not preload itself.[/b] It used to, for a typed [code]static func of() -> BfhRequest[/code] factory, and that one line leaked the whole script graph at exit — 111 scripts, the grid textures in [code]bfh_textures.gd[/code]'s static cache and eight texture RIDs — whenever the file was first loaded from a module a [DotServer] loads at runtime, which is how every deployed server loads it. Measured on 4.7.2 with a two-line reproduction: a script that [code]extends DotNetMessage[/code] and preloads ITSELF is enough, whether the base is named or given by path; a self-preload over [code]RefCounted[/code], [DotResult] or [DotNetBehaviour] is not, nor is a two-script cycle through [DotNetMessage]. The registry decodes with a bare [code]new()[/code], which is why both arguments default. See docs/history.md, "The leak that was one line of a message".
+[b]Built with [code]new(kind, body)[/code], and this file does not preload itself.[/b] It used to, for a typed [code]static func of() -> BfhRequest[/code] factory, and that one line leaked the whole script graph at exit — 111 scripts, the grid textures in [code]bfh_textures.gd[/code]'s static cache and eight texture RIDs — whenever the file was first loaded from a module a [GSServer] loads at runtime, which is how every deployed server loads it. Measured on 4.7.2 with a two-line reproduction: a script that [code]extends GSNetMessage[/code] and preloads ITSELF is enough, whether the base is named or given by path; a self-preload over [code]RefCounted[/code], [GSResult] or [GSNetBehaviour] is not, nor is a two-script cycle through [GSNetMessage]. The registry decodes with a bare [code]new()[/code], which is why both arguments default. See docs/history.md, "The leak that was one line of a message".
 
 ### game/net/bfh_toy_net.gd (was line 3)
 
-One of the map's toys on the wire (dot-props' [DotPropBody]): where its moving part is and how it is turned, whether it is on, and how often it has been used.
+One of the map's toys on the wire (dot-props' [GSPropBody]): where its moving part is and how it is turned, whether it is on, and how often it has been used.
 
-[b]The server's physics, never predicted[/b], for the reason game-fatal-contact's FcProps gives: Godot's rigid-body solver is not the same on two machines. The client's toy is frozen and posed from these ([method DotPropBody.show_state]), so a see-saw a person stands on there is the plank the server tipped, an interpolation behind, and a roundabout's spin is measured from the poses.
+[b]The server's physics, never predicted[/b], for the reason game-fatal-contact's FcProps gives: Godot's rigid-body solver is not the same on two machines. The client's toy is frozen and posed from these ([method GSPropBody.show_state]), so a see-saw a person stands on there is the plank the server tipped, an interpolation behind, and a roundabout's spin is measured from the poses.
 
 [b]Paired by index[/b]: both ends build the same toys in the same order from the map, so the TOYS event carries only the net ids, in toy order, and nothing here says which toy it is.
 
@@ -3072,7 +3072,7 @@ A wheel advanced once per physics tick and drawn three times is a wheel that tur
 
 The steering angle the simulation is actually using, in radians.
 
-Read off the wheel rather than off the last command: the chassis ramps steering towards what was asked for at [member DotVehicleTunables.steering_rate_deg] and falls it off with speed, so the command is what the driver wants and this is what the bus is doing. Drawing the command would show full lock on a bus that has barely begun to turn.
+Read off the wheel rather than off the last command: the chassis ramps steering towards what was asked for at [member GSVehicleTunables.steering_rate_deg] and falls it off with speed, so the command is what the driver wants and this is what the bus is doing. Drawing the command would show full lock on a bus that has barely begun to turn.
 
 ### props/bfh_bus.gd (was line 173)
 
@@ -3088,13 +3088,13 @@ A crate or a barrel: a rigid body with a Kenney model under it.
 
 ### tools/camera_check.gd (was line 3)
 
-The third-person camera and the spectator's chase camera flown round the bowl in the real offline game (dot-core's DotCameraCheck: never inside, armed by the unprotected camera being in or behind the level on some frames), `mp_forceview` through the view key's path, and with `--render` both views and another player at the lens before and after the fade. No body check: runners and buses share layer one here, so this game binds no `mp_solidplayers` (see bfh_game.gd's `view_rules`).
+The third-person camera and the spectator's chase camera flown round the bowl in the real offline game (dot-core's GSCameraCheck: never inside, armed by the unprotected camera being in or behind the level on some frames), `mp_forceview` through the view key's path, and with `--render` both views and another player at the lens before and after the fade. No body check: runners and buses share layer one here, so this game binds no `mp_solidplayers` (see bfh_game.gd's `view_rules`).
 
   tools/camera_check.sh            # headless; exit 1 on a failure   tools/camera_check.sh --render   # and the frames, in screenshots/cameras/
 
 ### tools/cover_server.gd (was line 6)
 
-A headless dedicated bowl for tools/render_cover.gd to join: the boot examples/dedicated.gd does (DotServer, the world, the module), left running.
+A headless dedicated bowl for tools/render_cover.gd to join: the boot examples/dedicated.gd does (GSServer, the world, the module), left running.
 
 [codeblock] godot --headless --path . res://tools/cover_server.tscn -- --port 27399 [/codeblock]
 
@@ -3158,15 +3158,15 @@ A barrel going off twelve metres in front of the local runner, drawn by the clie
 
 ### tools/shot.gd (was line 545)
 
-A real ballot from this game's vote: every bowl this server offers there is, four voters, three of whom have voted, drawn the way the client shell's notice overlay draws a `map_ballot` — a [DotBallotPanel] down the right-hand side. Waits a second for the voters' discs to slide to the row they chose; a frame too soon catches one between rows.
+A real ballot from this game's vote: every bowl this server offers there is, four voters, three of whom have voted, drawn the way the client shell's notice overlay draws a `map_ballot` — a [GSBallotPanel] down the right-hand side. Waits a second for the voters' discs to slide to the row they chose; a frame too soon catches one between rows.
 
 ### tools/soak.gd (was line 7)
 
-Bot soak on the real game: N bot-driven buses chase idle runners in one bowl for M simulated minutes through dot-bot's DotBotSoak, fed by dot-spawn's DotSpawnWatch. A "map" here is a bowl id.
+Bot soak on the real game: N bot-driven buses chase idle runners in one bowl for M simulated minutes through dot-bot's GSBotSoak, fed by dot-spawn's GSSpawnWatch. A "map" here is a bowl id.
 
 [codeblock] ./game.sh soak [bowl] [minutes] godot --headless --path . res://tools/soak.tscn -- --map bfh_bowl --bots 4 --minutes 2 [/codeblock]
 
-Takes the harness's own flags too (--soak-max-stuck-sec and the rest of DotBotSoakConfig). Writes .godot/test-logs/soak-<bowl>.json, prints the SOAK line, exits 1 when the run fails. The movers are the bot-driven buses; runners are idle people (there is no runner bot in play), so rounds end when the buses have run them down. Kills are off.
+Takes the harness's own flags too (--soak-max-stuck-sec and the rest of GSBotSoakConfig). Writes .godot/test-logs/soak-<bowl>.json, prints the SOAK line, exits 1 when the run fails. The movers are the bot-driven buses; runners are idle people (there is no runner bot in play), so rounds end when the buses have run them down. Kills are off.
 
 ### examples/dedicated.gd (was line 522)
 
@@ -3222,7 +3222,7 @@ The speed a leg is held under (m/s); how still the bus has to be, and for how lo
 
 ### game/bfh_module.gd (was line 29)
 
-[b]No `const CHANNEL` here, and its absence is the point.[/b] [DotGameModule] already declares one and GDScript refuses to let a subclass redeclare it — which is the right refusal: a module logs through [method DotModule.log_info], which stamps the module's own name, so a second channel would.
+[b]No `const CHANNEL` here, and its absence is the point.[/b] [GSGameModule] already declares one and GDScript refuses to let a subclass redeclare it — which is the right refusal: a module logs through [method GSModule.log_info], which stamps the module's own name, so a second channel would.
 
 ### game/bfh_services.gd (was line 105)
 

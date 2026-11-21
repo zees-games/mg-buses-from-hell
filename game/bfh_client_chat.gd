@@ -9,7 +9,7 @@ const CHANNEL := "bfh.chat"
 
 ## Push to talk. Bound to V, which is where twenty years of this genre put it.
 ## dot-voice's action, so dot-menu's key table and every other game's talk key are one setting.
-const TALK_ACTION := DotVoiceManager.TALK_ACTION
+const TALK_ACTION := GSVoiceManager.TALK_ACTION
 const TALK_KEY := KEY_V
 
 ## Rows of `BfhBindings`, which puts them on the InputMap when the settings load.
@@ -23,30 +23,30 @@ signal typing_changed(typing: bool)
 
 var bridge: BfhNetBridge = null
 
-var chat: DotChatClient = null
-var window: DotChatWindow = null
-var voice: DotVoiceManager = null
+var chat: GSChatClient = null
+var window: GSChatWindow = null
+var voice: GSVoiceManager = null
 
 var _layer: CanvasLayer = null
 var _talking: bool = false
 
 
 ## Builds the box, the client and the microphone over an attached bridge.
-func attach(p_bridge: BfhNetBridge) -> DotResult:
+func attach(p_bridge: BfhNetBridge) -> GSResult:
 	bridge = p_bridge
 
 	_build_window()
 	_build_chat()
 
 	var heard := _build_voice()
-	DotLog.result(CHANNEL, "voice", heard)
+	GSLog.result(CHANNEL, "voice", heard)
 
 	if bridge != null:
 		bridge.chat_received.connect(_on_chat_received)
 		bridge.voice_arrived.connect(_on_voice_arrived)
 		_watch_link()
 
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 func _build_window() -> void:
@@ -56,7 +56,7 @@ func _build_window() -> void:
 	_layer.layer = 100
 	add_child(_layer)
 
-	window = DotChatWindow.new()
+	window = GSChatWindow.new()
 	window.name = "ChatWindow"
 	window.open_action = OPEN_ACTION
 	window.team_action = TEAM_ACTION
@@ -87,7 +87,7 @@ func _build_window() -> void:
 
 
 func _build_chat() -> void:
-	chat = DotChatClient.new()
+	chat = GSChatClient.new()
 	chat.name = "ChatClient"
 	# The statics, not `BfhServices.new()`: see [method BfhServices.chat_rules]. A client
 	# that built a services layer to read its rules would build a moderation store and a
@@ -104,15 +104,15 @@ func _build_chat() -> void:
 
 
 ## The microphone, which is allowed to be absent.
-func _build_voice() -> DotResult:
+func _build_voice() -> GSResult:
 	# Typed explicitly rather than inferred.
-	var config: DotVoiceConfig = BfhServices.voice_format()
+	var config: GSVoiceConfig = BfhServices.voice_format()
 	# [b]The CLIENT captures, so the client's copy turns capture on.[/b] The same object on
 	# the server has it off: a dedicated server with a microphone open is a dedicated
 	# server sending its own room to everybody.
 	config.capture_enabled = true
 
-	voice = DotVoiceManager.new()
+	voice = GSVoiceManager.new()
 	voice.name = "Voice"
 	voice.config = config
 	# Empty, for the reason every netcode config here says: a stale `user://dot_voice.json`
@@ -127,9 +127,9 @@ func _build_voice() -> DotResult:
 
 	# The menu's voice rows bind to it, and the server's sv_voice_enable reaches it.
 	voice.publish_as_client()
-	var _following := voice.follow_cvars(DotRegistry.get_service(&"dot_client_link"))
+	var _following := voice.follow_cvars(GSRegistry.get_service(&"dot_client_link"))
 
-	return DotResult.success(voice)
+	return GSResult.success(voice)
 
 
 ## Binds V, unless the player has already bound it to something.
@@ -161,7 +161,7 @@ func _process(_delta: float) -> void:
 	# player was ever heard.
 	var started := voice.update_talk(wanted)
 	if wanted and not started.ok:
-		DotLog.info(CHANNEL, "no microphone; listening only", {"why": started.error.message})
+		GSLog.info(CHANNEL, "no microphone; listening only", {"why": started.error.message})
 
 
 func _on_submitted(text: String, channel: StringName) -> void:
@@ -184,9 +184,9 @@ func _on_submitted(text: String, channel: StringName) -> void:
 
 ## [b]The server's own lines arrive on the shell's client link, not on the bridge.[/b] A vote
 ## between games, "Ada joined the game." and an admin's `say` are dot-server's chat manager, sent as
-## `chat.line` on `DotClientLink`; this box read only the bridge and never showed one.
+## `chat.line` on `GSClientLink`; this box read only the bridge and never showed one.
 func _watch_link() -> void:
-	var link := DotRegistry.get_service(&"dot_client_link")
+	var link := GSRegistry.get_service(&"dot_client_link")
 
 	if link != null and link.has_signal(&"chat_received") \
 			and not link.is_connected(&"chat_received", _on_server_line):
@@ -194,7 +194,7 @@ func _watch_link() -> void:
 
 
 func _on_server_line(payload: Dictionary) -> void:
-	var _drawn := DotGameChatClient.draw_server_line(window, payload)
+	var _drawn := GSGameChatClient.draw_server_line(window, payload)
 
 
 func _on_chat_received(wire: Dictionary) -> void:
@@ -202,7 +202,7 @@ func _on_chat_received(wire: Dictionary) -> void:
 		chat.receive(wire)
 
 
-func _on_message(message: DotChatMessage, _channel_id: StringName) -> void:
+func _on_message(message: GSChatMessage, _channel_id: StringName) -> void:
 	if window == null or message == null:
 		return
 

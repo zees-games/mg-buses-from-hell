@@ -1,11 +1,11 @@
-extends DotGameCheckSuite
+extends GSGameCheckSuite
 
 const BfhVote := preload("../game/bfh_vote.gd")
 const BfhGame := preload("../game/bfh_game.gd")
 const BfhBowls := preload("../game/bfh_bowls.gd")
 const BfhArena := preload("../game/bfh_arena.gd")
 
-## What a subscribed map pack does to this game's lists, against a fixture [DotContentIndex] and
+## What a subscribed map pack does to this game's lists, against a fixture [GSContentIndex] and
 ## never the process's shared one: a solo map is listed (ballot and map menu) as Name [Pack], an
 ## online session lists none, a map kind the game does not accept is left out, and the game's own.
 
@@ -18,7 +18,7 @@ var _completed := 0
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	GSLog.set_level(GSLog.Level.ERROR)
 	_run.call_deferred()
 
 
@@ -31,12 +31,12 @@ func _run() -> void:
 	_report_sections(_entered, _completed, SECTIONS)
 
 
-func _index(session: StringName) -> DotContentIndex:
+func _index(session: StringName) -> GSContentIndex:
 	DirAccess.make_dir_recursive_absolute(DIR)
 	var file := FileAccess.open(DIR + "hill.json", FileAccess.WRITE)
 	file.store_string(JSON.stringify({"radius": 90.0}))
 	file.close()
-	var index := DotContentIndex.new()
+	var index := GSContentIndex.new()
 	index.set_session(session)
 	var added := index.add_pack({
 		"content_id": "fixture/hills", "version": "1.0.0", "prefix": DIR,
@@ -52,11 +52,11 @@ func _index(session: StringName) -> DotContentIndex:
 	return index
 
 
-func _vote(index: DotContentIndex) -> BfhVote:
+func _vote(index: GSContentIndex) -> BfhVote:
 	var vote := BfhVote.new()
 	vote.content_index = index
 	vote.maps_fn = func() -> Array: return [[&"bfh_bowl", "The Bowl"], [&"bfh_small_bowl", "The Small Bowl"]]
-	vote.apply_fn = func(id: StringName) -> DotResult: return DotResult.success(id)
+	vote.apply_fn = func(id: StringName) -> GSResult: return GSResult.success(id)
 	add_child(vote)
 	var built := vote.setup()
 	_check(built.ok, "the vote builds", str(built.message) if not built.ok else "")
@@ -94,7 +94,7 @@ func _test_solo() -> void:
 	_entered += 1
 	print("")
 	print("solo")
-	var index := _index(DotContentIndex.SESSION_SOLO)
+	var index := _index(GSContentIndex.SESSION_SOLO)
 	var vote := _vote(index)
 	var labels := _labels(vote)
 	_check(labels.has("Fixture Hill [Fixture Pack]"), "the vote lists the accepted map as Name [Pack]", str(labels))
@@ -130,10 +130,10 @@ func _test_online() -> void:
 	_entered += 1
 	print("")
 	print("online")
-	var index := _index(DotContentIndex.SESSION_SOLO)
+	var index := _index(GSContentIndex.SESSION_SOLO)
 	var vote := _vote(index)
 	_check(_labels(vote).has("Fixture Hill [Fixture Pack]"), "listed while the index is solo")
-	index.set_session(DotContentIndex.SESSION_ONLINE)
+	index.set_session(GSContentIndex.SESSION_ONLINE)
 	_check(not _labels(vote).has("Fixture Hill [Fixture Pack]"), "gone from the ballot when the session turns online")
 	var game := BfhGame.new()
 	_check(not _names(game.bowl_rows(index)).has("Fixture Hill [Fixture Pack]"), "and from the map menu")
@@ -151,6 +151,6 @@ func _test_ids() -> void:
 	add_child(vote)
 	var built := vote.setup()
 	_check(built.ok, "a vote with no fixture follows the process's shared index")
-	_check(vote.source.content_index == DotContentIndex.shared(), "it is the registered one")
+	_check(vote.source.content_index == GSContentIndex.shared(), "it is the registered one")
 	vote.queue_free()
 	_completed += 1

@@ -11,7 +11,7 @@ A dedicated server is the deployment this game is for, and on one the buses are 
 
 ## `steer_around` is a nudge, not a path
 
-Before the target reaches `DotVehicleDriver`, the nearest obstacle in the corridor between the bus and its aim point moves the aim aside, by `_clearance(i)` (`radius + PILLAR_CLEARANCE`). Deliberately a nudge: it cannot solve the stacks as a maze, and a bus that comes round one pillar into another has to come round again.
+Before the target reaches `GSVehicleDriver`, the nearest obstacle in the corridor between the bus and its aim point moves the aim aside, by `_clearance(i)` (`radius + PILLAR_CLEARANCE`). Deliberately a nudge: it cannot solve the stacks as a maze, and a bus that comes round one pillar into another has to come round again.
 
 - **Each side is scored by how much room is actually there** (`_room_at`, measured to surfaces), with the side the geometry indicates winning a tie. Picking the side the bus leaned towards drove it at a point beside one pillar it could not occupy because another stood there.
 - **The ceiling is lane width.** Below `LANE_THROUGH` both sides of a lane are in the corridor and the nudge sends the bus beside one into the other. A lane-threading exemption (skip an obstacle when the line passes between it and a neighbour with room) was tried: it took the bus through the narrow courtyard lanes and wedged it in the stacks, because the corridor test cannot tell a gap the bus is lined up on from one it crosses at an angle. Telling them apart needs heading and turning circle, which is a path. Not committed; see [map.md](map.md#the-gap-rule-no-gap-a-bus-cannot-take) for what this costs (doors, and the hook).

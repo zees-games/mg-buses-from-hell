@@ -1,9 +1,9 @@
-extends DotGameClientBench
+extends GSGameClientBench
 
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhGame := preload("../game/bfh_game.gd")
 
-## Client prediction bench (dot-game's DotGameClientBench): see that class for the flags.
+## Client prediction bench (dot-game's GSGameClientBench): see that class for the flags.
 ## The module fills empty driving seats with bots itself (bot_quota), so `--bots` is ignored.
 
 
@@ -12,17 +12,17 @@ func _configure() -> void:
 	forward_action = &"dot_fps_forward"
 
 
-func _boot_server(_bots_wanted: int, data_dir: String) -> DotNetManager:
+func _boot_server(_bots_wanted: int, data_dir: String) -> GSNetManager:
 	var dir := ProjectSettings.globalize_path(data_dir)
 	var config := make_server_config(data_dir)
 	config.max_players = 24
-	var server := DotServer.new()
+	var server := GSServer.new()
 	server.name = "Server"
 	server.config = config
 	add_child(server)
 	for _i in 60:
 		await get_tree().process_frame
-		if server.state == DotServer.State.RUNNING:
+		if server.state == GSServer.State.RUNNING:
 			break
 	var bfh_config := BfhConfig.new()
 	bfh_config.warmup_seconds = 0.0
@@ -36,7 +36,7 @@ func _boot_server(_bots_wanted: int, data_dir: String) -> DotNetManager:
 	add_child(game)
 	await get_tree().process_frame
 	(load("res://game/bfh_module.gd") as GDScript).set("punishments_file", "%s/punishments.json" % dir)
-	var loaded: DotResult = await server.modules.load_module("res://game/bfh_module.gd")
+	var loaded: GSResult = await server.modules.load_module("res://game/bfh_module.gd")
 	if not loaded.ok:
 		printerr("client_bench server: ", loaded.error)
 		return null

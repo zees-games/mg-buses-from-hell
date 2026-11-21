@@ -6,8 +6,8 @@ extends "bfh_client_view.gd"
 const BUS_BEAM_RISE := 2.6
 
 ## The light on the eye and the others' beams.
-var flash: DotFlashlight = null
-var flash_crowd: DotFlashlightCrowd = null
+var flash: GSFlashlight = null
+var flash_crowd: GSFlashlightCrowd = null
 var _flash_msec := -100000
 var _flash_retain := 0.0
 
@@ -41,10 +41,10 @@ func _eye_is_ours() -> bool:
 
 
 ## The sound manager the flashlight clicks play through, or null before audio is up.
-func _flash_audio_ref() -> DotNodeRef:
+func _flash_audio_ref() -> GSNodeRef:
 	if audio == null or audio.audio == null or not audio.audio.is_inside_tree():
 		return null
-	return DotNodeRef.of_path(audio.audio.get_path())
+	return GSNodeRef.of_path(audio.audio.get_path())
 
 
 ## Where a player's beam starts: their eyes on foot, the cab over their bus while they drive.
@@ -60,10 +60,10 @@ func _present_flashlights(delta: float) -> void:
 		return
 
 	var cfg := game.flashlight_conf()
-	var allowed := DotFlashlightRules.allowed_on(cfg, String(game.bowl_id))
+	var allowed := GSFlashlightRules.allowed_on(cfg, String(game.bowl_id))
 
 	if flash == null or not is_instance_valid(flash):
-		flash = DotFlashlight.new()
+		flash = GSFlashlight.new()
 		flash.name = "Flashlight"
 		flash.config = cfg
 		flash.handle_input = false
@@ -76,7 +76,7 @@ func _present_flashlights(delta: float) -> void:
 	flash.allowed = allowed
 
 	if flash_crowd == null:
-		flash_crowd = DotFlashlightCrowd.new()
+		flash_crowd = GSFlashlightCrowd.new()
 		flash_crowd.name = "Flashlights"
 		flash_crowd.config = cfg
 		flash_crowd.audio = _flash_audio_ref()

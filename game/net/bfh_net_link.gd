@@ -7,7 +7,7 @@ const CHANNEL := "bfh.link"
 ## The node name both ends must use. It is the routing, so it is a constant.
 const NODE_NAME := &"Buses"
 
-## Everything here rides [constant DotTransport.Channel.STATE], which dot-server reserves
+## Everything here rides [constant GSTransport.Channel.STATE], which dot-server reserves
 ## for exactly this and uses for nothing itself. Sharing chat's channel would make a
 ## burst of snapshots delay a chat line, and a chat line delay a snapshot.
 const CHANNEL_STATE := 1
@@ -57,7 +57,7 @@ func _live() -> bool:
 
 	if live != _was_live:
 		_was_live = live
-		DotLog.debug(CHANNEL, "the link went %s" % ("live" if live else "quiet"), {
+		GSLog.debug(CHANNEL, "the link went %s" % ("live" if live else "quiet"), {
 			"end": "server" if is_server else "client",
 			"loopback": loopback.is_valid(),
 		})

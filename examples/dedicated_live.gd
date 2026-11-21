@@ -9,7 +9,7 @@ func _test_finish_round_waits_for_a_live_round() -> void:
 	print("finish_round waits for a live round, not warmup")
 	var module := _module()
 	var vote: Node = module.get("vote") if module != null else null
-	var director: DotVoteDirector = vote.get("director") if vote != null else null
+	var director: GSVoteDirector = vote.get("director") if vote != null else null
 	var hook: Variant = director.get("round_in_progress_fn") if director != null else null
 	_check(hook is Callable and (hook as Callable).is_valid(), "the game tells its vote whether a round is live")
 
@@ -17,21 +17,21 @@ func _test_finish_round_waits_for_a_live_round() -> void:
 		_done()
 		return
 
-	var match_node: DotMatch = game.match_node
+	var match_node: GSMatch = game.match_node
 	var was := match_node.state
-	match_node.state = DotMatch.State.WARMUP
+	match_node.state = GSMatch.State.WARMUP
 	var warm_applied := []
 	var warm := _finish_round_probe(hook, warm_applied)
 	_check(warm_applied == [&"b"] and not warm.is_finishing_round(),
 		"in warmup a time limit with finish_round changes at once", str(warm_applied))
 
-	match_node.state = DotMatch.State.LIVE
+	match_node.state = GSMatch.State.LIVE
 	var live_applied := []
 	var live := _finish_round_probe(hook, live_applied)
 	_check(live_applied.is_empty() and live.is_finishing_round(),
 		"during a live round it waits for the round", str(live_applied))
 
-	match_node.state = DotMatch.State.INTERMISSION
+	match_node.state = GSMatch.State.INTERMISSION
 	live.advance(0.1)
 	_check(live_applied == [&"b"], "and the round ending is the change", str(live_applied))
 
@@ -43,27 +43,27 @@ func _test_finish_round_waits_for_a_live_round() -> void:
 
 ## A director under `time_up: finish_round` carrying [param hook], its clock run out with a
 ## winner already decided: what dot-vote's own suite builds, with the game's answer in it.
-func _finish_round_probe(hook: Callable, applied: Array) -> DotVoteDirector:
-	var source := DotVoteListSource.new()
-	var _a := source.add(DotVoteChoice.of(&"a", "A"))
-	var _b := source.add(DotVoteChoice.of(&"b", "B"))
-	source.apply_fn = func(id: StringName) -> DotResult:
+func _finish_round_probe(hook: Callable, applied: Array) -> GSVoteDirector:
+	var source := GSVoteListSource.new()
+	var _a := source.add(GSVoteChoice.of(&"a", "A"))
+	var _b := source.add(GSVoteChoice.of(&"b", "B"))
+	source.apply_fn = func(id: StringName) -> GSResult:
 		applied.append(id)
-		return DotResult.success(id)
+		return GSResult.success(id)
 
-	var rules := DotVoteRules.new()
+	var rules := GSVoteRules.new()
 	rules.apply_delay_sec = 0.0
 	rules.duration_sec = 100.0
 	rules.vote_lead_sec = 40.0
 	rules.vote_duration_sec = 5.0
 	rules.include_extend = false
-	rules.apply = DotVoteRules.Apply.END_OF_TIME
+	rules.apply = GSVoteRules.Apply.END_OF_TIME
 	rules.cooldown = 0
-	rules.time_up = DotVoteRules.TimeUp.FINISH_ROUND
+	rules.time_up = GSVoteRules.TimeUp.FINISH_ROUND
 	# For ever: only the hook may release it.
 	rules.finish_round_max_sec = 0.0
 
-	var probe := DotVoteDirector.new()
+	var probe := GSVoteDirector.new()
 	probe.rules = rules
 	probe.source = source
 	probe.register_service = false
@@ -227,14 +227,14 @@ func _test_the_bots() -> void:
 		"each of them replicated exactly like a person"
 	)
 
-	# [b]A person who takes a seat takes it from a bot, and leaving gives it back[/b]: DotBotQuota's
+	# [b]A person who takes a seat takes it from a bot, and leaving gives it back[/b]: GSBotQuota's
 	# fill mode, counted in driving seats.
 	_check(server.console.find_cvar("bot_quota") != null and server.console.find_cvar("bot_quota_mode") != null,
 		"the shared bot_quota cvars are registered")
 
 	# Free roam: dot-spectate's three cvars are bound on the module, and a console change
 	# reaches the rules the world's spectator manager runs.
-	var roam_rules: DotSpectatorRules = game.spectate.manager.rules if game.spectate != null else null
+	var roam_rules: GSSpectatorRules = game.spectate.manager.rules if game.spectate != null else null
 	var _roam_off := _run_command("mp_freeroam 0")
 	var roam_reached := roam_rules != null and not roam_rules.roaming_permitted()
 	var _roam_on := _run_command("mp_freeroam 1")
@@ -251,11 +251,11 @@ func _test_the_bots() -> void:
 		var _one := _run_command("bot_quota 1")
 		module.call("_keep_the_seats_full")
 		var bots_before := _bot_drivers()
-		var on_foot: DotResult = bridge.call("add_player", 0, 9002, "On foot")
+		var on_foot: GSResult = bridge.call("add_player", 0, 9002, "On foot")
 		var first_runs: bool = on_foot.ok and game.team_of(BfhNetBridge.player_key(9002)) == BfhGame.TEAM_RUNNERS
 		_check(first_runs, "the first person on a server of bots runs, because a bot cannot",
 			"a server with only bots driving and a person in a seat never starts a round")
-		var joined: DotResult = bridge.call("add_player", 0, 9001, "Person")
+		var joined: GSResult = bridge.call("add_player", 0, 9001, "Person")
 		module.call("_keep_the_seats_full")
 		var bots_with := _bot_drivers()
 		_check(joined.ok and bots_before == 1 and bots_with == 0
@@ -273,10 +273,10 @@ func _test_the_bots() -> void:
 		for driver in game.drivers():
 			if driver.is_bot:
 				names.append(driver.display_name)
-		_check(not names.is_empty() and names.all(func(n: String) -> bool: return DotBotNames.POOL.has(n)),
+		_check(not names.is_empty() and names.all(func(n: String) -> bool: return GSBotNames.POOL.has(n)),
 			"bots are named from dot-bot's pool, not \"Bus driver\"", str(names))
 		var picked := _run_command("bot_difficulty nightmare")
-		var reached := DotBotSettings.of(game).difficulty() == "nightmare"
+		var reached := GSBotSettings.of(game).difficulty() == "nightmare"
 		var _back := _run_command("bot_difficulty medium")
 		_check(reached, "bot_difficulty is a cvar, and reaches the world the bots drive from", str(picked))
 	else:
@@ -340,7 +340,7 @@ func _test_the_services() -> void:
 	# router that started before moderation warns once about a missing mute source and then
 	# enforces nothing; what says it went right is that the router can SEE the source.
 	_check(
-		DotRegistry.get_service(DotGameServices.MUTE_SERVICE) != null,
+		GSRegistry.get_service(GSGameServices.MUTE_SERVICE) != null,
 		"the mute source is registered, which is the only thing that makes a gag work"
 	)
 
@@ -356,7 +356,7 @@ func _test_the_services() -> void:
 	# Nobody is connected, so this is the shape of the answer rather than a real refusal —
 	# and the shape is what matters: a services layer that returned a failure here would
 	# refuse every join on a server with an empty punishment list.
-	var session := DotClientSession.new()
+	var session := GSClientSession.new()
 	session.userid = 4242
 	session.display_name = "Ada"
 	_check(
@@ -392,12 +392,12 @@ func _test_the_live_tools() -> void:
 	# An adopted session has no peer, so the netcode's own sends to it would be an engine
 	# RPC error per tick. Pointed at nothing for this section; the module is rebuilt with
 	# its own manager when the next section reloads it.
-	var net: DotNetManager = module.get("net")
+	var net: GSNetManager = module.get("net")
 	var previous_send := net.send_fn
 	net.send_fn = func(_peer: int, _payload: PackedByteArray, _delivery: int) -> void:
 		pass
 
-	var session := DotClientSession.new()
+	var session := GSClientSession.new()
 	session.peer_id = 5151
 	session.userid = 515
 	session.display_name = "Runner"
@@ -416,18 +416,18 @@ func _test_the_live_tools() -> void:
 		_done()
 		return
 
-	var controller: DotFpsController = runner.get("controller")
-	var health: DotHealth = runner.get("health")
+	var controller: GSFpsController = runner.get("controller")
+	var health: GSHealth = runner.get("health")
 
 	# Each body is looked at the moment the command returns, not after a frame. A lone runner makes the
 	# sides playable, so a round can start under this section — and a round start is a new body here,
 	# which is exactly when the tools switch a noclip off and the game stands a slain runner back up.
 	var noclipped := await _run_and_look("noclip Runner",
-		func() -> bool: return DotFpsAdminModifiers.is_noclipped(controller))
+		func() -> bool: return GSFpsAdminModifiers.is_noclipped(controller))
 	_check(bool(noclipped[1]), "`noclip Runner` puts them in noclip", " | ".join(noclipped[0]))
 
 	var landed := await _run_and_look("noclip Runner off",
-		func() -> bool: return not DotFpsAdminModifiers.is_noclipped(controller))
+		func() -> bool: return not GSFpsAdminModifiers.is_noclipped(controller))
 	_check(bool(landed[1]), "and `noclip Runner off` takes it away")
 
 	var _god := await _run_command_later("god Runner")
@@ -478,7 +478,7 @@ func _test_the_live_tools() -> void:
 	services.call("_on_round_began_for_tools", 99)
 	_check(
 		bool(runner.get("blinded")) and bool(runner.get("beacon"))
-		and not DotFpsAdminModifiers.is_noclipped(controller),
+		and not GSFpsAdminModifiers.is_noclipped(controller),
 		"a new round keeps blind and beacon, and ends the noclip"
 	)
 	var _unlit := await _run_command_later("beacon Runner off")
@@ -514,7 +514,7 @@ func _test_the_live_tools() -> void:
 ## Runs a line, asks [param look] about the world at once, then waits for the reply.
 func _run_and_look(line: String, look: Callable) -> Array:
 	var captured: Array[String] = []
-	var context := DotCmdContext.console("", PackedStringArray())
+	var context := GSCmdContext.console("", PackedStringArray())
 	context.reply_sink = func(text: String) -> void: captured.append(text)
 	server.console.execute(line, context)
 	var seen: Variant = look.call()
@@ -528,7 +528,7 @@ func _run_and_look(line: String, look: Callable) -> Array:
 ## arrive a frame after the command returned.
 func _run_command_later(line: String) -> PackedStringArray:
 	var captured: Array[String] = []
-	var context := DotCmdContext.console("", PackedStringArray())
+	var context := GSCmdContext.console("", PackedStringArray())
 	context.reply_sink = func(text: String) -> void: captured.append(text)
 	server.console.execute(line, context)
 	await get_tree().process_frame
@@ -569,7 +569,7 @@ func _test_it_unloads_cleanly() -> void:
 		"the world outlives the module that was driving it"
 	)
 
-	var again: DotResult = await server.modules.load_module("res://game/bfh_module.gd")
+	var again: GSResult = await server.modules.load_module("res://game/bfh_module.gd")
 	_check(again.ok, "and it loads again onto the same world",
 		again.error.message if not again.ok else "")
 	_check(
@@ -613,7 +613,7 @@ func _test_a_reload_leaves_one_live_link() -> void:
 	var mirror := Node.new()
 	mirror.name = name
 	side.add_child(mirror)
-	var link := DotClientLink.new()
+	var link := GSClientLink.new()
 	link.name = "Server"
 	link.player_name = "Reload"
 	link.transport_preference = "udp"

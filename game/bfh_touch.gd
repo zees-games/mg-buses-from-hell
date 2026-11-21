@@ -1,26 +1,26 @@
 extends RefCounted
 
-## The phone's controls: dot-mobile's overlay driving the client's [DotFpsTouchSampler]. The buttons a phone needs to
+## The phone's controls: dot-mobile's overlay driving the client's [GSFpsTouchSampler]. The buttons a phone needs to
 ## drive and swing: the hammer (the horn in a bus), jump and the handbrake.
 ## The left half of the screen is the sampler's steer pad (up and down are throttle and brake, sideways is the wheel)
-## and the right half looks; [DotMobileControls] draws the stick, forwards the fingers and holds the buttons.
+## and the right half looks; [GSMobileControls] draws the stick, forwards the fingers and holds the buttons.
 
 const CHANNEL := "bfh.touch"
 
-const FIRE := DotGameTouchLayout.FIRE
-const JUMP := DotGameTouchLayout.JUMP
-const HANDBRAKE := DotGameTouchLayout.HANDBRAKE
+const FIRE := GSGameTouchLayout.FIRE
+const JUMP := GSGameTouchLayout.JUMP
+const HANDBRAKE := GSGameTouchLayout.HANDBRAKE
 
 ## dot-game's driving preset less what the steer pad covers (gas, brake, steering) and the buses lack; the hammer takes fire's home.
-static func touch_layout() -> DotGameTouchLayout:
-	var res := DotGameTouchLayout.build(DotGameTouchLayout.DRIVING, {
+static func touch_layout() -> GSGameTouchLayout:
+	var res := GSGameTouchLayout.build(GSGameTouchLayout.DRIVING, {
 		&"gas": null, &"brake": null, &"use": null, &"respawn": null, &"camera": null, &"board": null, &"chat": null,
 		FIRE: {"slot": &"primary", "label": "HIT"},
 		HANDBRAKE: {"slot": &"outer", "label": "BRAKE"},
 	})
 	if not res.ok:
 		push_error("mg-buses-from-hell touch layout refused: %s" % str(res.error))
-		return DotGameTouchLayout.custom()
+		return GSGameTouchLayout.custom()
 	return res.value
 
 
@@ -29,15 +29,15 @@ static func controls_layout() -> Array[Dictionary]:
 	var rows := touch_layout().buttons()
 	for row in rows:
 		if row["id"] == JUMP:
-			row["hold"] = DotFpsCommand.BUTTON_JUMP
+			row["hold"] = GSFpsCommand.BUTTON_JUMP
 		elif row["id"] == HANDBRAKE:
-			row["hold"] = DotFpsCommand.BUTTON_CROUCH
+			row["hold"] = GSFpsCommand.BUTTON_CROUCH
 	return rows
 
 
-var controls: DotMobileControls = null
+var controls: GSMobileControls = null
 ## dot-ui's buttons inside the overlay, for the shell's DPI fit.
-var buttons: DotTouchButtons:
+var buttons: GSTouchButtons:
 	get:
 		return controls.buttons if controls != null else null
 
@@ -49,10 +49,10 @@ var _client: Object = null
 ## right half looks, jump and the handbrake hold their bits, the hammer goes to [param swing_fn] (takes `down: bool`).
 ## No crosshair is given, so auto-fire and aim assist have nothing to act on: this is not a shooter. [param client] fits
 ## the buttons to the phone's DPI.
-func build(parent: Control, sampler: DotFpsSampler, swing_fn: Callable, client: Object = null) -> DotMobileControls:
+func build(parent: Control, sampler: GSFpsSampler, swing_fn: Callable, client: Object = null) -> GSMobileControls:
 	_swing_fn = swing_fn
 	_client = client
-	controls = DotMobileControls.new()
+	controls = GSMobileControls.new()
 	controls.name = "TouchControls"
 	controls.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	controls.setup(sampler, controls_layout())
@@ -64,7 +64,7 @@ func build(parent: Control, sampler: DotFpsSampler, swing_fn: Callable, client: 
 
 
 ## The active sampler changed (the player did): the overlay drives the new one.
-func bind_sampler(sampler: DotFpsSampler) -> void:
+func bind_sampler(sampler: GSFpsSampler) -> void:
 	if controls == null or controls.sampler == sampler:
 		return
 	controls.setup(sampler, controls_layout())
@@ -101,14 +101,14 @@ func _on_button(id: StringName, down: bool) -> void:
 
 ## A touch sampler where a phone is, the keyboard one otherwise; [param ignore_fn], when given, is asked with a screen
 ## position and keeps a finger off the stick.
-static func make_sampler(tunables: DotFpsTunables, ignore_fn: Callable = Callable()) -> DotFpsSampler:
-	var sampler: DotFpsSampler
-	if DotPlatform.has_touch():
-		var touch := DotFpsTouchSampler.new(tunables)
+static func make_sampler(tunables: GSFpsTunables, ignore_fn: Callable = Callable()) -> GSFpsSampler:
+	var sampler: GSFpsSampler
+	if GSPlatform.has_touch():
+		var touch := GSFpsTouchSampler.new(tunables)
 		if ignore_fn.is_valid():
 			touch.ignore_fn = ignore_fn
 		sampler = touch
 	else:
-		sampler = DotFpsSampler.new(tunables)
-	DotFpsSampler.register_default_actions(sampler)
+		sampler = GSFpsSampler.new(tunables)
+	GSFpsSampler.register_default_actions(sampler)
 	return sampler

@@ -181,7 +181,7 @@ func _drive_into(where: Callable, out_by: float, in_the_lane: bool = false) -> D
 	# Twelve seconds: past the stuck rule's five, so a bus that wedges and is left there
 	# long enough to be sent home says so rather than being reported as wedged.
 	for _i in range(720):
-		var still := DotFpsCommand.new()
+		var still := GSFpsCommand.new()
 		still.yaw = runner.controller.state.yaw
 		runner.controller.apply_command(still)
 		game.simulate(TICK)
@@ -301,7 +301,7 @@ func _test_up_onto_the_deck() -> void:
 		var killed_at := -1.0
 		var peak := 0.0
 		for i in range(int(20.0 / TICK)):
-			var still := DotFpsCommand.new()
+			var still := GSFpsCommand.new()
 			still.yaw = runner.controller.state.yaw
 			runner.controller.apply_command(still)
 			game.simulate(TICK)
@@ -473,7 +473,7 @@ func _test_standing_on_a_crate() -> void:
 	var body := crate.body()
 	body.freeze = false
 	# Gravity LEFT ON, and the first version of this check turned it off. A crate with no gravity still
-	# takes the player's weight — that is the whole point of `DotPropCarry.stand` — so it accelerates
+	# takes the player's weight — that is the whole point of `GSPropCarry.stand` — so it accelerates
 	# downward out from under them and they are carried for about four ticks.
 	body.angular_velocity = Vector3.ZERO
 	body.linear_velocity = Vector3.ZERO

@@ -3,7 +3,7 @@ extends Node
 const BfhConfig := preload("bfh_config.gd")
 const BfhGame := preload("bfh_game.gd")
 
-## What a [DotServer] loads as its game scene. Never a client.
+## What a [GSServer] loads as its game scene. Never a client.
 
 const CHANNEL := "bfh.server"
 
@@ -21,7 +21,7 @@ func _ready() -> void:
 	var loaded := binder.load_layers()
 
 	if not loaded.ok:
-		DotGameConfigBinder.fail_boot(get_tree(), loaded)
+		GSGameConfigBinder.fail_boot(get_tree(), loaded)
 		return
 
 	game = BfhGame.new()
@@ -34,7 +34,7 @@ func _ready() -> void:
 	game.tick_rate = Engine.physics_ticks_per_second
 	add_child(game)
 
-	DotLog.info(CHANNEL, "the world is up", {
+	GSLog.info(CHANNEL, "the world is up", {
 		"tick_rate": game.tick_rate,
 		"bowl": "%.0f m" % config.arena_radius,
 	})

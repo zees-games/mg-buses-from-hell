@@ -85,13 +85,13 @@ static func sound_dir(root: String = "") -> String:
 
 
 ## Every sound, as a document. [param root] as in [method sound_dir].
-static func catalogue(root: String = "") -> DotAudioCatalogue:
+static func catalogue(root: String = "") -> GSAudioCatalogue:
 	var dir := sound_dir(root)
-	var c := DotAudioCatalogue.new()
+	var c := GSAudioCatalogue.new()
 
 	# Runners' footsteps in the sand and the bowl's wind: dot-audio's stock (CC0, the addon's
 	# stock/CREDITS.md), under the addon's own path, which an addon pack overlays at boot.
-	DotAudioStock.add_to(c)
+	GSAudioStock.add_to(c)
 
 	# The engine is the most important sound in the game and the most frequent, so it is capped harder
 	# than anything else: two buses, and a pulse each that overlaps its neighbour at speed.
@@ -149,7 +149,7 @@ static func catalogue(root: String = "") -> DotAudioCatalogue:
 	# place in the bowl, and a round start that was quieter the further you stood from
 	# the origin would be one some players never heard.
 	for id: StringName in [ROUND_START, ROUND_WON, ROUND_LOST, SIDE_SWAP, UI_CLICK, UI_NOTICE]:
-		var cue := DotAudioDef.new()
+		var cue := GSAudioDef.new()
 		cue.id = id
 		cue.path = "%s/%s.ogg" % [dir, String(id)]
 		cue.bus = &"UI"
@@ -166,12 +166,12 @@ static func catalogue(root: String = "") -> DotAudioCatalogue:
 
 	# A body landing: dot-player-char's stock death sounds (Kenney, CC0), shipped in the addon,
 	# so their paths are the addon's own whatever the game's root.
-	for row: Dictionary in DotPlayerDeathSounds.rows():
-		var fall := DotAudioDef.new()
+	for row: Dictionary in GSPlayerDeathSounds.rows():
+		var fall := GSAudioDef.new()
 		fall.id = row["id"]
 		fall.path = row["path"]
 		fall.variants = row["variants"]
-		fall.kind = DotAudioDef.Kind.POSITIONAL_3D
+		fall.kind = GSAudioDef.Kind.POSITIONAL_3D
 		fall.bus = &"SFX"
 		fall.gain_db = float(row["gain_db"])
 		fall.pitch_min = float(row["pitch_min"])
@@ -184,12 +184,12 @@ static func catalogue(root: String = "") -> DotAudioCatalogue:
 
 	# The bowl's toys: dot-props' stock toy sounds (Kenney, CC0), shipped in the addon, under
 	# the buses in priority.
-	for row: Dictionary in DotPropBodySounds.rows():
-		var toy := DotAudioDef.new()
+	for row: Dictionary in GSPropBodySounds.rows():
+		var toy := GSAudioDef.new()
 		toy.id = row["id"]
 		toy.path = row["path"]
 		toy.variants = row["variants"]
-		toy.kind = DotAudioDef.Kind.POSITIONAL_3D
+		toy.kind = GSAudioDef.Kind.POSITIONAL_3D
 		toy.bus = &"SFX"
 		toy.gain_db = float(row["gain_db"])
 		toy.pitch_min = float(row["pitch_min"])
@@ -206,52 +206,52 @@ static func catalogue(root: String = "") -> DotAudioCatalogue:
 static func sound_recipes() -> Dictionary:
 	return {
 		# A low, noisy thud, pulsed faster and higher as the bus speeds up. See `BfhAudio`.
-		BUS_ENGINE: DotAudioSynth.Voice.STEP,
+		BUS_ENGINE: GSAudioSynth.Voice.STEP,
 		# The tonal sweep, an octave down: the one sound here that is a note rather than a
 		# noise, which is what a horn is for.
-		BUS_HORN: DotAudioSynth.Voice.SHOT_TIGHT,
-		HAMMER_SWING: DotAudioSynth.Voice.CLICK,
-		HAMMER_HIT: DotAudioSynth.Voice.IMPACT,
-		CRATE_SHOVE: DotAudioSynth.Voice.SHOT,
-		CRATE_BREAK: DotAudioSynth.Voice.SHOT_HEAVY,
-		RUNNER_HIT: DotAudioSynth.Voice.HURT,
-		RUNNER_DOWN: DotAudioSynth.Voice.DIE,
-		BARREL_BLAST: DotAudioSynth.Voice.BOOM,
-		ROUND_START: DotAudioSynth.Voice.SPAWN,
-		ROUND_WON: DotAudioSynth.Voice.PICKUP,
-		ROUND_LOST: DotAudioSynth.Voice.DENY,
-		SIDE_SWAP: DotAudioSynth.Voice.SPAWN,
-		UI_CLICK: DotAudioSynth.Voice.CLICK,
-		UI_NOTICE: DotAudioSynth.Voice.BLIP,
+		BUS_HORN: GSAudioSynth.Voice.SHOT_TIGHT,
+		HAMMER_SWING: GSAudioSynth.Voice.CLICK,
+		HAMMER_HIT: GSAudioSynth.Voice.IMPACT,
+		CRATE_SHOVE: GSAudioSynth.Voice.SHOT,
+		CRATE_BREAK: GSAudioSynth.Voice.SHOT_HEAVY,
+		RUNNER_HIT: GSAudioSynth.Voice.HURT,
+		RUNNER_DOWN: GSAudioSynth.Voice.DIE,
+		BARREL_BLAST: GSAudioSynth.Voice.BOOM,
+		ROUND_START: GSAudioSynth.Voice.SPAWN,
+		ROUND_WON: GSAudioSynth.Voice.PICKUP,
+		ROUND_LOST: GSAudioSynth.Voice.DENY,
+		SIDE_SWAP: GSAudioSynth.Voice.SPAWN,
+		UI_CLICK: GSAudioSynth.Voice.CLICK,
+		UI_NOTICE: GSAudioSynth.Voice.BLIP,
 		# Stand-ins only for a build without dot-props' toy files.
-		DotPropBodySounds.BOUNCE: DotAudioSynth.Voice.IMPACT,
-		DotPropBodySounds.THUMP: DotAudioSynth.Voice.IMPACT,
-		DotPropBodySounds.KNOCK: DotAudioSynth.Voice.IMPACT,
-		DotPropBodySounds.PIN: DotAudioSynth.Voice.CLICK,
-		DotPropBodySounds.WOOD: DotAudioSynth.Voice.IMPACT,
-		DotPropBodySounds.RUBBER: DotAudioSynth.Voice.IMPACT,
-		DotPropBodySounds.PUNCH: DotAudioSynth.Voice.HURT,
-		DotPropBodySounds.METAL: DotAudioSynth.Voice.CLICK,
-		DotPropBodySounds.BELL: DotAudioSynth.Voice.PICKUP,
-		DotPropBodySounds.CLICK: DotAudioSynth.Voice.CLICK,
-		DotPropBodySounds.WATER: DotAudioSynth.Voice.STEP,
-		DotPropBodySounds.BOING: DotAudioSynth.Voice.SPAWN,
-		DotPropBodySounds.HORN: DotAudioSynth.Voice.BLIP,
+		GSPropBodySounds.BOUNCE: GSAudioSynth.Voice.IMPACT,
+		GSPropBodySounds.THUMP: GSAudioSynth.Voice.IMPACT,
+		GSPropBodySounds.KNOCK: GSAudioSynth.Voice.IMPACT,
+		GSPropBodySounds.PIN: GSAudioSynth.Voice.CLICK,
+		GSPropBodySounds.WOOD: GSAudioSynth.Voice.IMPACT,
+		GSPropBodySounds.RUBBER: GSAudioSynth.Voice.IMPACT,
+		GSPropBodySounds.PUNCH: GSAudioSynth.Voice.HURT,
+		GSPropBodySounds.METAL: GSAudioSynth.Voice.CLICK,
+		GSPropBodySounds.BELL: GSAudioSynth.Voice.PICKUP,
+		GSPropBodySounds.CLICK: GSAudioSynth.Voice.CLICK,
+		GSPropBodySounds.WATER: GSAudioSynth.Voice.STEP,
+		GSPropBodySounds.BOING: GSAudioSynth.Voice.SPAWN,
+		GSPropBodySounds.HORN: GSAudioSynth.Voice.BLIP,
 		# Stand-ins only for a build without dot-player-char's files.
-		DotPlayerDeathReactions.SOUND_THUD: DotAudioSynth.Voice.IMPACT,
-		DotPlayerDeathReactions.SOUND_FACE_PLANT: DotAudioSynth.Voice.IMPACT,
-		DotPlayerDeathReactions.SOUND_SLUMP: DotAudioSynth.Voice.STEP,
-		DotPlayerDeathReactions.SOUND_WHOOSH: DotAudioSynth.Voice.SPAWN,
+		GSPlayerDeathReactions.SOUND_THUD: GSAudioSynth.Voice.IMPACT,
+		GSPlayerDeathReactions.SOUND_FACE_PLANT: GSAudioSynth.Voice.IMPACT,
+		GSPlayerDeathReactions.SOUND_SLUMP: GSAudioSynth.Voice.STEP,
+		GSPlayerDeathReactions.SOUND_WHOOSH: GSAudioSynth.Voice.SPAWN,
 	}
 
 
 static func _positional(
 	dir: String, id: StringName, max_distance: float, concurrent: int, priority: int
-) -> DotAudioDef:
-	var def := DotAudioDef.new()
+) -> GSAudioDef:
+	var def := GSAudioDef.new()
 	def.id = id
 	def.path = "%s/%s.ogg" % [dir, String(id)]
-	def.kind = DotAudioDef.Kind.POSITIONAL_3D
+	def.kind = GSAudioDef.Kind.POSITIONAL_3D
 	def.bus = &"SFX"
 	# Past this it is not a sound anybody can act on, and a sound accepted for distance
 	# costs a voice and a position update every frame for as long as it lasts.

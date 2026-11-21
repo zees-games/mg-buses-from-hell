@@ -42,7 +42,7 @@ class EngineErrors extends Logger:
 func _test_the_wire() -> void:
 	_section("the wire format")
 
-	var hello := BfhEvents.read_hello(DotNetReader.new(
+	var hello := BfhEvents.read_hello(GSNetReader.new(
 		BfhEvents.write_hello(SESSION, 128, 9001, 44.0, 180.0, "wide", 6.6)
 	))
 	_check(bool(hello["ok"]), "hello round-trips")
@@ -65,20 +65,20 @@ func _test_the_wire() -> void:
 		"%s, %.3f" % [str(hello["hook_layout"]), float(hello["courtyard_west_lane"])]
 	)
 
-	var bowl := BfhEvents.read_bowl(DotNetReader.new(BfhEvents.write_bowl(54.0, "tight", 7.6)))
+	var bowl := BfhEvents.read_bowl(GSNetReader.new(BfhEvents.write_bowl(54.0, "tight", 7.6)))
 	_check(bool(bowl["ok"]) and absf(float(bowl["arena_radius"]) - 54.0) < 0.05
 			and str(bowl["hook_layout"]) == "tight" and absf(float(bowl["courtyard_west_lane"]) - 7.6) < 0.005,
 		"bowl round-trips: the map a vote changed between rounds", str(bowl))
 
-	var open_bowl := BfhEvents.read_bowl(DotNetReader.new(BfhEvents.write_bowl(46.0, "tight", 7.6, "", false)))
+	var open_bowl := BfhEvents.read_bowl(GSNetReader.new(BfhEvents.write_bowl(46.0, "tight", 7.6, "", false)))
 	_check(bool(bowl["south_run"]) and bool(open_bowl["ok"]) and not bool(open_bowl["south_run"]),
 		"bowl: the south run travels with it, on unless the server built the rim open")
 
 	_check(str(hello["district"]) == "" and str(bowl["district"]) == "",
 		"neither names a district unless the map is one")
-	var town_hello := BfhEvents.read_hello(DotNetReader.new(
+	var town_hello := BfhEvents.read_hello(GSNetReader.new(
 		BfhEvents.write_hello(SESSION, 128, 9001, 52.0, 180.0, "tight", 7.6, "bfh_hill_town")))
-	var town_bowl := BfhEvents.read_bowl(DotNetReader.new(
+	var town_bowl := BfhEvents.read_bowl(GSNetReader.new(
 		BfhEvents.write_bowl(56.0, "tight", 7.6, "bfh_suburb")))
 	_check(bool(town_hello["ok"]) and str(town_hello["district"]) == "bfh_hill_town"
 			and bool(town_bowl["ok"]) and str(town_bowl["district"]) == "bfh_suburb",
@@ -93,7 +93,7 @@ func _test_the_wire() -> void:
 
 ## Join, with and without a face, and a side change.
 func _wire_join_and_team() -> void:
-	var join := BfhEvents.read_join(DotNetReader.new(
+	var join := BfhEvents.read_join(GSNetReader.new(
 		BfhEvents.write_join(SESSION, 31, "Ada", BfhGame.TEAM_DRIVERS)
 	))
 	_check(bool(join["ok"]) and int(join["net_id"]) == 31, "join round-trips")
@@ -103,17 +103,17 @@ func _wire_join_and_team() -> void:
 
 	var face := BfhAvatars.stock_avatar(&"u1")
 	face.set_part(BfhAvatars.SLOT_SKIN, &"skin_k")
-	var faced := BfhEvents.read_join(DotNetReader.new(
+	var faced := BfhEvents.read_join(GSNetReader.new(
 		BfhEvents.write_join(SESSION, 31, "Ada", BfhGame.TEAM_RUNNERS, face)
 	))
 	_check(
-		bool(faced["ok"]) and faced["avatar"] is DotAvatar
-			and (faced["avatar"] as DotAvatar).digest() == face.digest()
+		bool(faced["ok"]) and faced["avatar"] is GSAvatar
+			and (faced["avatar"] as GSAvatar).digest() == face.digest()
 			and int(faced["team"]) == BfhGame.TEAM_RUNNERS,
 		"join: and a face, after the side rather than in front of it"
 	)
 
-	var team := BfhEvents.read_team(DotNetReader.new(
+	var team := BfhEvents.read_team(GSNetReader.new(
 		BfhEvents.write_team(SESSION, BfhGame.TEAM_RUNNERS)
 	))
 	_check(
@@ -126,7 +126,7 @@ func _wire_join_and_team() -> void:
 ## Props, a bus, a removal and a seat.
 func _wire_props_and_seat() -> void:
 	var at := Vector3(12.5, 1.25, -30.75)
-	var prop := BfhEvents.read_prop(DotNetReader.new(
+	var prop := BfhEvents.read_prop(GSNetReader.new(
 		BfhEvents.write_prop(17, BfhContent.BARREL, at, false)
 	))
 	_check(bool(prop["ok"]) and int(prop["net_id"]) == 17, "a prop round-trips")
@@ -141,7 +141,7 @@ func _wire_props_and_seat() -> void:
 	)
 	_check(not bool(prop["vehicle"]), "prop: and it is not a vehicle")
 
-	var bus := BfhEvents.read_prop(DotNetReader.new(
+	var bus := BfhEvents.read_prop(GSNetReader.new(
 		BfhEvents.write_prop(18, BfhContent.BUS, at, true)
 	))
 	_check(
@@ -149,15 +149,15 @@ func _wire_props_and_seat() -> void:
 		"and a bus round-trips as one, which is which catalogue to look in"
 	)
 
-	var gone := BfhEvents.read_prop_gone(DotNetReader.new(
-		BfhEvents.write_prop_gone(17, DotPropSpawner.REASON_CLEANUP)
+	var gone := BfhEvents.read_prop_gone(GSNetReader.new(
+		BfhEvents.write_prop_gone(17, GSPropSpawner.REASON_CLEANUP)
 	))
 	_check(
-		bool(gone["ok"]) and (gone["reason"] as StringName) == DotPropSpawner.REASON_CLEANUP,
+		bool(gone["ok"]) and (gone["reason"] as StringName) == GSPropSpawner.REASON_CLEANUP,
 		"a removal round-trips, with the reason"
 	)
 
-	var seat := BfhEvents.read_seat(DotNetReader.new(BfhEvents.write_seat(SESSION, 18, true)))
+	var seat := BfhEvents.read_seat(GSNetReader.new(BfhEvents.write_seat(SESSION, 18, true)))
 	_check(
 		bool(seat["ok"]) and bool(seat["seated"]) and int(seat["net_id"]) == 18,
 		"a seat round-trips"
@@ -168,7 +168,7 @@ func _wire_props_and_seat() -> void:
 ## The clock, a round result, a blast and a death.
 func _wire_clock_and_events() -> void:
 	var at := Vector3(12.5, 1.25, -30.75)
-	var clock := BfhEvents.read_clock(DotNetReader.new(
+	var clock := BfhEvents.read_clock(GSNetReader.new(
 		BfhEvents.write_clock(3, 42.5, 27, 4, true, 5, 2)
 	))
 	_check(bool(clock["ok"]) and int(clock["round"]) == 3, "the clock round-trips")
@@ -185,7 +185,7 @@ func _wire_clock_and_events() -> void:
 		"clock: and the rounds each side has won, which is what dot-match scores here"
 	)
 
-	var round_over := BfhEvents.read_round(DotNetReader.new(
+	var round_over := BfhEvents.read_round(GSNetReader.new(
 		BfhEvents.write_round(2, false, BfhGame.TEAM_RUNNERS)
 	))
 	_check(
@@ -193,13 +193,13 @@ func _wire_clock_and_events() -> void:
 		"a round result round-trips"
 	)
 
-	var blast := BfhEvents.read_blast(DotNetReader.new(BfhEvents.write_blast(at, 6.5)))
+	var blast := BfhEvents.read_blast(GSNetReader.new(BfhEvents.write_blast(at, 6.5)))
 	_check(
 		bool(blast["ok"]) and absf(float(blast["radius"]) - 6.5) < 0.05,
 		"a blast round-trips"
 	)
 
-	var death := BfhEvents.read_death(DotNetReader.new(BfhEvents.write_death(SESSION, 9)))
+	var death := BfhEvents.read_death(GSNetReader.new(BfhEvents.write_death(SESSION, 9)))
 	_check(
 		bool(death["ok"]) and int(death["by"]) == 9, "a death round-trips, with who did it"
 	)
@@ -212,17 +212,17 @@ func _wire_truncated_and_asks() -> void:
 	# [b]A truncated packet must NOT decode as a valid message about nothing.[/b] dot-net
 	# shipped with reader exhaustion that was not sticky, so a decoder that skipped the
 	# check got a believable value for the field after the overrun.
-	var short := BfhEvents.read_join(DotNetReader.new(
+	var short := BfhEvents.read_join(GSNetReader.new(
 		BfhEvents.write_join(SESSION, 31, "Ada", 1).slice(0, 2)
 	))
 	_check(not bool(short["ok"]), "a truncated join is reported as exhausted, not as zeros")
 
-	var short_clock := BfhEvents.read_clock(DotNetReader.new(
+	var short_clock := BfhEvents.read_clock(GSNetReader.new(
 		BfhEvents.write_clock(3, 42.5, 27, 4, true, 5, 2).slice(0, 2)
 	))
 	_check(not bool(short_clock["ok"]), "and so is a truncated clock")
 
-	var sound := BfhEvents.read_sound(DotNetReader.new(
+	var sound := BfhEvents.read_sound(GSNetReader.new(
 		BfhEvents.write_sound(BfhSounds.world_index(BfhSounds.RUNNER_DOWN), at)
 	))
 	_check(
@@ -236,7 +236,7 @@ func _wire_truncated_and_asks() -> void:
 		"an index this build does not know is silence, and the engine is never sent"
 	)
 
-	var watch := BfhEvents.read_watch(DotNetReader.new(
+	var watch := BfhEvents.read_watch(GSNetReader.new(
 		BfhEvents.write_watch(BfhSpectate.ASK_VIEW)
 	))
 	_check(
@@ -244,7 +244,7 @@ func _wire_truncated_and_asks() -> void:
 		"a spectator's click round-trips, and it is only the ask — never who to watch"
 	)
 
-	var roam_ask := BfhEvents.read_watch(DotNetReader.new(
+	var roam_ask := BfhEvents.read_watch(GSNetReader.new(
 		BfhEvents.write_watch(BfhSpectate.ASK_ROAM)
 	))
 	_check(
@@ -259,7 +259,7 @@ func _wire_truncated_and_asks() -> void:
 	_check(BfhRequest.fits(), "every request kind fits the request's kind field",
 		"%d kinds in %d bits" % [BfhEvents.Ask.size(), BfhRequest.KIND_BITS])
 	_check(BfhEvents.chat_kinds_fit(), "every chat kind fits the chat line's kind field",
-		"%d kinds in %d bits" % [DotChatMessage.KIND_NAMES.size(), BfhEvents.CHAT_KIND_BITS])
+		"%d kinds in %d bits" % [GSChatMessage.KIND_NAMES.size(), BfhEvents.CHAT_KIND_BITS])
 
 
 func _test_a_client_joins() -> void:
@@ -467,7 +467,7 @@ func _test_the_bus() -> void:
 	# mirror below is only meaningful because it does.
 	await _steps(60)
 
-	var server_bus: DotVehicleInstance = _server_game.vehicles.all_vehicles()[0]
+	var server_bus: GSVehicleInstance = _server_game.vehicles.all_vehicles()[0]
 	var mirror := client_buses[0]
 
 	_check(
@@ -475,7 +475,7 @@ func _test_the_bus() -> void:
 		"the mirror's wheels are drawn from the wire"
 	)
 	# [b]Off the replicated layout, not off the node.[/b] A bus goes over the wire through
-	# [DotVehicleNetSync] — three floats, a quantised quaternion, a speed and a steering angle — and
+	# [GSVehicleNetSync] — three floats, a quantised quaternion, a speed and a steering angle — and
 	# NOT through the `net_position` a crate uses.
 	_check(
 		mirror.replicated_position().distance_to(server_bus.position()) < 1.5,
@@ -539,11 +539,11 @@ func _test_moving() -> void:
 
 
 
-func _identity_of(player: BfhPlayer) -> DotNetIdentity:
+func _identity_of(player: BfhPlayer) -> GSNetIdentity:
 	if player == null:
 		return null
 
-	return player.get_node_or_null("Identity") as DotNetIdentity
+	return player.get_node_or_null("Identity") as GSNetIdentity
 
 
 ## What the client shows of its own runner. The node, because that is what the camera
@@ -554,7 +554,7 @@ func _client_shown() -> Vector3:
 
 
 ## Prediction corrections per second over [param ticks] ticks of [param command].
-func _corrections_per_second(ticks: int, command: DotFpsCommand) -> float:
+func _corrections_per_second(ticks: int, command: GSFpsCommand) -> float:
 	var before := _corrections()
 	await _steps(ticks, command)
 	return float(_corrections() - before) * float(SERVER_TICK_RATE) / float(ticks)
@@ -707,7 +707,7 @@ func _predicted_a_teleport_converges(server_player: BfhPlayer, client_player: Bf
 
 
 ## Running into a crate, then a local runner mirrored before its HELLO.
-func _predicted_a_crate_and_an_early_join(server_player: BfhPlayer, mine: DotNetIdentity) -> void:
+func _predicted_a_crate_and_an_early_join(server_player: BfhPlayer, mine: GSNetIdentity) -> void:
 	# Into a crate: a body the server simulates and the client only mirrors, frozen, at the
 	# snapshot's position. The one place the two ends are computing against different
 	# geometry, so the one place corrections are expected. Measured, not asserted.
@@ -746,10 +746,10 @@ func _predicted_a_crate_and_an_early_join(server_player: BfhPlayer, mine: DotNet
 		"owner %d, predicted %s" % [mine.owner_peer_id, mine.is_predicted()]
 	)
 	var kc := BfhKillcam.new()
-	_check(kc.camera_mode_fn.call() == DotKillViewRules.Camera.EYE, "the killcam camera is the eye until the server says")
-	var framing := DotKillcamFraming.new(null, 1)
+	_check(kc.camera_mode_fn.call() == GSKillViewRules.Camera.EYE, "the killcam camera is the eye until the server says")
+	var framing := GSKillcamFraming.new(null, 1)
 	var eye := Transform3D(Basis.IDENTITY, Vector3(0, 1.6, 0))
-	var placed: Dictionary = framing.place(DotKillViewRules.Camera.BEHIND, eye, 75.0, Vector3(0, 1.2, -20))
+	var placed: Dictionary = framing.place(GSKillViewRules.Camera.BEHIND, eye, 75.0, Vector3(0, 1.2, -20))
 	_check((placed["transform"] as Transform3D).origin.z > 1.0, "the behind camera sits behind the killer's eye")
 	kc.free()
 

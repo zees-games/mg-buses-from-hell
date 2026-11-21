@@ -1,4 +1,4 @@
-extends DotGameWorkbenchSuite
+extends GSGameWorkbenchSuite
 
 ## mg-buses-from-hell: the workbench over the config binder, one edit per profile set, the export and its cfg round trip.
 ## Run: godot --headless --path . res://examples/headless_workbench.tscn
@@ -6,9 +6,9 @@ extends DotGameWorkbenchSuite
 const BfhConfig := preload("../game/bfh_config.gd")
 
 
-func _make_config() -> DotConfig:
+func _make_config() -> GSConfig:
 	return BfhConfig.new()
 
 
-func _make_binder(config: DotConfig) -> DotGameConfigBinder:
+func _make_binder(config: GSConfig) -> GSGameConfigBinder:
 	return BfhConfig.make_binder(config)

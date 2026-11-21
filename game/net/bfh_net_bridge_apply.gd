@@ -74,7 +74,7 @@ func _join_body(session_id: int) -> PackedByteArray:
 		behaviour.player.avatar
 	)
 
-func _on_event(message: DotNetMessage) -> void:
+func _on_event(message: GSNetMessage) -> void:
 	var event := message as BfhEvent
 
 	if event == null or game == null or net == null or net.is_server:
@@ -142,7 +142,7 @@ func _on_event(message: DotNetMessage) -> void:
 				notice_received.emit(str(notice["text"]))
 
 ## A round began or ended, on a client.
-func _apply_round(reader: DotNetReader) -> void:
+func _apply_round(reader: GSNetReader) -> void:
 	var round_info := BfhEvents.read_round(reader)
 	if bool(round_info["ok"]):
 		game.round_number = int(round_info["round"])
@@ -161,7 +161,7 @@ func _apply_round(reader: DotNetReader) -> void:
 			game.round_over.emit(int(round_info["round"]), int(round_info["winner"]))
 
 ## A death, on a client.
-func _apply_death(reader: DotNetReader) -> void:
+func _apply_death(reader: GSNetReader) -> void:
 	var death := BfhEvents.read_death(reader)
 	if bool(death["ok"]):
 		# The fall goes on the player before anybody hears of the death, so the client
@@ -202,7 +202,7 @@ func _adopt_map(radius: float, hook: String, west: float, district: String = "",
 		game.arena.south_run = south
 		game.arena.build(radius)
 
-func _apply_hello(reader: DotNetReader) -> void:
+func _apply_hello(reader: GSNetReader) -> void:
 	var hello := BfhEvents.read_hello(reader)
 
 	if not bool(hello["ok"]):
@@ -247,11 +247,11 @@ func _adopt_tick_rate(rate: int) -> void:
 	net.clock.tick_rate = game.tick_rate
 	Engine.physics_ticks_per_second = game.tick_rate
 
-	DotLog.info(CHANNEL, "adopted the server's tick rate", {
+	GSLog.info(CHANNEL, "adopted the server's tick rate", {
 		"was": before, "now": game.tick_rate, "engine": Engine.physics_ticks_per_second,
 	})
 
-func _apply_join(reader: DotNetReader) -> void:
+func _apply_join(reader: GSNetReader) -> void:
 	var join := BfhEvents.read_join(reader)
 
 	if not bool(join["ok"]):
@@ -280,7 +280,7 @@ func _apply_join(reader: DotNetReader) -> void:
 		)
 
 		if not registered.ok:
-			DotLog.warn(CHANNEL, "could not mirror a player", {"error": str(registered.error)})
+			GSLog.warn(CHANNEL, "could not mirror a player", {"error": str(registered.error)})
 			return
 	else:
 		player.display_name = str(join["name"])
@@ -303,13 +303,13 @@ func _claim_local_player() -> void:
 	if claimed == 0 or mine.identity.owner_peer_id == claimed:
 		return
 
-	DotLog.debug(CHANNEL, "claimed the local player after HELLO", {
+	GSLog.debug(CHANNEL, "claimed the local player after HELLO", {
 		"session": local_player_id, "net_id": mine.identity.net_id,
 	})
 	var _changed := net.registry.change_owner(mine.identity.net_id, claimed)
 
 ## A crate, a barrel, a block or a bus the server has put out.
-func _apply_prop(reader: DotNetReader) -> void:
+func _apply_prop(reader: GSNetReader) -> void:
 	var info := BfhEvents.read_prop(reader)
 
 	if not bool(info["ok"]):
@@ -326,13 +326,13 @@ func _apply_prop(reader: DotNetReader) -> void:
 	if scene_path == "":
 		# Not an error: a server may run a catalogue this build does not have, and the
 		# honest answer is to draw nothing rather than to guess.
-		DotLog.debug(CHANNEL, "something this build does not have", {"id": String(kind_id)})
+		GSLog.debug(CHANNEL, "something this build does not have", {"id": String(kind_id)})
 		return
 
 	var scene: PackedScene = load(scene_path)
 
 	if scene == null:
-		DotLog.warn(CHANNEL, "a scene would not load", {"path": scene_path})
+		GSLog.warn(CHANNEL, "a scene would not load", {"path": scene_path})
 		return
 
 	var body := scene.instantiate() as Node3D
@@ -356,17 +356,17 @@ func _apply_prop(reader: DotNetReader) -> void:
 	behaviour.prop = body
 	body.add_child(behaviour)
 
-	var identity := DotNetIdentity.new()
+	var identity := GSNetIdentity.new()
 	identity.name = "Identity"
 	identity.owner_peer_id = 0
-	identity.authority = DotNetIdentity.Authority.SERVER
+	identity.authority = GSNetIdentity.Authority.SERVER
 	identity.always_relevant = true
 	body.add_child(identity)
 
 	var registered := net.registry.register(identity, net_id, net.clock.tick, net.config)
 
 	if not registered.ok:
-		DotLog.warn(CHANNEL, "could not mirror a body", {"error": str(registered.error)})
+		GSLog.warn(CHANNEL, "could not mirror a body", {"error": str(registered.error)})
 		body.queue_free()
 		return
 
@@ -381,7 +381,7 @@ func _scene_for(kind_id: StringName, vehicle: bool) -> String:
 	var prop := game.props.catalogue.get_prop(kind_id) if game.props != null else null
 	return prop.scene_path if prop != null else ""
 
-func _apply_prop_gone(reader: DotNetReader) -> void:
+func _apply_prop_gone(reader: GSNetReader) -> void:
 	var info := BfhEvents.read_prop_gone(reader)
 
 	if not bool(info["ok"]):
@@ -401,7 +401,7 @@ func _apply_prop_gone(reader: DotNetReader) -> void:
 		behaviour.prop.queue_free()
 
 ## A client's copy of "that player is driving".
-func _apply_seat(reader: DotNetReader) -> void:
+func _apply_seat(reader: GSNetReader) -> void:
 	var info := BfhEvents.read_seat(reader)
 
 	if not bool(info["ok"]):
@@ -421,7 +421,7 @@ func _apply_seat(reader: DotNetReader) -> void:
 
 	seat_changed.emit(int(info["player_id"]), bool(info["seated"]))
 
-func _apply_clock(reader: DotNetReader) -> void:
+func _apply_clock(reader: GSNetReader) -> void:
 	var clock := BfhEvents.read_clock(reader)
 
 	if not bool(clock["ok"]):

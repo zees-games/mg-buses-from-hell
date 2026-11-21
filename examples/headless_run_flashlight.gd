@@ -27,11 +27,11 @@ func _test_the_flashlight() -> void:
 	_check(not BfhFlashlight.starts_on(cfg, "bfh_downtown"), "and so does a town in ruins")
 	_check(BfhFlashlight.starts_on(cfg, "bfh_bowl", "outdoor_night"), "and a night mood would start lit")
 
-	cfg.default_state = DotFlashlightConfig.START_ON
+	cfg.default_state = GSFlashlightConfig.START_ON
 	a.flashlight_ready = false
 	await _step(game, 2)
 	_check(a.flashlight, "a config that starts lit lights the player")
-	cfg.default_state = DotFlashlightConfig.START_OFF
+	cfg.default_state = GSFlashlightConfig.START_OFF
 	a.flashlight_ready = false
 	await _step(game, 2)
 	_check(not a.flashlight, "and one that starts dark does not")
@@ -45,6 +45,6 @@ func _test_the_flashlight() -> void:
 	cfg.enabled = false
 	_check(not game.toggle_flashlight(a.player_id) and not a.flashlight, "a disabled config has no light")
 	cfg.enabled = true
-	cfg.default_state = DotFlashlightConfig.START_DARK
+	cfg.default_state = GSFlashlightConfig.START_DARK
 	await _dispose(game)
 	_done()

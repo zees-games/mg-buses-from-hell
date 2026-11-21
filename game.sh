@@ -119,7 +119,7 @@ run_suite() {
     timeout "$TIMEOUT" "$GODOT" --headless --path . "res://examples/$scene.tscn" >"$log" 2>&1
     status=$?
     summary="$(grep -Eo '[0-9]+ (passed|checks), [0-9]+ failed' "$log" | tail -1)"
-    # Section accounting: "N sections entered, M finished" from DotGameCheckSuite._report_sections.
+    # Section accounting: "N sections entered, M finished" from GSGameCheckSuite._report_sections.
     local acct entered finished
     acct="$(grep -Eo '^[0-9]+ sections entered, [0-9]+ finished' "$log" | tail -1)"
     if [ -n "$acct" ]; then

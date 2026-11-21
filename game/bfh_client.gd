@@ -4,7 +4,7 @@ func _ready() -> void:
 	# First, before anything can be drawn: the bowl, the player and the camera arrive after
 	# this node is in the tree. The platform puts the loading cover up, held until the player
 	# exists and the camera is current, and finds the link.
-	platform = DotGameClient.new()
+	platform = GSGameClient.new()
 	platform.name = "Platform"
 	platform.force_offline = force_offline
 	platform.spawned_fn = func() -> bool: return player != null
@@ -20,7 +20,7 @@ func _ready() -> void:
 	var loaded := binder.load_layers()
 
 	if not loaded.ok:
-		DotGameConfigBinder.fail_boot(get_tree(), loaded)
+		GSGameConfigBinder.fail_boot(get_tree(), loaded)
 		return
 
 	link = platform.link as Node
@@ -59,15 +59,15 @@ func _ready() -> void:
 	if _offline:
 		_start_offline()
 	else:
-		# [b]Here, in `_ready`, which runs INSIDE `DotClientLink._load_scene`.[/b] The link adds this
+		# [b]Here, in `_ready`, which runs INSIDE `GSClientLink._load_scene`.[/b] The link adds this
 		# scene and tells the server it has loaded on the next line, so the netcode is up before the
 		# server has been told there is anybody to send to — which is the order that leaves nothing to be.
 		var netted := _build_netcode()
-		DotLog.result(CHANNEL, "the netcode", netted)
+		GSLog.result(CHANNEL, "the netcode", netted)
 		if netted.ok and link != null:
 			_start_remote_workbench()
 
-## The load gate is [member DotGameClient.gate]: covered, and the local body and the input still,
+## The load gate is [member GSGameClient.gate]: covered, and the local body and the input still,
 ## until the bowl stands, the local player exists and its camera is current.
 
 ## The bowl is rebuilt (a vote's bowl, a server's radius in the HELLO): covered from the build
@@ -90,7 +90,7 @@ func _hold_for_bowls() -> void:
 ## says so itself; connected, the bridge re-emits it from DEATH after putting the server's fall
 ## on the player.
 func _build_ragdolls() -> void:
-	ragdolls = DotPlayerRagdolls.new()
+	ragdolls = GSPlayerRagdolls.new()
 	ragdolls.name = "Ragdolls"
 	ragdolls.rules = game.ragdoll_rules
 	ragdolls.sound_fn = _ragdoll_sound
@@ -115,7 +115,7 @@ func _fall(who: BfhPlayer) -> void:
 	if who == null or ragdolls == null or who.figure == null or not who.figure.is_inside_tree():
 		return
 	var velocity := who.controller.state.velocity if who.controller != null else Vector3.ZERO
-	var _body := ragdolls.spawn(who.figure, who.death if who.death != null else DotPlayerDeath.new(), velocity)
+	var _body := ragdolls.spawn(who.figure, who.death if who.death != null else GSPlayerDeath.new(), velocity)
 
 # --- Offline
 
@@ -123,7 +123,7 @@ func _start_offline() -> void:
 	# A driver and a runner, because a round needs both sides and there is one person here. What the
 	# bot is for is having a bus on the floor to run away from, which is the thing worth looking at.
 	# Named from dot-bot's pool, as a server's are.
-	var roster := DotBotRoster.new()
+	var roster := GSBotRoster.new()
 	var taken: Array = ["You"]
 	for i in range(offline_bots):
 		var bot_name := roster.next_name(taken)
@@ -135,13 +135,13 @@ func _start_offline() -> void:
 
 	# How well they drive: `bot_difficulty` and every `bot_*` at the console, or
 	# `-- --bot_difficulty <preset>` at launch; the settings a server binds as cvars.
-	var skill := DotBotSettings.of(game)
+	var skill := GSBotSettings.of(game)
 	var args := OS.get_cmdline_user_args()
 	var at := args.find("--bot_difficulty")
 	if at >= 0 and at + 1 < args.size():
-		DotLog.result(CHANNEL, "bot difficulty from the command line", skill.set_difficulty(args[at + 1]))
+		GSLog.result(CHANNEL, "bot difficulty from the command line", skill.set_difficulty(args[at + 1]))
 	if console != null:
-		var local := DotConsoleLocal.new()
+		var local := GSConsoleLocal.new()
 		console.add_source(local)
 		var _bound := skill.bind_console(local)
 
@@ -162,11 +162,11 @@ func _start_offline() -> void:
 
 	# No bridge: the box still opens and still echoes, because a chat box that does nothing
 	# at all reads as broken rather than as absent.
-	DotLog.result(CHANNEL, "chat, offline", chat.attach(null))
+	GSLog.result(CHANNEL, "chat, offline", chat.attach(null))
 
 # --- Connected
 
-func _build_netcode() -> DotResult:
+func _build_netcode() -> GSResult:
 	# The server's sv_ragdoll* set: this end draws the bodies.
 	if link != null:
 		var _bodies := game.ragdoll_rules.follow_cvars(link)
@@ -180,7 +180,7 @@ func _build_netcode() -> DotResult:
 		if game.spectate != null and game.spectate.manager != null:
 			var _roam := game.spectate.manager.rules.follow_cvars(link)
 
-	net = DotNetManager.new()
+	net = GSNetManager.new()
 	net.name = "Net"
 	net.is_server = false
 	net.local_peer_id = multiplayer.get_unique_id() if multiplayer != null else 2
@@ -188,7 +188,7 @@ func _build_netcode() -> DotResult:
 	# Empty: a stale `user://dot_net.json` would silently change the tick rate.
 	net.config_file = ""
 
-	var config := DotNetConfig.new()
+	var config := GSNetConfig.new()
 	config.tick_rate = game.tick_rate
 	config.snapshot_rate = BfhGame.NET_SNAPSHOT_RATE
 	config.enable_prediction = true
@@ -218,9 +218,9 @@ func _build_netcode() -> DotResult:
 	# Under the link, and NAMED the same as the server's — the name is the routing.
 	bridge.open_link(link)
 	# Before the seal and in the server's order (after the bridge), or the actions stay local.
-	DotLog.result(CHANNEL, "avatar action message", DotGameAvatarActionMessage.register(net))
+	GSLog.result(CHANNEL, "avatar action message", GSGameAvatarActionMessage.register(net))
 	# The server's order again (after the avatar frame): the remote workbench's frame.
-	workbench_remote = DotGameWorkbenchRemoteClient.attach(net)
+	workbench_remote = GSGameWorkbenchRemoteClient.attach(net)
 	net.messages.seal()
 
 	bridge.hello_received.connect(_on_hello)
@@ -242,7 +242,7 @@ func _build_netcode() -> DotResult:
 		bridge.rtt_source = func() -> float:
 			return float(maxi(0, int(link.call("ping_ms"))))
 
-	DotLog.result(CHANNEL, "chat and voice", chat.attach(bridge))
+	GSLog.result(CHANNEL, "chat and voice", chat.attach(bridge))
 
 	# READY, and not one byte before the scene exists. dot-server's signon finishes and
 	# THEN the client builds this; anything the server sent in between landed on a node
@@ -292,7 +292,7 @@ func _adopt(candidate: BfhPlayer) -> void:
 	if platform != null:
 		_suspend_input(platform.is_input_blocked())
 
-	if DotPlatform.has_touch() and player.sampler != null and not player.sampler is DotFpsTouchSampler:
+	if GSPlatform.has_touch() and player.sampler != null and not player.sampler is GSFpsTouchSampler:
 		player.sampler = BfhTouch.make_sampler(player.sampler.tunables)
 		_suspend_input(platform.is_input_blocked() if platform != null else false)
 
@@ -319,7 +319,7 @@ func _on_blast(at: Vector3, radius: float) -> void:
 	# The picture is [BfhFx]'s, from the world's `barrel_exploded` that the bridge re-emits, so the
 	# same path draws it offline. The log line is what tells somebody reading a client's records that
 	# the barrel they saw was one the server decided about, rather than one their own copy imagined.
-	DotLog.debug(CHANNEL, "a barrel went off", {"at": str(at), "radius": radius})
+	GSLog.debug(CHANNEL, "a barrel went off", {"at": str(at), "radius": radius})
 
 # --- The frame
 
@@ -336,7 +336,7 @@ func _build_camera() -> void:
 
 	# Other runners and drivers: hidden when one is at the lens, faded in third person when
 	# one stands between the camera and you.
-	_fade = DotCameraFade.new()
+	_fade = GSCameraFade.new()
 	_fade.name = "Fade"
 	_fade.bodies_fn = _other_players
 	camera.add_child(_fade)
@@ -353,7 +353,7 @@ func _build_hud() -> void:
 
 ## The phone's buttons over the HUD, on a touch device only.
 func _build_touch() -> void:
-	if not DotPlatform.has_touch() or hud == null:
+	if not GSPlatform.has_touch() or hud == null:
 		return
 	_touch = BfhTouch.new()
 	# BfhHud is a CanvasLayer; the buttons need a Control to anchor to.
@@ -373,7 +373,7 @@ func _build_scoreboard() -> void:
 	scoreboard.name = "Scoreboard"
 	add_child(scoreboard)
 	# The platform feeds the menu's board and holds it on the Tab row; this draws on it.
-	var board: DotMenuScoreboard = platform.board as DotMenuScoreboard
+	var board: GSMenuScoreboard = platform.board as GSMenuScoreboard
 	scoreboard.bind(game, func() -> BfhPlayer: return player, board, link if not _offline else null)
 
 ## The player's settings, applied to everything that reads them. See [BfhSettings].
@@ -388,9 +388,9 @@ func _build_settings() -> void:
 	platform.board_snapshot_fn = func() -> Dictionary:
 		return scoreboard.snapshot() if scoreboard != null else {}
 	_wire_maps()
-	DotLog.result(CHANNEL, "the platform", platform.setup())
+	GSLog.result(CHANNEL, "the platform", platform.setup())
 	# The starter set: the equipped list needs a credential the client does not hold (the server reads it).
-	DotLog.result(CHANNEL, "avatar actions", platform.add_avatar_actions(net, _avatar_figure))
+	GSLog.result(CHANNEL, "avatar actions", platform.add_avatar_actions(net, _avatar_figure))
 	_add_noblock_and_workbench()
 	# Walking is off while the cover is up, a menu is open or a line is typed: the sampler polls the
 	# keyboard, and a player dragging a volume slider with the arrow keys would otherwise walk into the
@@ -399,7 +399,7 @@ func _build_settings() -> void:
 	_suspend_input(platform.is_input_blocked())
 
 	settings = platform.settings as BfhSettings
-	console = platform.console as DotConsoleController
+	console = platform.console as GSConsoleController
 	if settings == null:
 		return
 
@@ -427,9 +427,9 @@ func _build_settings() -> void:
 ## (dot-vote's map menu, wired in [BfhModule]).
 func _wire_maps() -> void:
 	if game != null:
-		game.workshop_index = DotContentIndex.shared()
+		game.workshop_index = GSContentIndex.shared()
 	platform.maps_rows_fn = func() -> Array: return game.bowl_rows(game.workshop_index) if game != null else []
-	platform.maps_change_fn = func(id: StringName) -> DotResult: return game.change_bowl_now(id)
+	platform.maps_change_fn = func(id: StringName) -> GSResult: return game.change_bowl_now(id)
 	platform.maps_title = "Change bowl"
 	platform.maps_noun = "bowls"
 
@@ -445,10 +445,10 @@ func _build_audio() -> void:
 	audio.name = "Audio"
 	add_child(audio)
 
-	var built: DotResult = audio.setup(game, func() -> BfhPlayer: return player)
+	var built: GSResult = audio.setup(game, func() -> BfhPlayer: return player)
 
 	if not built.ok:
-		DotLog.warn(CHANNEL, "no audio", {"why": built.error.message})
+		GSLog.warn(CHANNEL, "no audio", {"why": built.error.message})
 		remove_child(audio)
 		audio.free()
 		audio = null
@@ -459,10 +459,10 @@ func _build_fx() -> void:
 	fx.name = "Fx"
 	add_child(fx)
 
-	var built: DotResult = fx.setup(game)
+	var built: GSResult = fx.setup(game)
 
 	if not built.ok:
-		DotLog.warn(CHANNEL, "no effects", {"why": built.error.message})
+		GSLog.warn(CHANNEL, "no effects", {"why": built.error.message})
 		remove_child(fx)
 		fx.free()
 		fx = null
@@ -479,21 +479,21 @@ func _build_chat() -> void:
 func _start_remote_workbench() -> void:
 	if workbench_remote == null:
 		return
-	var wb := DotGameWorkbench.new()
+	var wb := GSGameWorkbench.new()
 	wb.name = "Workbench"
 	wb.remote_client = workbench_remote
 	wb.remote_fn = func() -> bool: return true
 	wb.config = {"enabled": false}
 	if game.config_binder != null:
-		for set: DotProfileSet in game.config_binder.profile_sets():
+		for set: GSProfileSet in game.config_binder.profile_sets():
 			wb.add_set(set, "Game settings: %s" % set.rel_path.trim_prefix("config_"))
 	var _fl := game.flashlight_conf()
 	if game.flashlight_binder != null:
-		for set: DotProfileSet in game.flashlight_binder.profile_sets():
+		for set: GSProfileSet in game.flashlight_binder.profile_sets():
 			wb.add_set(set, "Flashlight")
 	add_child(wb)
 	var started := wb.start(game.ensure_runtime())
-	DotLog.result(CHANNEL, "the remote workbench", started)
+	GSLog.result(CHANNEL, "the remote workbench", started)
 	if not started.ok:
 		wb.queue_free()
 		return
@@ -503,28 +503,28 @@ func _start_remote_workbench() -> void:
 ## dot-team's block rules followed from the server, or, solo, the F9 tuning panel over this process's own config.
 func _add_noblock_and_workbench() -> void:
 	if link != null:
-		DotLog.result(CHANNEL, "noblock", platform.add_noblock(game, Callable(game, "team_of_side")))
+		GSLog.result(CHANNEL, "noblock", platform.add_noblock(game, Callable(game, "team_of_side")))
 		return
-	var wb := DotGameWorkbench.new()
+	var wb := GSGameWorkbench.new()
 	wb.name = "Workbench"
 	wb.lazy_panel = true
 	wb.listen_host_fn = func() -> bool: return true
 	workbench = wb
 	wb.config = {"enabled": false}
 	if game.config_binder != null:
-		for set: DotProfileSet in game.config_binder.profile_sets():
+		for set: GSProfileSet in game.config_binder.profile_sets():
 			wb.add_set(set, "Game settings: %s" % set.rel_path.trim_prefix("config_"))
 	var _fl := game.flashlight_conf()
 	if game.flashlight_binder != null:
-		for set: DotProfileSet in game.flashlight_binder.profile_sets():
+		for set: GSProfileSet in game.flashlight_binder.profile_sets():
 			wb.add_set(set, "Flashlight")
 	add_child(wb)
 	var started := wb.start()
-	DotLog.result(CHANNEL, "the workbench", started)
+	GSLog.result(CHANNEL, "the workbench", started)
 	if started.ok and game.config_binder != null and wb.api != null:
-		game.config_binder.attach(wb.api.runtime as DotProfileRuntime)
+		game.config_binder.attach(wb.api.runtime as GSProfileRuntime)
 	if started.ok and game.flashlight_binder != null and wb.api != null:
-		game.flashlight_binder.attach(wb.api.runtime as DotProfileRuntime)
+		game.flashlight_binder.attach(wb.api.runtime as GSProfileRuntime)
 	platform.add_workbench(wb)
 
 ## Whether the pointer is the game's: captured. A menu frees it and the platform takes it back.

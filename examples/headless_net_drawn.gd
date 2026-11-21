@@ -17,7 +17,7 @@ func _test_who_somebody_is_crosses() -> void:
 	# bridge hands out a bot's session as it seats it, so the face answers any session.
 	var chosen := [-1]
 	var face_of := {}
-	_server_bridge.avatar_fn = func(session_id: int) -> DotAvatar:
+	_server_bridge.avatar_fn = func(session_id: int) -> GSAvatar:
 		var key := BfhNetBridge.player_key(session_id)
 		chosen[0] = (BfhAvatars.stock_index(key) + 3) % BfhAvatars.SKINS.size()
 		var face := BfhAvatars.stock_avatar(key)
@@ -41,7 +41,7 @@ func _test_who_somebody_is_crosses() -> void:
 	var key := seated.player_id
 	var session := BfhNetBridge.session_of(key)
 	_check(
-		theirs.avatar != null and theirs.avatar.digest() == (face_of[key] as DotAvatar).digest(),
+		theirs.avatar != null and theirs.avatar.digest() == (face_of[key] as GSAvatar).digest(),
 		"a runner seated with a face arrives wearing it"
 	)
 	_check(
@@ -72,7 +72,7 @@ func _test_who_somebody_is_crosses() -> void:
 		theirs.figure.atlas.get_file() if theirs.figure != null else "-"
 	)
 
-	var foreign := DotAvatar.make(&"some_other_game")
+	var foreign := GSAvatar.make(&"some_other_game")
 	foreign.set_part(BfhAvatars.SLOT_SKIN, BfhAvatars.SKINS[later])
 	_server_bridge.refresh_player(session, "", foreign)
 	await _steps(4)
@@ -253,7 +253,7 @@ func _most_open_floor() -> Dictionary:
 ## Runs [param other] forward for 60 ticks, drawing frames between them, and records both tracks.
 func _run_the_other_runner(other: BfhPlayer, mine: BfhPlayer, theirs: BfhPlayer,
 		server_track: Array[Vector3], drawn: Array[Vector3]) -> void:
-	var run := DotFpsCommand.new()
+	var run := GSFpsCommand.new()
 	run.move = Vector2(0.0, 1.0)
 	run.yaw = 90.0
 
@@ -412,26 +412,26 @@ func _workbench_rig(flags: Dictionary, state: Dictionary) -> Dictionary:
 	var cbinder := BfhConfig.make_binder(cconfig)
 	var _l1 := sbinder.load_layers()
 	var _l2 := cbinder.load_layers()
-	var set: DotProfileSet = null
-	for candidate: DotProfileSet in sbinder.profile_sets():
+	var set: GSProfileSet = null
+	for candidate: GSProfileSet in sbinder.profile_sets():
 		if candidate.rel_path.ends_with("round"):
 			set = candidate
-	var cset: DotProfileSet = null
-	for candidate: DotProfileSet in cbinder.profile_sets():
+	var cset: GSProfileSet = null
+	for candidate: GSProfileSet in cbinder.profile_sets():
 		if candidate.rel_path.ends_with("round"):
 			cset = candidate
-	var swb := DotGameWorkbench.new()
+	var swb := GSGameWorkbench.new()
 	swb.dedicated = true
 	swb.config = {"enabled": false}
 	swb.add_set(set, "Game settings")
 	add_child(swb)
 	var started := swb.start()
 	sbinder.attach(swb.api.runtime)
-	var made := DotGameWorkbenchRemote.serve(snet)
-	var slink := DotNetProfileLink.attach(snet, swb.api.runtime as DotProfileRuntime)
-	var cremote := DotGameWorkbenchRemoteClient.attach(cnet)
-	var crt := DotProfileRuntime.new()
-	var clink := DotNetProfileLink.attach(cnet, crt)
+	var made := GSGameWorkbenchRemote.serve(snet)
+	var slink := GSNetProfileLink.attach(snet, swb.api.runtime as GSProfileRuntime)
+	var cremote := GSGameWorkbenchRemoteClient.attach(cnet)
+	var crt := GSProfileRuntime.new()
+	var clink := GSNetProfileLink.attach(cnet, crt)
 	snet.messages.seal()
 	cnet.messages.seal()
 	var remote := swb.serve_remote(snet)
@@ -447,8 +447,8 @@ func _workbench_rig(flags: Dictionary, state: Dictionary) -> Dictionary:
 	remote.connected_fn = func(_p: int) -> bool: return true
 	remote.permit_uid_fn = func(uid: String, flag: String) -> bool: return (flags.get(uid, []) as Array).has(flag)
 	remote.now_fn = func() -> int: return state["now"]
-	remote.limiter = DotRateLimiter.new(1000.0, 1000.0)
-	var cwb := DotGameWorkbench.new()
+	remote.limiter = GSRateLimiter.new(1000.0, 1000.0)
+	var cwb := GSGameWorkbench.new()
 	cwb.panel_mode = 2
 	cwb.config = {"enabled": false}
 	cwb.remote_client = cremote
@@ -465,7 +465,7 @@ func _workbench_rig(flags: Dictionary, state: Dictionary) -> Dictionary:
 ## panel and an edit that applies and replicates; a guest, a non-admin, a revoked admin and the cvar off are refused.
 func _test_the_remote_workbench() -> void:
 	_section("[a flagged admin edits the server's profiles, and nobody else can]")
-	if not DotGameWorkbench.available():
+	if not GSGameWorkbench.available():
 		print("  dot-workbench is not linked: skipped")
 		_passed += 16
 		_done()
@@ -473,21 +473,21 @@ func _test_the_remote_workbench() -> void:
 	var flags := {"boss": ["cvar", "root"], "plain": []}
 	var state := {"on": false, "uid": "", "now": 100000}
 	var rig := _workbench_rig(flags, state)
-	var snet: DotNetManager = rig["snet"]
-	var cnet: DotNetManager = rig["cnet"]
+	var snet: GSNetManager = rig["snet"]
+	var cnet: GSNetManager = rig["cnet"]
 	var sconfig: BfhConfig = rig["sconfig"]
-	var sbinder: DotGameConfigBinder = rig["sbinder"]
-	var set: DotProfileSet = rig["set"]
-	var swb: DotGameWorkbench = rig["swb"]
-	var cwb: DotGameWorkbench = rig["cwb"]
-	var slink: DotNetProfileLink = rig["slink"]
-	var clink: DotNetProfileLink = rig["clink"]
-	var cremote: DotGameWorkbenchRemoteClient = rig["cremote"]
-	var crt: DotProfileRuntime = rig["crt"]
-	var remote: DotGameWorkbenchRemote = rig["remote"]
+	var sbinder: GSGameConfigBinder = rig["sbinder"]
+	var set: GSProfileSet = rig["set"]
+	var swb: GSGameWorkbench = rig["swb"]
+	var cwb: GSGameWorkbench = rig["cwb"]
+	var slink: GSNetProfileLink = rig["slink"]
+	var clink: GSNetProfileLink = rig["clink"]
+	var cremote: GSGameWorkbenchRemoteClient = rig["cremote"]
+	var crt: GSProfileRuntime = rig["crt"]
+	var remote: GSGameWorkbenchRemote = rig["remote"]
 	var kind: String = set.rel_path
 	var edit := {"op": "set", "kind": kind, "id": sbinder.profile_id, "key": "round_seconds", "value": 240.0}
-	var srt := swb.api.runtime as DotProfileRuntime
+	var srt := swb.api.runtime as GSProfileRuntime
 
 	state["uid"] = "boss"
 	cremote.ask()
@@ -499,7 +499,7 @@ func _test_the_remote_workbench() -> void:
 	cremote.ask()
 	_check(cremote.allowed and cremote.flags.has("cvar"), "with the cvar on an admin is told the flags it holds")
 	_check(cwb.overlay != null, "and gets the panel")
-	var applied: DotResult = cwb.api.handle(DotGameWorkbenchRemoteClient.ACTOR, edit)
+	var applied: GSResult = cwb.api.handle(GSGameWorkbenchRemoteClient.ACTOR, edit)
 	_check(applied.ok and sconfig.round_seconds == 240.0, "an edit from the panel reaches the server's live config", "" if applied.ok else applied.error.message)
 	_check(crt.revision(kind, sbinder.profile_id) > 0 and crt.revision(kind, sbinder.profile_id) == srt.revision(kind, sbinder.profile_id), "and its row replicated to the client")
 

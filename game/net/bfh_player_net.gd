@@ -1,4 +1,4 @@
-extends DotNetBehaviour
+extends GSNetBehaviour
 
 const BfhNetCommand := preload("bfh_net_command.gd")
 
@@ -43,7 +43,7 @@ var net_bus: int = 0
 
 # --- Where they look while they are out
 
-## `DotSpectatorView.Mode` of the view the server has them in; 0 when they are playing.
+## `GSSpectatorView.Mode` of the view the server has them in; 0 when they are playing.
 var net_watch: int = 0
 
 ## Who that view is on: the session id of the target, or of the killer a death camera looks
@@ -52,13 +52,13 @@ var net_watch_target: int = 0
 
 ## Retained, not cleared: a player whose packet was lost keeps moving in a straight line
 ## rather than stopping dead. The controller says the same of its own command.
-var last_move: DotFpsCommand = DotFpsCommand.new()
+var last_move: GSFpsCommand = GSFpsCommand.new()
 var last_state_tick: int = -1
 
 
 func _register_net_vars() -> void:
-	for spec in DotFpsNetSync.state_specs():
-		var declaration := replicate(spec["property"], DotNetVar.Type[spec["type"]])
+	for spec in GSFpsNetSync.state_specs():
+		var declaration := replicate(spec["property"], GSNetVar.Type[spec["type"]])
 		if int(spec["bits"]) > 0:
 			declaration.bits(int(spec["bits"]))
 		if bool(spec["interpolated"]):
@@ -67,29 +67,29 @@ func _register_net_vars() -> void:
 			declaration.range_of(0.0, 1.0)
 
 	# Owner-only jump timers, appended after the movement specs (declaration order is wire order).
-	# Guarded: a shell without API 10 has no DotFpsNetSync.rewind_specs().
-	if DotAddonApi.build_level("dot_player_controller") >= 10:
-		for spec in DotFpsNetSync.rewind_specs():
-			var _timers := replicate(spec["property"], DotNetVar.Type[spec["type"]]).bits(int(spec["bits"])).to_owner_only()
+	# Guarded: a shell without API 10 has no GSFpsNetSync.rewind_specs().
+	if GSAddonApi.build_level("dot_player_controller") >= 10:
+		for spec in GSFpsNetSync.rewind_specs():
+			var _timers := replicate(spec["property"], GSNetVar.Type[spec["type"]]).bits(int(spec["bits"])).to_owner_only()
 
 	# Server-driven: only the game writes these, never the owner's prediction, so a change is not a misprediction.
-	replicate(&"net_health", DotNetVar.Type.FLOAT_RANGE).range_of(0.0, 1000.0).bits(12).server_driven()
-	replicate(&"net_riding", DotNetVar.Type.BOOL).server_driven()
+	replicate(&"net_health", GSNetVar.Type.FLOAT_RANGE).range_of(0.0, 1000.0).bits(12).server_driven()
+	replicate(&"net_riding", GSNetVar.Type.BOOL).server_driven()
 
 	# [b]Per-player state rather than an event, and that is what makes both of these survive what an
 	# event does not.[/b] A client that joins after the admin typed `beacon`, a snapshot lost on the
 	# way, a round re-laying the bowl: each is a baseline the next snapshot corrects, where an event.
-	replicate(&"net_blind", DotNetVar.Type.BOOL).to_owner_only().server_driven()
-	replicate(&"net_beacon", DotNetVar.Type.BOOL).server_driven()
-	replicate(&"net_flashlight", DotNetVar.Type.BOOL).server_driven()
-	replicate(&"net_bus", DotNetVar.Type.VARINT).server_driven()
+	replicate(&"net_blind", GSNetVar.Type.BOOL).to_owner_only().server_driven()
+	replicate(&"net_beacon", GSNetVar.Type.BOOL).server_driven()
+	replicate(&"net_flashlight", GSNetVar.Type.BOOL).server_driven()
+	replicate(&"net_bus", GSNetVar.Type.VARINT).server_driven()
 
 	# Seven modes fit in three bits. The owner's alone: see [member net_watch].
-	replicate(&"net_watch", DotNetVar.Type.UINT).bits(3).to_owner_only().server_driven()
-	replicate(&"net_watch_target", DotNetVar.Type.VARINT).to_owner_only().server_driven()
+	replicate(&"net_watch", GSNetVar.Type.UINT).bits(3).to_owner_only().server_driven()
+	replicate(&"net_watch_target", GSNetVar.Type.VARINT).to_owner_only().server_driven()
 
 
-func _net_apply_input(input: DotNetInput, _tick: int) -> void:
+func _net_apply_input(input: GSNetInput, _tick: int) -> void:
 	var command := input as BfhNetCommand
 	if command != null:
 		last_move = command.move
@@ -122,7 +122,7 @@ func pull() -> void:
 	if player == null:
 		return
 
-	DotFpsNetSync.pull(player.controller.state, self)
+	GSFpsNetSync.pull(player.controller.state, self)
 
 	# Server-owned fields: a predicting client writing them from its own copy would disagree with the next snapshot and replay.
 	if identity != null and not identity.is_authoritative:
@@ -160,7 +160,7 @@ func _net_state_applied(tick: int) -> void:
 		return
 
 	last_state_tick = tick
-	DotFpsNetSync.push(self, player.controller.state)
+	GSFpsNetSync.push(self, player.controller.state)
 	_adopt()
 
 	# NOT the node, on a predicted entity: `receive_snapshot` calls this BEFORE the predictor
@@ -175,7 +175,7 @@ func _net_interpolated(_tick: int) -> void:
 	if player == null:
 		return
 
-	DotFpsNetSync.push(self, player.controller.state)
+	GSFpsNetSync.push(self, player.controller.state)
 	player.global_position = player.controller.state.position
 
 

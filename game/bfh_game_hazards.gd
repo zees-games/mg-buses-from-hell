@@ -23,10 +23,10 @@ signal run_over(player_id: StringName, by: StringName, lethal: bool)
 ## A bus drove into a prop, at speed or stuck on it. [param by] is its driver, or empty.
 signal bus_struck(instance_id: int, by: StringName)
 
-var props: DotPropSpawner = null
-var prop_damage: DotPropDamage = null
+var props: GSPropSpawner = null
+var prop_damage: GSPropDamage = null
 
-var combat: DotCombatManager = null
+var combat: GSCombatManager = null
 
 ## player id -> team, for the sides that outlive a round.
 var sides: Dictionary = {}
@@ -121,7 +121,7 @@ func _bus_hit(player: BfhPlayer, by: StringName, closing: float, offset: Vector3
 	if players.has(by):
 		attacker = (players[by] as BfhPlayer).entity_id
 
-	var damage := DotDamage.make(attacker, player.entity_id, amount, null)
+	var damage := GSDamage.make(attacker, player.entity_id, amount, null)
 	damage.point = player.global_position
 	damage.direction = offset.normalized()
 	# What killed them, for how the body falls (`decide_death`): a bus throws it.
@@ -140,7 +140,7 @@ func _bus_hit(player: BfhPlayer, by: StringName, closing: float, offset: Vector3
 	# game that would look broken from every angle.
 	player.controller.state.velocity += offset.normalized() * closing * 0.6
 
-func _break_props_under(bus: DotVehicleInstance, speed: float, by: StringName) -> void:
+func _break_props_under(bus: GSVehicleInstance, speed: float, by: StringName) -> void:
 	if speed < 4.0 or prop_damage == null:
 		return
 
@@ -177,7 +177,7 @@ var _bus_hopped: Dictionary = {}
 var _bus_pinned: Dictionary = {}
 
 ## Breaks whatever lies under the bus's footprint.
-func _clear_props_under(bus: DotVehicleInstance, by: StringName) -> void:
+func _clear_props_under(bus: GSVehicleInstance, by: StringName) -> void:
 	if prop_damage == null:
 		return
 	var into_bus := bus.body().global_transform.affine_inverse()
@@ -202,7 +202,7 @@ func block_positions() -> Array[Vector3]:
 	return out
 
 ## A bus that is throttling and going nowhere, and what to do about it.
-func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
+func _unstick(bus: GSVehicleInstance, by: StringName, delta: float) -> void:
 	var asking := bus.command != null and absf(bus.command.throttle) > 0.3
 	var moving := bus.speed() > 1.0
 
@@ -250,7 +250,7 @@ func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
 			hop_body.linear_velocity = Vector3.ZERO
 			hop_body.angular_velocity = Vector3.ZERO
 			hop_body.global_position += behind.normalized() * config.bus_stuck_hop_metres + Vector3.UP * 0.4
-			DotLog.debug(CHANNEL, "a stuck bus hopped back", {"stuck_for": held})
+			GSLog.debug(CHANNEL, "a stuck bus hopped back", {"stuck_for": held})
 			return
 
 	if held < config.bus_stuck_reset_seconds:
@@ -270,7 +270,7 @@ func _unstick(bus: DotVehicleInstance, by: StringName, delta: float) -> void:
 
 	_bus_stuck.erase(bus.instance_id)
 	_bus_pinned.erase(bus.instance_id)
-	DotLog.info(CHANNEL, "a bus was put back on its start line", {"stuck_for": held})
+	GSLog.info(CHANNEL, "a bus was put back on its start line", {"stuck_for": held})
 
 ## Seconds a bus may lie on its roof before it is rolled back over.
 const INVERTED_RIGHT_SEC := 2.0
@@ -279,7 +279,7 @@ const INVERTED_RIGHT_SEC := 2.0
 var _bus_inverted: Dictionary = {}
 
 ## A bus that has rolled over, and why it is not left there.
-func _upright(bus: DotVehicleInstance, delta: float) -> void:
+func _upright(bus: GSVehicleInstance, delta: float) -> void:
 	if not bus.is_inverted():
 		_bus_inverted.erase(bus.instance_id)
 		return
@@ -312,7 +312,7 @@ func _upright(bus: DotVehicleInstance, delta: float) -> void:
 	)
 
 	_bus_inverted.erase(bus.instance_id)
-	DotLog.info(CHANNEL, "a bus was rolled back onto its wheels", {"upside_down_for": held})
+	GSLog.info(CHANNEL, "a bus was rolled back onto its wheels", {"upside_down_for": held})
 
 ## Who is driving the bus with this instance id, or an empty name.
 func driver_of(instance_id: int) -> StringName:
@@ -344,7 +344,7 @@ func _on_prop_exploded(
 			continue
 
 		var falloff := 1.0 - (distance / radius)
-		var damage := DotDamage.make(
+		var damage := GSDamage.make(
 			attacker, player.entity_id, damage_amount * falloff, null
 		)
 		damage.point = player.global_position
@@ -365,9 +365,9 @@ func _on_prop_exploded(
 		# [b]And off the ground, or none of that survives the tick.[/b] A velocity added to a runner the
 		# motor still has as GROUND is snapped back onto the sand before it moves them — which is what
 		# this did for nine days, and a barrel lifted people 7 cm.
-		state.mode = DotFpsState.Mode.AIR
+		state.mode = GSFpsState.Mode.AIR
 		state.time_since_grounded = 1000.0
 
-## What a lethal hit was, on [member DotDamage.context] as `why`: run over, or thrown by a blast.
+## What a lethal hit was, on [member GSDamage.context] as `why`: run over, or thrown by a blast.
 const KILLED_BY_BUS := &"bus"
 const KILLED_BY_BARREL := &"barrel"

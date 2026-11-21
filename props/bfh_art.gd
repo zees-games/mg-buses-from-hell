@@ -34,7 +34,7 @@ static func paint(root: Node, atlas_path: String) -> int:
 				atlas = load(BfhPaths.rebase(atlas_path)) as Texture2D
 
 				if atlas == null:
-					DotLog.warn(CHANNEL, "the atlas is missing from this build", {
+					GSLog.warn(CHANNEL, "the atlas is missing from this build", {
 						"path": BfhPaths.rebase(atlas_path),
 					})
 					return repaired

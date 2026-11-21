@@ -2,7 +2,7 @@ extends "dedicated_exit.gd"
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	GSLog.set_level(GSLog.Level.ERROR)
 	_run.call_deferred()
 
 
@@ -17,31 +17,31 @@ func _run() -> void:
 	# A member's site avatar, translated into this game's schema. The site's document is the
 	# Kenney skins filed as `top.skin-c` (the site's slot.option part id); without a translation every member is stock here.
 	var site_avatars = preload("res://game/bfh_avatars.gd")
-	var site_doc := DotAvatar.make(&"builtin")
+	var site_doc := GSAvatar.make(&"builtin")
 	site_doc.set_part(&"top", &"top.skin-c")
 	site_doc.set_part(&"face", &"face.skin-k")
-	var as_ours: DotAvatar = site_avatars.from_site(site_doc)
+	var as_ours: GSAvatar = site_avatars.from_site(site_doc)
 	_check(
 		as_ours != null and site_avatars.schema().validate(as_ours).ok and as_ours.part_in(&"skin") == &"skin_c",
 		"a member's site avatar becomes this game's, and its schema accepts it",
 		str(as_ours.to_dict()) if as_ours != null else "null"
 	)
-	var unknown_skin := DotAvatar.make(&"builtin")
+	var unknown_skin := GSAvatar.make(&"builtin")
 	unknown_skin.set_part(&"top", &"top.skin-r")
 	unknown_skin.set_part(&"face", &"face.skin-r")
-	var not_site := DotAvatar.make(&"elsewhere")
+	var not_site := GSAvatar.make(&"elsewhere")
 	not_site.set_part(&"top", &"top.skin-c")
 	_check(
 		site_avatars.from_site(unknown_skin) == null and site_avatars.from_site(not_site) == null,
 		"a skin this game does not draw, or a document that is not the site's, is stock"
 	)
 
-	DotPaths.remove_tree(SERVER_DIR)
+	GSPaths.remove_tree(SERVER_DIR)
 	DirAccess.make_dir_recursive_absolute(SERVER_DIR)
 
 	await _boot()
 
-	if server != null and server.state == DotServer.State.RUNNING:
+	if server != null and server.state == GSServer.State.RUNNING:
 		await _test_the_module_loads()
 		_test_the_commands()
 		_test_the_tunables()
@@ -68,5 +68,5 @@ func _run() -> void:
 	var checks := CHECKS - (EXIT_PROBE_CHECKS if _is_exit_probe() else 0)
 
 	await _shut_down()
-	DotPaths.remove_tree(SERVER_DIR)
+	GSPaths.remove_tree(SERVER_DIR)
 	_report_sections(_completed, _completed, sections, checks)

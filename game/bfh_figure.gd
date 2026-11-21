@@ -31,12 +31,12 @@ var atlas: String = ""
 var from_art: bool = false
 
 ## The person, under this node.
-var person: DotHumanoidFigure = null
+var person: GSHumanoidFigure = null
 
 ## The hammer in the right hand, or null when the figure holds nothing (a driver on foot).
 var hammer: Node3D = null
 
-## The hammer's size in the hand mount, which is itself [member DotHumanoidFigure.held_scale]
+## The hammer's size in the hand mount, which is itself [member GSHumanoidFigure.held_scale]
 ## times life size: this brings the drawn hammer back to about life size.
 const HAMMER_SCALE := 0.6
 
@@ -46,13 +46,13 @@ var _holds_hammer: bool = false
 ## Builds the figure to stand [param height] metres tall, feet at this node's origin.
 func build(height: float, atlas_path: String) -> void:
 	atlas = atlas_path
-	var look := DotHumanoidLook.from_letter(atlas_path)
+	var look := GSHumanoidLook.from_letter(atlas_path)
 	if look == null:
-		look = DotHumanoidLook.stock(hash(atlas_path))
+		look = GSHumanoidLook.stock(hash(atlas_path))
 	if person != null:
 		remove_child(person)
 		person.queue_free()
-	person = DotHumanoidFigure.new()
+	person = GSHumanoidFigure.new()
 	person.name = "Person"
 	add_child(person)
 	person.build(look, height)
@@ -61,7 +61,7 @@ func build(height: float, atlas_path: String) -> void:
 	hammer = null
 	hold_hammer(_holds_hammer)
 	if not from_art:
-		DotLog.warn(CHANNEL, "the person's art did not load; a capsule stands in", {"atlas": atlas.get_file()})
+		GSLog.warn(CHANNEL, "the person's art did not load; a capsule stands in", {"atlas": atlas.get_file()})
 
 
 ## Puts the hammer in the right hand (and the arms in the melee hold), or takes it away. Kept over
@@ -74,9 +74,9 @@ func hold_hammer(on: bool) -> void:
 		if hammer != null and is_instance_valid(hammer):
 			hammer.queue_free()
 		hammer = null
-		person.set_hold(DotHumanoidFigure.Hold.NONE)
+		person.set_hold(GSHumanoidFigure.Hold.NONE)
 		return
-	person.set_hold(DotHumanoidFigure.Hold.MELEE)
+	person.set_hold(GSHumanoidFigure.Hold.MELEE)
 	if hammer != null and is_instance_valid(hammer):
 		return
 	var hand := person.attachment(&"right_hand")

@@ -13,7 +13,7 @@ var _server_pid := -1
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	GSLog.set_level(GSLog.Level.ERROR)
 	_run.call_deferred()
 
 
@@ -31,7 +31,7 @@ func _run() -> void:
 		"res://tools/cover_server.tscn", "--", "--port", str(PORT)]))
 	await get_tree().create_timer(10.0).timeout
 
-	var link := DotClientLink.new()
+	var link := GSClientLink.new()
 	link.name = "Server"
 	link.player_name = "Cover"
 	link.transport_preference = "udp"
@@ -48,7 +48,7 @@ func _run() -> void:
 	add_child(client)
 	for i in 3:
 		await get_tree().process_frame
-	var gate: DotLoadGate = client.get("gate")
+	var gate: GSLoadGate = client.get("gate")
 	print("render_cover: gate open at the first shot: ", gate.is_open() if gate != null else "no gate")
 	await _shot("cover_up")
 

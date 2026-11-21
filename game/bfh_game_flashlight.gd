@@ -5,17 +5,17 @@ extends "bfh_game_roster.gd"
 const BfhFlashlight := preload("bfh_flashlight.gd")
 
 ## The flashlight config and binder, made on first use so a suite that builds a game by hand still has one; the bowl the lights were last set for.
-var flashlight_config: DotFlashlightConfig = null
-var flashlight_binder: DotGameConfigBinder = null
+var flashlight_config: GSFlashlightConfig = null
+var flashlight_binder: GSGameConfigBinder = null
 var _flashlight_bowl: String = ""
 
 
 ## The flashlight config, made on first use.
-func flashlight_conf() -> DotFlashlightConfig:
+func flashlight_conf() -> GSFlashlightConfig:
 	if flashlight_config == null:
 		flashlight_config = BfhFlashlight.make_config()
 		flashlight_binder = BfhFlashlight.make_binder(flashlight_config)
-		DotLog.result("bfh.game", "flashlight config", flashlight_binder.load_layers())
+		GSLog.result("bfh.game", "flashlight config", flashlight_binder.load_layers())
 	return flashlight_config
 
 
@@ -46,7 +46,7 @@ func toggle_flashlight(id: StringName) -> bool:
 
 	if player == null or player.health == null or not player.health.alive \
 			or (spectate != null and spectate.is_spectating(id)) \
-			or not DotFlashlightRules.allowed_on(flashlight_conf(), String(bowl_id)):
+			or not GSFlashlightRules.allowed_on(flashlight_conf(), String(bowl_id)):
 		return false
 
 	player.flashlight = not player.flashlight

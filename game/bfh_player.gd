@@ -48,7 +48,7 @@ signal beacon_pulsed(at: Vector3)
 ## What this player looks like on foot, as a dot-user-avatar document; null is the stock person. Set
 ## on a server from the platform — see `bfh_module._avatar_for` — and carried to every client in
 ## JOIN.
-var avatar: DotAvatar = null
+var avatar: GSAvatar = null
 
 ## Whether a command is sampled from the input devices each tick.
 @export var samples_input: bool = false
@@ -60,18 +60,18 @@ var avatar: DotAvatar = null
 ## the game's numbers. Set by [BfhGame] before this enters the tree.
 var config: BfhConfig = null
 
-var controller: DotFpsController = null
-var sampler: DotFpsSampler = null
+var controller: GSFpsController = null
+var sampler: GSFpsSampler = null
 
 ## Set by the world each tick for somebody flying a free camera: their command is zeroed.
 var input_off := false
-var health: DotHealth = null
+var health: GSHealth = null
 
 ## The hammer, on a runner. Null on a driver: a bus is the weapon.
 var hammer: BfhHammer = null
 
 ## Set by the world so a player rides what they are standing on.
-var carry: DotPropCarry = null
+var carry: GSPropCarry = null
 
 ## Their mass, which is what a crate feels.
 var mass_kg: float = 80.0
@@ -97,7 +97,7 @@ var flashlight_ready: bool = false
 
 ## The marker [member beacon] draws, while it does. Client side; built and freed by
 ## [method present_beacon].
-var beacon_marker: DotFxBeacon = null
+var beacon_marker: GSFxBeacon = null
 
 ## Whether [member beacon_marker] is currently sized for a bus; see [method present_beacon].
 var _beacon_on_bus: bool = false
@@ -108,10 +108,10 @@ var figure: BfhFigure = null
 
 ## How this player's body falls on their death: the server's pick ([method BfhGame.decide_death]),
 ## carried on DEATH and set here before anybody hears of it. Null before a first death.
-var death: DotPlayerDeath = null
+var death: GSPlayerDeath = null
 
 ## This bot's driver, built on first use. Null for a person.
-var autopilot: DotVehicleDriver = null
+var autopilot: GSVehicleDriver = null
 
 ## The entity id dot-combat knows them by.
 var entity_id: int = 0
@@ -128,31 +128,31 @@ var tick_rate: int = 60:
 
 
 func _ready() -> void:
-	controller = DotFpsController.new()
+	controller = GSFpsController.new()
 	controller.name = "Controller"
 	controller.tick_rate = tick_rate
 
 	# EXTERNAL rather than LOCAL even offline: the game owns the tick, so the order "sample, move, then
 	# ride what you are standing on" is explicit here rather than happening inside somebody else's
 	# loop.
-	controller.drive = DotFpsController.Drive.EXTERNAL
+	controller.drive = GSFpsController.Drive.EXTERNAL
 	controller.tunables = tunables_for(config)
 	# Every player, both ends: an admin's noclip or freeze is a modifier whose index
 	# travels on the wire, and a client that had not registered it would read it as
-	# something else. See dot-player-controller's DotFpsAdminModifiers.
+	# something else. See dot-player-controller's GSFpsAdminModifiers.
 	controller.admin_abilities = true
 	add_child(controller)
 
 	controller.simulated.connect(_on_simulated)
 
 	if samples_input:
-		sampler = DotFpsSampler.new(controller.tunables)
-		DotFpsSampler.register_default_actions(sampler)
+		sampler = GSFpsSampler.new(controller.tunables)
+		GSFpsSampler.register_default_actions(sampler)
 
 
 ## How a runner moves.
-static func tunables_for(config: BfhConfig) -> DotFpsTunables:
-	var t := DotFpsTunables.with_profile("legacy")
+static func tunables_for(config: BfhConfig) -> GSFpsTunables:
+	var t := GSFpsTunables.with_profile("legacy")
 
 	# [b]No bunny hopping, and that is a design decision rather than an omission.[/b] Every other 3D
 	# game in this family turns auto-hop on because their genres are about carrying speed.
@@ -187,11 +187,11 @@ func simulate(tick: int, delta: float) -> void:
 
 	if sampler != null:
 		# Settling under the cover runs the body with its input off (falls, lands, no keys).
-		var gate := DotLoadGate.of(self) if is_inside_tree() else null
+		var gate := GSLoadGate.of(self) if is_inside_tree() else null
 		var open := gate == null or gate.is_open()
 		# A roamer's keys fly the camera; they must not also walk the body that fell.
 		controller.apply_command(
-			sampler.sample(delta) if open and not input_off else DotFpsCommand.new()
+			sampler.sample(delta) if open and not input_off else GSFpsCommand.new()
 		)
 
 	# Sampled above and then dropped: those same keys are what the bus is steered with, and the world
@@ -207,14 +207,14 @@ func simulate(tick: int, delta: float) -> void:
 
 
 ## After the move, which is the only place riding can go.
-func _on_simulated(_tick: int, state: DotFpsState) -> void:
+func _on_simulated(_tick: int, state: GSFpsState) -> void:
 	global_position = state.position
 
 	if carry == null:
 		return
 
 	# [b]`ground_id` is the whole mechanism, and it is deliberately not simulation state.[/b]
-	# `DotFpsState` documents it as a local physics handle whose value differs between machines — which
+	# `GSFpsState` documents it as a local physics handle whose value differs between machines — which
 	# is exactly right for this: riding is resolved per frame from a handle each machine has, rather.
 	var lift := carry.ride(state.ground_id, state.position, mass_kg, delta_for_tick())
 
@@ -254,7 +254,7 @@ func set_riding(value: bool) -> void:
 	controller.state.velocity = Vector3.ZERO
 
 	if not riding:
-		controller.state.mode = DotFpsState.Mode.AIR
+		controller.state.mode = GSFpsState.Mode.AIR
 		ridden = null
 
 
@@ -280,7 +280,7 @@ func present_beacon(delta: float, own_view: bool) -> void:
 	var on_bus := riding and ridden != null and is_instance_valid(ridden)
 
 	if beacon_marker == null:
-		beacon_marker = DotFxBeacon.new()
+		beacon_marker = GSFxBeacon.new()
 		beacon_marker.name = "Beacon"
 		beacon_marker.period = BEACON_PERIOD
 		beacon_marker.ripple_scale = 3.0

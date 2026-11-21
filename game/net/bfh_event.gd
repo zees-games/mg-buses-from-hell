@@ -1,4 +1,4 @@
-extends DotNetMessage
+extends GSNetMessage
 
 const BfhEvents := preload("bfh_events.gd")
 
@@ -15,9 +15,9 @@ var kind: int = 0
 var body: PackedByteArray = PackedByteArray()
 
 
-## Measured on 4.7.2 with a two-line reproduction: a script that [code]extends DotNetMessage[/code]
+## Measured on 4.7.2 with a two-line reproduction: a script that [code]extends GSNetMessage[/code]
 ## and preloads ITSELF is enough, whether the base is named or given by path; a self-preload over
-## [code]RefCounted[/code], [DotResult] or [DotNetBehaviour] is not, nor is a two-script cycle.
+## [code]RefCounted[/code], [GSResult] or [GSNetBehaviour] is not, nor is a two-script cycle.
 func _init(p_kind: int = 0, p_body: PackedByteArray = PackedByteArray()) -> void:
 	kind = p_kind
 	body = p_body
@@ -27,20 +27,20 @@ func _type_name() -> StringName:
 	return NAME
 
 
-func _write(writer: DotNetWriter) -> void:
+func _write(writer: GSNetWriter) -> void:
 	writer.write_uint(kind, KIND_BITS)
 	writer.write_bytes(body)
 
 
-func _read(reader: DotNetReader) -> void:
+func _read(reader: GSNetReader) -> void:
 	kind = reader.read_uint(KIND_BITS)
 	body = reader.read_bytes(MAX_BODY)
 
 
-func _validate() -> DotResult:
+func _validate() -> GSResult:
 	if kind < 0 or kind >= BfhEvents.Kind.size():
-		return DotResult.fail(DotError.CODE_INVALID, "Unknown event kind %d." % kind)
-	return DotResult.success(true)
+		return GSResult.fail(GSError.CODE_INVALID, "Unknown event kind %d." % kind)
+	return GSResult.success(true)
 
 
 ## Whether every [enum BfhEvents.Kind] fits in [constant KIND_BITS]. What a check reads; the
@@ -49,8 +49,8 @@ static func fits() -> bool:
 	return int(BfhEvents.Kind.values().max()) < (1 << KIND_BITS)
 
 
-func reader() -> DotNetReader:
-	return DotNetReader.new(body)
+func reader() -> GSNetReader:
+	return GSNetReader.new(body)
 
 
 func _to_string() -> String:

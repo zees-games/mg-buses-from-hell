@@ -26,7 +26,7 @@ func _test_a_rolled_bus() -> void:
 
 	_check(true, "there is a bus to roll")
 
-	var bus: DotVehicleInstance = buses[0]
+	var bus: GSVehicleInstance = buses[0]
 	var body := bus.body()
 	var where := body.global_position
 
@@ -59,9 +59,9 @@ func _test_help_and_menu() -> void:
 	print("H opens help, and the Escape menu has Help and Leave")
 	var settings := BfhSettings.new()
 	add_child(settings)
-	var built: DotResult = settings.setup(DotSettingsStoreMemory.new())
-	var keys: DotMenuBindings = settings.bindings
-	_check(built.ok and keys != null and keys.key_for(DotMenuBindings.HELP_ACTION) == "H", "help is on H")
+	var built: GSResult = settings.setup(GSSettingsStoreMemory.new())
+	var keys: GSMenuBindings = settings.bindings
+	_check(built.ok and keys != null and keys.key_for(GSMenuBindings.HELP_ACTION) == "H", "help is on H")
 	_check(keys.defaults_on("H").size() == 1, "and nothing else in the table defaults to H",
 		str(keys.defaults_on("H").map(func(r: Dictionary) -> String: return str(r["label"]))))
 	var h := InputEventKey.new()
@@ -88,7 +88,7 @@ func _test_wheel_jump() -> void:
 	print("the wheel jumps")
 	var settings := BfhSettings.new()
 	add_child(settings)
-	var _built: DotResult = settings.setup(DotSettingsStoreMemory.new())
+	var _built: GSResult = settings.setup(GSSettingsStoreMemory.new())
 	var labels: Array = []
 	for row in settings.bindings.rows:
 		if StringName(row["action"]) == &"dot_fps_jump":
@@ -99,8 +99,8 @@ func _test_wheel_jump() -> void:
 		if StringName(row["action"]) == &"dot_fps_jump" and (str(row["default"]) == "Wheel up" or str(row["default"]) == "Wheel down"):
 			found += 1
 	_check(found == 2, "the rows are Wheel up and Wheel down", str(found))
-	var sampler := DotFpsSampler.new(DotFpsTunables.with_profile("legacy"))
-	DotFpsSampler.register_default_actions(sampler)
+	var sampler := GSFpsSampler.new(GSFpsTunables.with_profile("legacy"))
+	GSFpsSampler.register_default_actions(sampler)
 	var up := InputEventMouseButton.new()
 	up.button_index = MOUSE_BUTTON_WHEEL_UP
 	up.pressed = true
@@ -110,8 +110,8 @@ func _test_wheel_jump() -> void:
 	rel.pressed = false
 	sampler.handle_event(rel)
 	var cmd := sampler.sample(0.016)
-	_check(cmd.is_pressed(DotFpsCommand.BUTTON_JUMP), "a wheel-up tick is a jump in the next command")
-	_check(not sampler.sample(0.016).is_pressed(DotFpsCommand.BUTTON_JUMP), "and only that one")
+	_check(cmd.is_pressed(GSFpsCommand.BUTTON_JUMP), "a wheel-up tick is a jump in the next command")
+	_check(not sampler.sample(0.016).is_pressed(GSFpsCommand.BUTTON_JUMP), "and only that one")
 	settings.queue_free()
 	await get_tree().process_frame
 	_done()
@@ -128,9 +128,9 @@ func _test_the_map_menu() -> void:
 	await _step(game, 4)
 	var settings := BfhSettings.new()
 	add_child(settings)
-	var _built: DotResult = settings.setup(DotSettingsStoreMemory.new())
-	var keys: DotMenuBindings = settings.bindings
-	_check(keys.key_for(DotMenuBindings.MAPS_ACTION) == "M" and keys.defaults_on("M").size() == 1,
+	var _built: GSResult = settings.setup(GSSettingsStoreMemory.new())
+	var keys: GSMenuBindings = settings.bindings
+	_check(keys.key_for(GSMenuBindings.MAPS_ACTION) == "M" and keys.defaults_on("M").size() == 1,
 		"the map menu is on M, and nothing else in the table defaults to M",
 		str(keys.defaults_on("M").map(func(r: Dictionary) -> String: return str(r["label"]))))
 	var rows: Array = game.bowl_rows()
@@ -144,7 +144,7 @@ func _test_the_map_menu() -> void:
 	_check(settings.menu.handle_event(m) and settings.menu.picker.is_open(), "M opens the picker")
 	var wanted: StringName = &""
 	var key := KEY_NONE
-	for row in range(1, DotMenuPicker.PAGE_SIZE + 1):
+	for row in range(1, GSMenuPicker.PAGE_SIZE + 1):
 		var it: Variant = settings.menu.picker.at_row(row)
 		if it is Dictionary and not bool((it as Dictionary)["current"]):
 			wanted = StringName(str((it as Dictionary)["id"]))
@@ -183,12 +183,12 @@ func _test_blind_and_beacon_drawn() -> void:
 
 	var settings := BfhSettings.new()
 	add_child(settings)
-	var _built: Variant = settings.setup(DotSettingsStoreMemory.new())
+	var _built: Variant = settings.setup(GSSettingsStoreMemory.new())
 	hud.follow_menu(settings.menu)
 	var plate := hud.vitals.colour(&"plate")
 	_check(plate.get_luminance() < 0.1 and plate.a >= 0.7, "the HUD is dark by default, in the menu's theme", str(plate))
 	var _t := settings.settings.set_value(&"ui_theme", &"contrast")
-	var contrast: DotMenuPalette = settings.menu.palette()
+	var contrast: GSMenuPalette = settings.menu.palette()
 	_check(contrast.id == &"contrast" and hud.vitals.colour(&"plate") == contrast.hud_plate and hud.vitals.colour(&"text") == contrast.hud_text,
 		"a theme picked in the menu reaches the pieces at once")
 	_check(hud.vitals.colour(&"highlight") == BfhArena.SAND and hud._cover.get_theme_color(&"font_color") == contrast.hud_text,
@@ -222,8 +222,8 @@ func _test_blind_and_beacon_drawn() -> void:
 	var left := maxf(game.config.round_seconds - game.round_elapsed, 0.0)
 	_check(
 		hud.vitals.number_text() == "18" and hud.vitals.is_low()
-		and hud.strip.clock == DotScoreStrip.clock_text(left),
-		"the HUD hands health and the clock to DotVitals and DotScoreStrip, red at a quarter",
+		and hud.strip.clock == GSScoreStrip.clock_text(left),
+		"the HUD hands health and the clock to GSVitals and GSScoreStrip, red at a quarter",
 		"%s low=%s, clock %s for %.1f s" % [hud.vitals.number_text(), str(hud.vitals.is_low()), hud.strip.clock, left]
 	)
 	runner.health.health = runner.health.max_health
@@ -241,9 +241,9 @@ func _test_blind_and_beacon_drawn() -> void:
 	chat_box.queue_free()
 
 	# A pack naming these classes needs dot-ui 4 in the derived requires.json; nothing may lower it.
-	var asks := DotAddonApi.derive()
+	var asks := GSAddonApi.derive()
 	_check(
-		int(asks.get("dot_ui", 0)) >= 4 and not FileAccess.file_exists("res://" + DotAddonApi.FLOOR_FILE),
+		int(asks.get("dot_ui", 0)) >= 4 and not FileAccess.file_exists("res://" + GSAddonApi.FLOOR_FILE),
 		"the pack asks a shell for dot-ui level 4, the glance pieces",
 		str(asks.get("dot_ui"))
 	)
@@ -383,7 +383,7 @@ func _test_world_builds() -> void:
 	# The seam dot-match is built around: it has no idea what "alive" means, so the
 	# elimination rule asks. Unset, the round runs to the clock instead of ending on
 	# the last kill — which is the kind of wrong that looks like a tuning problem.
-	var rules := game.match_node.rules as DotRulesElimination
+	var rules := game.match_node.rules as GSRulesElimination
 	_check(rules != null, "the round is decided by elimination")
 	_check(rules != null and rules.alive_fn.is_valid(),
 		"and the rule has been told how to ask who is alive")
@@ -415,9 +415,9 @@ func _test_every_bowl() -> void:
 		radii[snappedf(arena.radius, 0.5)] = true
 
 		# dot-core's audit: drawn geometry nothing collides with is walked through.
-		var res := DotCollisionAudit.audit(arena, true)
+		var res := GSCollisionAudit.audit(arena, true)
 		if res.ok:
-			var report: DotCollisionAudit = res.value
+			var report: GSCollisionAudit = res.value
 			print("  ..    %s collision audit: %d of %d" % [String(bowl["id"]), report.count(), report.examined])
 			if report.count() > 0:
 				unshaped.append("%s (%d)" % [bowl["id"], report.count()])
@@ -480,7 +480,7 @@ func _test_districts() -> void:
 			_check(shops >= 2, "and its north corners hold shops", "%d shops" % shops)
 
 		# Runner spawns: every scattered point is on the floor and outside every obstacle.
-		var stream := DotRandomStream.new(7, &"district")
+		var stream := GSRandomStream.new(7, &"district")
 		var bad := 0
 		var obstacles := arena.obstacles()
 		for _i in range(120):
@@ -582,7 +582,7 @@ func _pace_drive(bowl_id: StringName, seconds: float, extra: Callable = Callable
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--pace-seed="):
 			pace_seed = int(arg.trim_prefix("--pace-seed="))
-	var stream := DotRandomStream.new(pace_seed, &"pace")
+	var stream := GSRandomStream.new(pace_seed, &"pace")
 	var out := {"covered": 0.0, "seconds": 0.0, "resets": 0, "reaches": 0, "stalls": 0,
 		"longest_stall": 0.0, "stall_at": Vector3.ZERO}
 	var last := bus.position()
@@ -677,7 +677,7 @@ func _pack_drive(bowl_id: StringName, seconds: float) -> Dictionary:
 	var buses: Array = []
 	for id in game._bus_ids:
 		buses.append(game.vehicles.get_vehicle(id))
-	var stream := DotRandomStream.new(23, &"pack")
+	var stream := GSRandomStream.new(23, &"pack")
 	var n := buses.size()
 	var last: Array = []
 	var stalled: Array = []

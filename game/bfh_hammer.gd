@@ -51,9 +51,9 @@ func swing(
 	world: Node3D,
 	origin: Vector3,
 	direction: Vector3,
-	props: DotPropSpawner,
-	prop_damage: DotPropDamage,
-	carry: DotPropCarry,
+	props: GSPropSpawner,
+	prop_damage: GSPropDamage,
+	carry: GSPropCarry,
 	by: StringName,
 	mask: int,
 ) -> bool:
@@ -85,7 +85,7 @@ func swing(
 	# of the hammer's weight would push it. The world's box, by name; on a client it does
 	# nothing, the server's swing decides.
 	var box: Variant = world.get("toys")
-	if box is DotPropBodyBox and (box as DotPropBodyBox).shot(collider, at, direction, TOY_WHACK) >= 0:
+	if box is GSPropBodyBox and (box as GSPropBodyBox).shot(collider, at, direction, TOY_WHACK) >= 0:
 		return true
 
 	var prop := props.prop_for_node(collider) if props != null else null

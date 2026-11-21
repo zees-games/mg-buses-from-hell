@@ -1,4 +1,4 @@
-extends DotNetBehaviour
+extends GSNetBehaviour
 
 ## What a crate, a barrel or a block replicates: where it is and how it is turned.
 
@@ -9,10 +9,10 @@ var net_rotation: Quaternion = Quaternion.IDENTITY
 
 
 func _register_net_vars() -> void:
-	replicate(&"net_position", DotNetVar.Type.VECTOR3_POSITION).interpolated()
+	replicate(&"net_position", GSNetVar.Type.VECTOR3_POSITION).interpolated()
 	# Smallest-three, nine bits an element. A crate's orientation does not need more: the
 	# error is under a degree, and nobody aligns a crate to a degree.
-	replicate(&"net_rotation", DotNetVar.Type.QUATERNION).bits(9).interpolated()
+	replicate(&"net_rotation", GSNetVar.Type.QUATERNION).bits(9).interpolated()
 
 
 ## Authority only. The body is moved by the physics server; this copies where it ended up

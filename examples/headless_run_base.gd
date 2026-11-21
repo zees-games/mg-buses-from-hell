@@ -1,4 +1,4 @@
-extends DotGameCheckSuite
+extends GSGameCheckSuite
 
 const BfhArena := preload("../game/bfh_arena.gd")
 const BfhAudio := preload("../game/bfh_audio.gd")
@@ -94,7 +94,7 @@ func _world(configure: Callable = Callable()) -> BfhGame:
 	game.tick_rate = 60
 	# [b]Off, because this file builds a dozen worlds in one process.[/b] A registry name is global and
 	# the last one to register wins, so worlds that registered would take the name off each other — the
-	# same shape as the two `DotRandomManager`s that laid out two different bowls from one seed.
+	# same shape as the two `GSRandomManager`s that laid out two different bowls from one seed.
 	game.register_service = false
 	# A bus wedged against a drum is contact physics sensitive enough to read that history: the
 	# courtyard's east lane was "sent home at 6.22 s" after two earlier drives and "works free, reaches
@@ -140,7 +140,7 @@ func _sent_home(before: Vector3, after: Vector3) -> bool:
 
 ## Called once a tick by every chase this file drives, with a fresh [param what] (and [param first]
 ## true) on its first tick.
-func _watch_parked(bus: DotVehicleInstance, what: String, first: bool = false) -> void:
+func _watch_parked(bus: GSVehicleInstance, what: String, first: bool = false) -> void:
 	if first:
 		_parked_for = 0.0
 	var idle := bus.command == null or absf(bus.command.throttle) < 0.05
@@ -248,7 +248,7 @@ func _run_route(game: BfhGame, player: BfhPlayer, waypoints: Array, ticks: int) 
 		var flat := Vector3(wp.x - state.position.x, 0.0, wp.z - state.position.z)
 
 		if (
-			state.mode == DotFpsState.Mode.GROUND
+			state.mode == GSFpsState.Mode.GROUND
 			and state.position.y > wp.y - 0.3
 			and flat.length() < 0.5
 		):
@@ -258,17 +258,17 @@ func _run_route(game: BfhGame, player: BfhPlayer, waypoints: Array, ticks: int) 
 			index += 1
 			continue
 
-		var keys := DotFpsCommand.new()
+		var keys := GSFpsCommand.new()
 		keys.yaw = rad_to_deg(atan2(-flat.x, -flat.z)) if flat.length() > 0.05 else state.yaw
 		keys.move = Vector2(0.0, 1.0) if flat.length() > 0.2 else Vector2.ZERO
 		# The face is about half a metre short of the waypoint; 1.9 m from it is the
 		# distance a jump at running speed needs to clear a metre.
 		if (
-			state.mode == DotFpsState.Mode.GROUND
+			state.mode == GSFpsState.Mode.GROUND
 			and wp.y > state.position.y + 0.5
 			and flat.length() < 1.9
 		):
-			keys.set_button(DotFpsCommand.BUTTON_JUMP, true)
+			keys.set_button(GSFpsCommand.BUTTON_JUMP, true)
 
 		player.controller.apply_command(keys)
 		game.simulate(TICK)

@@ -12,8 +12,8 @@ const CAT_RUNNING := &"running"
 const CAT_THE_BOWL := &"the_bowl"
 
 
-static func catalogue() -> DotAchievementCatalogue:
-	var out: Array[DotAchievement] = []
+static func catalogue() -> GSAchievementCatalogue:
+	var out: Array[GSAchievement] = []
 
 	out.append(_sum(
 		&"bfh.road_rage", "Road Rage", BfhStats.RUNNERS_FLATTENED, 1,
@@ -60,7 +60,7 @@ static func catalogue() -> DotAchievementCatalogue:
 		"Put ten crates in front of a bus.", CAT_THE_BOWL, 25, &"bfh.traffic", 2
 	))
 
-	var catalogue := DotAchievementCatalogue.new()
+	var catalogue := GSAchievementCatalogue.new()
 	catalogue.achievements = out
 	return catalogue
 
@@ -75,13 +75,13 @@ static func _sum(
 	points: int,
 	series: StringName,
 	tier: int,
-) -> DotAchievement:
-	var rules: Array[DotAchievementRule] = [
-		DotAchievementRule.make(
-			stat, target, DotAchievementRule.Op.AT_LEAST, DotAchievementRule.Merge.SUM
+) -> GSAchievement:
+	var rules: Array[GSAchievementRule] = [
+		GSAchievementRule.make(
+			stat, target, GSAchievementRule.Op.AT_LEAST, GSAchievementRule.Merge.SUM
 		)
 	]
-	var out := DotAchievement.make(id, name, rules)
+	var out := GSAchievement.make(id, name, rules)
 	out.description = description
 	out.category = category
 	out.points = points

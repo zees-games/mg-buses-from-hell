@@ -1,4 +1,4 @@
-extends DotGameCheckSuite
+extends GSGameCheckSuite
 
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhMapConfig := preload("../game/bfh_map_config.gd")
@@ -21,7 +21,7 @@ class FakeWorld:
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	GSLog.set_level(GSLog.Level.ERROR)
 	_run.call_deferred()
 
 
@@ -31,17 +31,17 @@ func _run() -> void:
 		print("SKIPPED: dot-map is not linked at addons/dot_map")
 		get_tree().quit(0)
 		return
-	DotAddonConfig.game = BfhMapConfig.GAME_ID
+	GSAddonConfig.game = BfhMapConfig.GAME_ID
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(DIR))
 	var file := FileAccess.open(DIR.path_join(FILE), FileAccess.WRITE)
 	file.store_string("bfh_bus_top_speed: 50\nbfh_crates: 7\nbfh_exec: quit\n")
 	file.close()
 
-	var console := DotConsole.new()
+	var console := GSConsole.new()
 	add_child(console)
-	console.cvar("bfh_bus_top_speed", "34", "", DotConVar.FLAG_ARCHIVE)
-	console.cvar("bfh_crates", "40", "", DotConVar.FLAG_ARCHIVE)
-	console.cvar("bfh_exec", "keep", "", DotConVar.FLAG_ARCHIVE)
+	console.cvar("bfh_bus_top_speed", "34", "", GSConVar.FLAG_ARCHIVE)
+	console.cvar("bfh_crates", "40", "", GSConVar.FLAG_ARCHIVE)
+	console.cvar("bfh_exec", "keep", "", GSConVar.FLAG_ARCHIVE)
 	var cfg := BfhMapConfig.build(console)
 
 	var got := cfg.apply("bfh_zz_mapcfg_check")
@@ -56,7 +56,7 @@ func _run() -> void:
 
 	var world := FakeWorld.new()
 	var before := world.config.bus_top_speed
-	var client := DotGameMapConfig.new()
+	var client := GSGameMapConfig.new()
 	client.game_id = BfhMapConfig.GAME_ID
 	client.keys = BfhMapConfig.client_keys()
 	client.get_fn = func(key: String) -> Variant: return BfhMapConfig.client_get(world, key)

@@ -86,7 +86,7 @@ func _run() -> void:
 	var image := get_viewport().get_texture().get_image()
 	image.save_png(ProjectSettings.globalize_path(_o_out))
 	print("wrote ", _o_out, " after %.1f s" % _o_elapsed)
-	await DotShotSeq.new().record(get_tree(), ProjectSettings.globalize_path(_o_out))
+	await GSShotSeq.new().record(get_tree(), ProjectSettings.globalize_path(_o_out))
 
 	var world: BfhGame = client.get("game")
 	if world != null:
@@ -107,7 +107,7 @@ func _parse_args() -> void:
 		elif arg.begins_with("--out="):
 			_o_out = arg.substr(6)
 		elif arg == "--touch":
-			DotPlatform.touch_override = 1
+			GSPlatform.touch_override = 1
 		elif arg == "--swing":
 			_o_swing = true
 		elif arg == "--bus":
@@ -165,7 +165,7 @@ func _parse_args() -> void:
 
 ## A fixture bowl pack in the shared content index, for `--maps`.
 func _shot_maps_fixture() -> void:
-	# `--maps`: a fixture bowl pack in the shared DotContentIndex, as the solo shell leaves one
+	# `--maps`: a fixture bowl pack in the shared GSContentIndex, as the solo shell leaves one
 	# after a subscribed pack mounts, and the M menu opened on it.
 	if _o_maps:
 		var dir := "user://ws_shot_bfh/"
@@ -173,11 +173,11 @@ func _shot_maps_fixture() -> void:
 		var file := FileAccess.open(dir + "pit.json", FileAccess.WRITE)
 		file.store_string(JSON.stringify({"radius": 50.0}))
 		file.close()
-		var index := DotContentIndex.shared()
-		index.set_session(DotContentIndex.SESSION_SOLO)
+		var index := GSContentIndex.shared()
+		index.set_session(GSContentIndex.SESSION_SOLO)
 		var _added := index.add_pack({
 			"content_id": "fixture/bowls", "version": "1.0.0", "prefix": dir,
-			"session": DotContentIndex.SESSION_SOLO, "source": &"subscription",
+			"session": GSContentIndex.SESSION_SOLO, "source": &"subscription",
 			"provides": {"schema": 1, "title": "Hilltop Pack", "kinds": ["map"], "entries": [
 				{"kind": "map", "id": "fixture_pit", "name": "Fixture Pit", "scene": "pit.json", "map_kind": "arena"},
 			]},
@@ -186,11 +186,11 @@ func _shot_maps_fixture() -> void:
 
 ## `--view=cover`: the loading cover, before it lifts.
 func _shot_cover(client: Node) -> void:
-	# --view=cover: the loading cover dot-game's DotGameClient puts up first, before it lifts.
+	# --view=cover: the loading cover dot-game's GSGameClient puts up first, before it lifts.
 	if _o_cover:
 		for _i in 2:
 			await RenderingServer.frame_post_draw
-		var platform: DotGameClient = client.get("platform")
+		var platform: GSGameClient = client.get("platform")
 		print("cover %s" % ("lifted" if platform.is_shown() else "up"))
 		var cover_path := ProjectSettings.globalize_path(_o_out)
 		DirAccess.make_dir_recursive_absolute(cover_path.get_base_dir())
@@ -249,7 +249,7 @@ func _shot_wait(client: Node) -> void:
 		_o_seconds = 4.0
 	_o_elapsed = 0.0
 	# Past the load cover (slow on a cold GPU box); capped, so a stuck cover cannot hang the shot.
-	if not await DotShotGate.wait_lifted(get_tree(), client.get("platform")):
+	if not await GSShotGate.wait_lifted(get_tree(), client.get("platform")):
 		printerr("shot: load cover still up after the wait; shooting anyway")
 	while _o_elapsed < _o_seconds:
 		_o_elapsed += get_process_delta_time()
@@ -294,7 +294,7 @@ func _shot_maps_menu(client: Node) -> void:
 		var picker: Variant = menu.get("picker")
 		var world_for_maps: BfhGame = client.get("game")
 		if picker != null and world_for_maps != null:
-			var rows := world_for_maps.bowl_rows(DotContentIndex.shared())
+			var rows := world_for_maps.bowl_rows(GSContentIndex.shared())
 			for i in range(rows.size()):
 				if str(rows[i]["id"]) == "fixture_pit":
 					picker.call(&"turn", 99)
@@ -666,7 +666,7 @@ func _shot_ballot(client: Node) -> void:
 
 ## A real ballot from this game's vote: every bowl this server offers there is, four voters, three
 ## of whom have voted, drawn the way the client shell's notice overlay draws a `map_ballot` — a
-## [DotBallotPanel] down the right-hand side.
+## [GSBallotPanel] down the right-hand side.
 func _show_ballot(list: Array, current: StringName) -> void:
 	var names := {&"1": "you", &"2": "bo", &"3": "quiet_one", &"4": "ana"}
 	var states: Array = []
@@ -677,15 +677,15 @@ func _show_ballot(list: Array, current: StringName) -> void:
 	vote.set("people_fn", func(voter: StringName) -> Dictionary: return {"name": names.get(voter, "?"), "avatar": ""})
 	vote.set("ballot_fn", func(state: Dictionary) -> void: states.append(state))
 	add_child(vote)
-	var _set: DotResult = vote.call("setup")
+	var _set: GSResult = vote.call("setup")
 	vote.call("note_map", current)
-	var director: DotVoteDirector = vote.get("director")
-	var _opened := director.open_vote(DotVoteClock.REASON_MANUAL)
+	var director: GSVoteDirector = vote.get("director")
+	var _opened := director.open_vote(GSVoteClock.REASON_MANUAL)
 	var options := director.ballot.option_ids()
 	var _a := director.cast_one(&"1", options[0])
 	var _b := director.cast_one(&"2", options[1 % options.size()])
 	var _c := director.cast_one(&"3", options[0])
-	(vote.get("feed") as DotVoteBallotFeed).poll()
+	(vote.get("feed") as GSVoteBallotFeed).poll()
 
 	var layer := CanvasLayer.new()
 	layer.layer = 50
@@ -699,8 +699,8 @@ func _show_ballot(list: Array, current: StringName) -> void:
 	box.offset_top = 110.0
 	box.offset_bottom = -16.0
 	layer.add_child(box)
-	var panel := DotBallotPanel.new()
-	panel.ui_theme = DotUiTheme.space()
+	var panel := GSBallotPanel.new()
+	panel.ui_theme = GSUiTheme.space()
 	panel.local_voter = "1"
 	box.add_child(panel)
 	panel.show_state(states.back() if not states.is_empty() else {})
@@ -724,10 +724,10 @@ func _stage_action(client: Node, kind: StringName, id: String, out: String) -> v
 		await get_tree().process_frame
 	var figure: Object = client.call("_avatar_figure", 0)
 	print("action %s/%s: figure=%s third_person=%s" % [kind, id, figure != null, client.get("third_person")])
-	var entry := DotAvatarActions.defaults().find(kind, id)
-	var input: Object = (client.get("platform") as DotGameClient).avatar_actions.input
+	var entry := GSAvatarActions.defaults().find(kind, id)
+	var input: Object = (client.get("platform") as GSGameClient).avatar_actions.input
 	input.emit_signal(&"action_requested", entry)
-	var yaw := deg_to_rad((me.get("controller") as DotFpsController).state.yaw)
+	var yaw := deg_to_rad((me.get("controller") as GSFpsController).state.yaw)
 	var ahead := Vector3(-sin(yaw), 0.0, -cos(yaw))
 	var feet: Vector3 = me.global_position
 	var camera := Camera3D.new()

@@ -10,11 +10,11 @@ game-airdrift speaks a long-established community's units because its operators 
 
 The obvious version gives the runners something to shoot the drivers with, and it is a deathmatch in a bowl: the buses and crates stop mattering and the round is decided by aim. The hammer changes the map instead: break the crate somebody is behind, shove one into a bus's line, open a path, close one. Every use is about geometry, the only thing a person on foot has against a vehicle.
 
-It is deliberately **not** a `DotWeapon` and there is no dot-loadout: both are about choosing between things, and there is exactly one thing.
+It is deliberately **not** a `GSWeapon` and there is no dot-loadout: both are about choosing between things, and there is exactly one thing.
 
 ## Concrete blocks, so the last thirty seconds are a game
 
-A round where every piece of cover can be removed ends the same way every time: the drivers flatten the crates and the runners have nowhere to be. A few blocks that cannot be broken or pushed are the floor under the round. They are the crate's `DotPropDef` with three fields different, and the suite asserts the design (data), not the code.
+A round where every piece of cover can be removed ends the same way every time: the drivers flatten the crates and the runners have nowhere to be. A few blocks that cannot be broken or pushed are the floor under the round. They are the crate's `GSPropDef` with three fields different, and the suite asserts the design (data), not the code.
 
 ## No bunny hopping
 
@@ -30,7 +30,7 @@ A runner sprinting into a parked bus is not run over; nor is one running away fr
 
 `BfhGame.sides` is this game's answer to who is on which side, and dot-match's elimination rule counts survivors off its own teams. Keep them in step:
 
-- dot-match's team setup lives in `_build_match` (the game's two teams, `force_balance` off, **`max_difference` 0**). `DotTeamManager.max_difference` defaults to 1 and refuses a join that puts one side more than one ahead; `force_balance = false` turns off the mover, not the refuser. A refused join is logged at ERROR.
+- dot-match's team setup lives in `_build_match` (the game's two teams, `force_balance` off, **`max_difference` 0**). `GSTeamManager.max_difference` defaults to 1 and refuses a join that puts one side more than one ahead; `force_balance = false` turns off the mover, not the refuser. A refused join is logged at ERROR.
 - **A swap goes through `switch_team`**; flipping `sides` alone scored every later round on the old sides.
 - A player who leaves leaves dot-match too.
 - **A round with one side empty is an infinite loop**: elimination ends a round when a side has nobody alive, and a side with nobody at all satisfies that on the first tick.
@@ -40,14 +40,14 @@ A runner sprinting into a parked bus is not run over; nor is one running away fr
 
 ## Seeds: one random manager per world
 
-Two `DotRandomManager`s in one process fight over the registry name (the last to register wins), and two worlds in one process is the normal case here: a server and a client in one editor session, and every section of the suite. With it on, two worlds from one seed laid out different bowls. `_build_random` sets `register_as_service = false`; keep it off.
+Two `GSRandomManager`s in one process fight over the registry name (the last to register wins), and two worlds in one process is the normal case here: a server and a client in one editor session, and every section of the suite. With it on, two worlds from one seed laid out different bowls. `_build_random` sets `register_as_service = false`; keep it off.
 
 ## What the addons gained
 
 dot-props' notes listed both as deliberately absent; they were right about the boundary and wrong about the gap. Detail in [dot-props/docs/damage-and-carry.md](../../dot-props/docs/damage-and-carry.md).
 
-- **`DotPropDamage`** holds hit points and decides when a prop breaks. It hurts nobody: a barrel *describes* its blast, and dot-combat's `explode()` turns that into hurt people.
-- **`DotPropCarry`** is standing on a prop: riding it and pressing down on it. Outside the motor on purpose, because the motor's `DotFpsState.ground_id` is a local physics handle that is deliberately not part of the simulation.
+- **`GSPropDamage`** holds hit points and decides when a prop breaks. It hurts nobody: a barrel *describes* its blast, and dot-combat's `explode()` turns that into hurt people.
+- **`GSPropCarry`** is standing on a prop: riding it and pressing down on it. Outside the motor on purpose, because the motor's `GSFpsState.ground_id` is a local physics handle that is deliberately not part of the simulation.
 
 ## How the map grew
 
@@ -55,14 +55,14 @@ Each feature in [map.md](map.md) exists because the bowl had run out of somethin
 
 ## The bowl vote
 
-This game has no map files and no dot-map catalogue: its map is `BfhArena.build(radius)`. So the players vote between **bowls**, which are named radii (`game/bfh_bowls.gd`; see [map.md](map.md#minimum-radii)), over dot-vote (`game/bfh_vote.gd`, a `DotVoteDirector` over a `DotVoteListSource` of `BfhBowls.allowed`, narrowed by `bowl_ids`). The bowl is only ever rebuilt between rounds, so a ballot opens `bfh_vote_after` (20) seconds into every round (dot-vote's MANUAL trigger) and is applied at the round's end (`apply: END_OF_ROUND`), setting `BfhGame.next_bowl_id`, which the next round's start builds once (and drops, with a WARN, if the server no longer offers it). The module advances the director once a server tick (`self_advance` off, `round_based` on), calls `note_round_end` from `DotMatch.round_ended`, and starts the director over on every `round_began`; the warmup has no ballot. dot-vote's ROUND_END trigger would apply a choice one round late.
+This game has no map files and no dot-map catalogue: its map is `BfhArena.build(radius)`. So the players vote between **bowls**, which are named radii (`game/bfh_bowls.gd`; see [map.md](map.md#minimum-radii)), over dot-vote (`game/bfh_vote.gd`, a `GSVoteDirector` over a `GSVoteListSource` of `BfhBowls.allowed`, narrowed by `bowl_ids`). The bowl is only ever rebuilt between rounds, so a ballot opens `bfh_vote_after` (20) seconds into every round (dot-vote's MANUAL trigger) and is applied at the round's end (`apply: END_OF_ROUND`), setting `BfhGame.next_bowl_id`, which the next round's start builds once (and drops, with a WARN, if the server no longer offers it). The module advances the director once a server tick (`self_advance` off, `round_based` on), calls `note_round_end` from `GSMatch.round_ended`, and starts the director over on every `round_began`; the warmup has no ballot. dot-vote's ROUND_END trigger would apply a choice one round late.
 
 - **Rock the vote opens the ballot in the game, not in dot-vote.** Under MANUAL the director hands every opening to its host, a passed rock-the-vote included: without `BfhVote`'s handler on `director.clock.expired` (reason `rtv`), `!rtv` answered "Rocked. 1 of 1." and nothing opened. A rocked vote still waits for the round's end (`rtv_apply`): a wall moving through the people beside it is not a map change. `rtv_delay_sec` is 0, because dot-vote's two minutes are most of a round.
 - The rebuild reaches clients as a BOWL event ([netcode.md](netcode.md#what-crosses)), and a client joining later gets the bowl in its HELLO as before, so `arena_radius` is still not a cvar: what changes the bowl is a round boundary, never a live setting.
 - No time limit (`duration_sec` 0), the current bowl is on the ballot, no cooldown in plays. Bots do not vote, so a server of bots never opens one.
 - dot-vote's commands (`vote`, `rtv`, `nominate`, …) are the module's, so `!vote 2` in chat reaches them through `_on_chat_command` as the player who typed it.
-- The client shell draws the ballot from the `map_ballot` notice (`DotVoteBallotFeed` → `DotBallotPanel` down the right-hand side); nothing of it is in this game's client. `tools/shot.sh 8 ballot.png --ballot` draws the same panel from this game's own vote.
-- `cfg/maps.yml` (dot-map's `DotMapRotationFile`, found through `--config`; `sv_map_rotation_file`, `bfh_rotation`, `bfh_maps_reload`) says which bowls rotate: the ballot, nominations and the pick for a round nobody voted on follow it, the map menu marks the others "(not in rotation)" and still loads them; no file rotates every bowl.
-- An owner reshapes it in `user://cfg/buses_vote.json` or `game.yml`'s `metadata: bowl_vote:`, keyed as `DotVoteRules`; `{"enabled": false}` keeps the server's own bowl.
+- The client shell draws the ballot from the `map_ballot` notice (`GSVoteBallotFeed` → `GSBallotPanel` down the right-hand side); nothing of it is in this game's client. `tools/shot.sh 8 ballot.png --ballot` draws the same panel from this game's own vote.
+- `cfg/maps.yml` (dot-map's `GSMapRotationFile`, found through `--config`; `sv_map_rotation_file`, `bfh_rotation`, `bfh_maps_reload`) says which bowls rotate: the ballot, nominations and the pick for a round nobody voted on follow it, the map menu marks the others "(not in rotation)" and still loads them; no file rotates every bowl.
+- An owner reshapes it in `user://cfg/buses_vote.json` or `game.yml`'s `metadata: bowl_vote:`, keyed as `GSVoteRules`; `{"enabled": false}` keeps the server's own bowl.
 
 `examples/dedicated`'s "the bowl vote" drives it through the console as a player's chat would, through to the next round rebuilt in the voted bowl. Not yet tried in a browser.

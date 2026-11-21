@@ -21,7 +21,7 @@ const CRATES_INTO_PATH := &"bfh.crates_into_path"
 ## to the end of it or to being put down.
 const SECONDS_SURVIVED := &"bfh.seconds_survived"
 
-## The published skill figure the site orders by (dot-stats' DotStatsRank). Derived from the five above, so it is not in [method ids].
+## The published skill figure the site orders by (dot-stats' GSStatsRank). Derived from the five above, so it is not in [method ids].
 const RANK_SCORE := &"rank_score"
 
 
@@ -33,22 +33,22 @@ static func ids() -> Array[StringName]:
 	]
 
 
-## The schema a [DotStatsTracker] is given.
-static func schema() -> DotStatsSchema:
-	var schema := DotStatsSchema.new()
+## The schema a [GSStatsTracker] is given.
+static func schema() -> GSStatsSchema:
+	var schema := GSStatsSchema.new()
 
 	_counter(schema, RUNNERS_FLATTENED, "Runners flattened", "runners")
 	_counter(schema, ROUNDS_SURVIVED, "Rounds survived", "rounds")
 	_counter(schema, CRATES_BROKEN, "Crates broken", "crates")
 	_counter(schema, CRATES_INTO_PATH, "Crates put in a bus's path", "crates")
 	_counter(schema, SECONDS_SURVIVED, "Time survived", "s")
-	var _rank := DotStatsRank.declare(schema, RANK_SCORE, "Rank score")
+	var _rank := GSStatsRank.declare(schema, RANK_SCORE, "Rank score")
 
 	return schema
 
 
-static func _counter(schema: DotStatsSchema, id: StringName, display: String, unit: String) -> void:
-	var def := schema.define(id, DotStatsDef.Kind.COUNTER, display)
+static func _counter(schema: GSStatsSchema, id: StringName, display: String, unit: String) -> void:
+	var def := schema.define(id, GSStatsDef.Kind.COUNTER, display)
 	def.unit = unit
 	def.decimals = 0
 	def.publish = true

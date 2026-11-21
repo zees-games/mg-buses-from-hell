@@ -1,8 +1,8 @@
 extends "bfh_net_bridge_base.gd"
 ## The bridge's loose toys: mirrored on a client, registered and paired before the bowl is built.
 
-func _build_entity(player: BfhPlayer, peer_id: int) -> DotNetIdentity:
-	# The behaviour is added BEFORE the identity: [DotNetIdentity] collects behaviours in
+func _build_entity(player: BfhPlayer, peer_id: int) -> GSNetIdentity:
+	# The behaviour is added BEFORE the identity: [GSNetIdentity] collects behaviours in
 	# `_ready` by walking the subtree, and one added afterwards would never be found.
 	var behaviour := BfhPlayerNet.new()
 	behaviour.name = "Net"
@@ -10,13 +10,13 @@ func _build_entity(player: BfhPlayer, peer_id: int) -> DotNetIdentity:
 	behaviour.bridge = self
 	player.add_child(behaviour)
 
-	var identity := DotNetIdentity.new()
+	var identity := GSNetIdentity.new()
 	identity.name = "Identity"
 	identity.owner_peer_id = peer_id
 	# SHARED: the server corrects, the owner predicts. SERVER would put a runner's own
 	# movement a round trip behind their keys, which in this game is the difference
 	# between dodging a bus and being told you were hit by one.
-	identity.authority = DotNetIdentity.Authority.SHARED
+	identity.authority = GSNetIdentity.Authority.SHARED
 	# [b]Always, and the bowl is why.[/b] Interest management is a saving on a map where most players
 	# are out of sight; this one is a 46 m disc with nothing tall in it, so everybody can see everybody
 	# and culling would only ever produce a player who disappears in the open.
@@ -71,8 +71,8 @@ func _register_toys() -> void:
 ## A toy's behaviour and identity under [param parent], registered under [param net_id] (0
 ## allocates: the server); null when the registry refused it. The behaviour before the
 ## identity, which collects behaviours in its `_ready`.
-func _toy_entity(toy: DotPropBody, parent: Node, net_id: int) -> DotGameToyNet:
-	var behaviour := DotGameToyNet.new()
+func _toy_entity(toy: GSPropBody, parent: Node, net_id: int) -> GSGameToyNet:
+	var behaviour := GSGameToyNet.new()
 	behaviour.name = "Net"
 	behaviour.toy = toy
 	var holder := Node3D.new() if parent != toy else null
@@ -83,14 +83,14 @@ func _toy_entity(toy: DotPropBody, parent: Node, net_id: int) -> DotGameToyNet:
 	at.add_child(behaviour)
 	if net.is_server:
 		behaviour.pull()
-	var identity := DotNetIdentity.new()
+	var identity := GSNetIdentity.new()
 	identity.name = "Identity"
 	identity.owner_peer_id = 0
-	identity.authority = DotNetIdentity.Authority.SERVER
+	identity.authority = GSNetIdentity.Authority.SERVER
 	at.add_child(identity)
 	var registered := net.registry.register(identity, net_id, net.clock.tick, net.config)
 	if not registered.ok:
-		DotLog.warn(CHANNEL, "could not replicate a toy", {"toy": _toy_nets.size(), "error": str(registered.error)})
+		GSLog.warn(CHANNEL, "could not replicate a toy", {"toy": _toy_nets.size(), "error": str(registered.error)})
 		at.remove_child(behaviour)
 		at.remove_child(identity)
 		behaviour.queue_free()
@@ -106,7 +106,7 @@ func _toy_entity(toy: DotPropBody, parent: Node, net_id: int) -> DotGameToyNet:
 ## toy collects every behaviour under it in its `_ready`, and a freed one found there broke the
 ## next snapshot. The server's, on a map change or a new set.
 func _release_toys() -> void:
-	for behaviour: DotGameToyNet in _toy_nets:
+	for behaviour: GSGameToyNet in _toy_nets:
 		if not is_instance_valid(behaviour):
 			continue
 		if behaviour.identity != null and net != null and net.registry.has(behaviour.identity.net_id):
@@ -145,21 +145,21 @@ func _pair_pending_toys() -> void:
 		return
 	var box := game.toys if game.toys != null and _toys_map == BOWL else null
 	if box != null and box.count() != _toy_nets.size():
-		DotLog.warn(CHANNEL, "the server's map has a different number of toys", {"server": _toy_nets.size(), "here": box.count()})
+		GSLog.warn(CHANNEL, "the server's map has a different number of toys", {"server": _toy_nets.size(), "here": box.count()})
 	for i in range(_toy_nets.size()):
-		var behaviour: DotGameToyNet = _toy_nets[i]
+		var behaviour: GSGameToyNet = _toy_nets[i]
 		behaviour.toy = box.toy(i) if box != null else null
 
 ## Client: the old bowl's toys are about to go; the mirrors stay registered, without them.
 func _unpair_toys() -> void:
-	for behaviour: DotGameToyNet in _toy_nets:
+	for behaviour: GSGameToyNet in _toy_nets:
 		if is_instance_valid(behaviour):
 			behaviour.toy = null
 
 ## How many toys this end replicates (a client: mirrors paired with a toy). For a check.
 func toy_count() -> int:
 	var n := 0
-	for behaviour: DotGameToyNet in _toy_nets:
+	for behaviour: GSGameToyNet in _toy_nets:
 		if is_instance_valid(behaviour) and (net.is_server or behaviour.toy != null):
 			n += 1
 	return n

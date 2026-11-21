@@ -1,9 +1,9 @@
-extends DotGameNetchaosServer
+extends GSGameNetchaosServer
 
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhGame := preload("../game/bfh_game.gd")
 
-## Buses From Hell's side of `tools/netchaos.sh` (dot-game's DotGameNetchaosServer): the world and the module, no warmup or intermission.
+## Buses From Hell's side of `tools/netchaos.sh` (dot-game's GSGameNetchaosServer): the world and the module, no warmup or intermission.
 ## The module fills empty driving seats with its own bots (bot_quota), so the roster holds those too.
 
 var _game: BfhGame = null
@@ -24,17 +24,17 @@ func _boot_world() -> void:
 	add_child(_game)
 	await get_tree().process_frame
 	(load("res://game/bfh_module.gd") as GDScript).set("punishments_file", "%s/punishments.json" % data_dir)
-	var loaded: DotResult = await server.modules.load_module("res://game/bfh_module.gd")
+	var loaded: GSResult = await server.modules.load_module("res://game/bfh_module.gd")
 	if not loaded.ok:
 		printerr("netchaos server: ", loaded.error)
 		return
 	module = server.modules.get_module("buses")
 	_game.player_added.connect(_protect)
-	var bots: DotConVar = server.console.find_cvar("bfh_bots")
+	var bots: GSConVar = server.console.find_cvar("bfh_bots")
 	if bots != null:
 		bots.force_set("0")
 	if solid != "":
-		var cv: DotConVar = server.console.find_cvar("mp_solidplayers")
+		var cv: GSConVar = server.console.find_cvar("mp_solidplayers")
 		if cv != null:
 			cv.force_set(solid)
 

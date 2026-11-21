@@ -17,25 +17,25 @@ const SHOVE_CREDIT_SEC := 3.0
 
 const REPORT_INTERVAL := 60.0
 
-## Same name as the addon's default timer; spelled here because naming DotGameStatsReport from this script closes a script reference cycle that leaks at exit.
+## Same name as the addon's default timer; spelled here because naming GSGameStatsReport from this script closes a script reference cycle that leaks at exit.
 const REPORT_TIMER_NAME := "StatsReportTimer"
 
 var _report_timer: Timer
 
 ## Somebody earned something. What the bridge tells them, and what an offline HUD shows.
-signal unlocked(player_id: StringName, achievement: DotAchievement)
+signal unlocked(player_id: StringName, achievement: GSAchievement)
 
-var stats: DotStatsTracker = null
+var stats: GSStatsTracker = null
 
 ## The skill rank, built on lifetime totals: baseline read at join, republished after each reading, forgotten on leave.
-var rank: DotStatsRank = null
+var rank: GSStatsRank = null
 
 ## Flattenings for the head-to-head table, through dot-stats' event feed; ids are player ids.
-var feed: DotStatsEventFeed = null
-var achievements: DotAchievementTracker = null
+var feed: GSStatsEventFeed = null
+var achievements: GSAchievementTracker = null
 
 ## The differencer between the two. See the class note.
-var link: DotAchievementStatsLink = null
+var link: GSAchievementStatsLink = null
 
 var _world: Node3D = null
 
@@ -59,21 +59,21 @@ var _fixed: Dictionary = {}
 
 
 ## Turns the backbone report on or off at run time (the family cvar `stats_report`); the cvar is registered after this tracker is built, so attach() alone cannot see it.
-func set_reporting(on: bool) -> DotResult:
+func set_reporting(on: bool) -> GSResult:
 	if stats == null:
-		return DotResult.fail(DotError.CODE_STATE, "There is no stats tracker.")
+		return GSResult.fail(GSError.CODE_STATE, "There is no stats tracker.")
 
 	if not on:
 		stats.report_to_backbone = false
-		return DotResult.success(false)
+		return GSResult.success(false)
 
 	stats.report_to_backbone = true
 	stats.define_on_start = true
 
 	if not stats.reporter.is_available():
 		stats.report_to_backbone = false
-		DotLog.warn(CHANNEL, "stats reporting needs a backbone client with STATS_WRITE; staying off")
-		return DotResult.fail(DotError.CODE_STATE, "No backbone client to report stats through.")
+		GSLog.warn(CHANNEL, "stats reporting needs a backbone client with STATS_WRITE; staying off")
+		return GSResult.fail(GSError.CODE_STATE, "No backbone client to report stats through.")
 
 	if _report_timer == null:
 		_report_timer = Timer.new()
@@ -83,25 +83,25 @@ func set_reporting(on: bool) -> DotResult:
 		_report_timer.timeout.connect(func() -> void: stats.flush())
 		stats.add_child(_report_timer)
 
-	return DotResult.success(true)
+	return GSResult.success(true)
 
 
 ## Builds both trackers and listens to [param world]. Call once, after this is in the tree
 ## and the world has built its props.
-func attach(world: Node3D) -> DotResult:
+func attach(world: Node3D) -> GSResult:
 	if world == null or world.get("props") == null or world.get("prop_damage") == null:
-		return DotResult.fail(DotError.CODE_STATE, "Progress needs a world with its props built.")
+		return GSResult.fail(GSError.CODE_STATE, "Progress needs a world with its props built.")
 
 	_world = world
 
-	stats = DotStatsTracker.new()
+	stats = GSStatsTracker.new()
 	stats.name = "Stats"
 	stats.schema = BfhStats.schema()
 	# Off, and see the class note: nothing here has a key the backbone could file under.
 	stats.report_to_backbone = false
 	add_child(stats)
 
-	feed = DotStatsEventFeed.new(stats)
+	feed = GSStatsEventFeed.new(stats)
 	feed.key_of = func(id: Variant) -> StringName: return StringName(key_of(StringName(str(id))))
 	feed.name_of = func(id: Variant) -> String:
 		var body := _player(StringName(str(id)))
@@ -111,10 +111,10 @@ func attach(world: Node3D) -> DotResult:
 	if not counted.ok:
 		return counted.wrap("the stats tracker")
 
-	achievements = DotAchievementTracker.new()
+	achievements = GSAchievementTracker.new()
 	achievements.name = "Achievements"
 	achievements.catalogue = BfhAwards.catalogue()
-	achievements.store = DotAchievementStoreMemory.new()
+	achievements.store = GSAchievementStoreMemory.new()
 	achievements.report_to_backbone = false
 	# [b]Not registered.[/b] A registry name is global to the process and a server and an
 	# offline world — or the suite's dozen worlds — would take it off each other. This node
@@ -128,7 +128,7 @@ func attach(world: Node3D) -> DotResult:
 
 	achievements.unlocked.connect(_on_unlocked)
 
-	link = DotAchievementStatsLink.new()
+	link = GSAchievementStatsLink.new()
 	link.name = "StatsLink"
 	link.tracker = achievements
 	link.stats = stats
@@ -148,7 +148,7 @@ func attach(world: Node3D) -> DotResult:
 	world.connect("run_over", _on_run_over)
 	world.connect("swung", _on_swung)
 	world.connect("bus_struck", _on_bus_struck)
-	(world.get("prop_damage") as DotPropDamage).broken.connect(_on_prop_broken)
+	(world.get("prop_damage") as GSPropDamage).broken.connect(_on_prop_broken)
 
 	# Anybody already in the world. A world builds this in `_ready`, before any player
 	# exists, so today this is empty — and a progress node attached late would otherwise
@@ -156,12 +156,12 @@ func attach(world: Node3D) -> DotResult:
 	for id: StringName in (world.get("players") as Dictionary):
 		_on_player_added(id)
 
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 ## The rank built from the run's stats, filed back on [member stats] under the player's key.
-func _make_rank() -> DotStatsRank:
-	var made := DotStatsRank.new()
+func _make_rank() -> GSStatsRank:
+	var made := GSStatsRank.new()
 	made.stat_id = BfhStats.RANK_SCORE
 	made.terms = [
 		{"stat": String(BfhStats.RUNNERS_FLATTENED), "weight": 3.0},
@@ -220,7 +220,7 @@ func _record(player_id: StringName, stat: StringName, value: float = 1.0) -> voi
 	if not recorded.ok:
 		# An undeclared id is a typo in this file and is the one failure worth a line: it
 		# is a number the game is counting into nothing.
-		DotLog.warn(CHANNEL, "a reading was refused", {
+		GSLog.warn(CHANNEL, "a reading was refused", {
 			"stat": String(stat), "why": recorded.error.message,
 		})
 		return
@@ -260,10 +260,10 @@ func _on_player_added(player_id: StringName) -> void:
 
 
 func _begin(key: String) -> void:
-	var began: DotResult = await achievements.begin(key)
+	var began: GSResult = await achievements.begin(key)
 
 	if not began.ok:
-		DotLog.warn(CHANNEL, "achievement progress could not be loaded", {
+		GSLog.warn(CHANNEL, "achievement progress could not be loaded", {
 			"player": key, "why": began.error.message,
 		})
 
@@ -289,10 +289,10 @@ func _on_player_removed(player_id: StringName) -> void:
 
 
 func _end(key: String) -> void:
-	var ended: DotResult = await achievements.end(key)
+	var ended: GSResult = await achievements.end(key)
 
 	if not ended.ok:
-		DotLog.debug(CHANNEL, "achievement progress could not be saved", {
+		GSLog.debug(CHANNEL, "achievement progress could not be saved", {
 			"player": key, "why": ended.error.message,
 		})
 
@@ -382,14 +382,14 @@ func _on_bus_struck(instance_id: int, _by: StringName) -> void:
 		return
 
 	_record(StringName(shove["by"]), BfhStats.CRATES_INTO_PATH)
-	DotLog.debug(CHANNEL, "a shoved crate was in a bus's path", {
+	GSLog.debug(CHANNEL, "a shoved crate was in a bus's path", {
 		"runner": String(shove["by"]), "prop": instance_id,
 	})
 
 
 ## Anything broken, credited to whoever broke it if it was a crate. A barrel is not cover,
 ## and a block cannot break.
-func _on_prop_broken(prop: DotPropInstance, _at: Vector3, by: StringName) -> void:
+func _on_prop_broken(prop: GSPropInstance, _at: Vector3, by: StringName) -> void:
 	_shoves.erase(prop.instance_id if prop != null else 0)
 
 	if prop == null or prop.def == null or prop.def.id != BfhContent.CRATE:
@@ -398,11 +398,11 @@ func _on_prop_broken(prop: DotPropInstance, _at: Vector3, by: StringName) -> voi
 	_record(by, BfhStats.CRATES_BROKEN)
 
 
-func _on_unlocked(key: String, achievement: DotAchievement) -> void:
+func _on_unlocked(key: String, achievement: GSAchievement) -> void:
 	var player_id: StringName = _player_of_key.get(key, &"")
 
 	# INFO: what an admin keeps. "I did the thing and was not told" is answered from here.
-	DotLog.info(CHANNEL, "an achievement was unlocked", {
+	GSLog.info(CHANNEL, "an achievement was unlocked", {
 		"player": key, "achievement": String(achievement.id), "points": achievement.points,
 	})
 
@@ -413,11 +413,11 @@ func _on_unlocked(key: String, achievement: DotAchievement) -> void:
 # --- Reading
 
 ## A player's numbers this session. Empty for a bot or a stranger.
-func session_values(player_id: StringName) -> DotStatsValues:
+func session_values(player_id: StringName) -> GSStatsValues:
 	var key := key_of(player_id)
 
 	if key == "" or stats == null:
-		return DotStatsValues.new()
+		return GSStatsValues.new()
 
 	return stats.session_values(StringName(key))
 

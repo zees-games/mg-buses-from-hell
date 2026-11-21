@@ -1,4 +1,4 @@
-extends DotGameNetIo
+extends GSGameNetIo
 
 const BfhBusNet := preload("bfh_bus_net.gd")
 const BfhEvent := preload("bfh_event.gd")
@@ -14,12 +14,12 @@ const BfhGame := preload("../bfh_game.gd")
 const BfhPlayer := preload("../bfh_player.gd")
 const BfhSounds := preload("../bfh_sounds.gd")
 
-## Joins a [BfhGame] to a [DotNetManager]. The netcode seam, and the only file in this project that
+## Joins a [BfhGame] to a [GSNetManager]. The netcode seam, and the only file in this project that
 ## names both.
 
 const CHANNEL := "bfh.net"
 
-## Bytes of acknowledgement in front of every input packet. [method DotNetManager.encode_ack].
+## Bytes of acknowledgement in front of every input packet. [method GSNetManager.encode_ack].
 const ACK_BYTES := 4
 
 ## Commands in every input packet: this tick's and the four before it, so a lost packet costs the
@@ -53,7 +53,7 @@ signal notice_received(text: String)
 signal say_requested(peer_id: int, channel_id: StringName, text: String)
 
 ## A voice frame arrived. Server side; the payload is unparsed and must not be trusted —
-## [method DotVoiceRouter.relay] is what stamps the speaker, from the peer id below.
+## [method GSVoiceRouter.relay] is what stamps the speaker, from the peer id below.
 signal voice_requested(peer_id: int, payload: PackedByteArray)
 
 ## Client side: one routed line, and one voice frame.
@@ -65,11 +65,11 @@ var game: BfhGame = null
 ## Which session this process is. Zero on a server.
 var local_player_id: int = 0
 
-## Where a voice frame goes on the server. Assigned by [DotGameModule] to the services
+## Where a voice frame goes on the server. Assigned by [GSGameModule] to the services
 ## layer's `relay_voice`, because the bridge is the only thing that names both ends.
 var voice_relay_fn: Callable = Callable()
 
-## `func(session_id: int) -> DotAvatar`: what a player looks like, asked once as they are
+## `func(session_id: int) -> GSAvatar`: what a player looks like, asked once as they are
 ## seated. Assigned by the module, which is what has the identity layer; unset, or answering
 ## null, is the stock person, which is what everybody was before there was one.
 var avatar_fn: Callable = Callable()
@@ -94,7 +94,7 @@ var _player_of_peer: Dictionary = {}
 var _peer_of_player: Dictionary = {}
 var _ready_peers: Dictionary = {}
 ## Carries the game's profile runtime over this manager; null when the types would not register.
-var profile_link: DotNetProfileLink = null
+var profile_link: GSNetProfileLink = null
 ## Server: peers whose READY came before their seat ([method add_player]).
 var _ready_unseated: Dictionary = {}
 
@@ -160,7 +160,7 @@ func _clock_bytes() -> PackedByteArray:
 ## Which catalogue entry a replicated body came from.
 func _kind_of(behaviour: BfhPropNet) -> StringName:
 	if behaviour is BfhBusNet:
-		var bus: DotVehicleInstance = (behaviour as BfhBusNet).vehicle
+		var bus: GSVehicleInstance = (behaviour as BfhBusNet).vehicle
 		return bus.def.id if bus != null and bus.def != null else BfhContent.BUS
 
 	var prop := game.props.prop_for_node(behaviour.prop) if game.props != null else null

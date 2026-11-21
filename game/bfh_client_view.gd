@@ -31,12 +31,12 @@ var camera: Camera3D = null
 var viewmodel: BfhViewmodel = null
 
 ## Keeps the screen covered, and the local body and the input still, until the bowl, the
-## player and the camera are all in. See [member DotGameClient.gate].
-var gate: DotLoadGate = null
+## player and the camera are all in. See [member GSGameClient.gate].
+var gate: GSLoadGate = null
 
 ## dot-game's client platform: the cover, settings and menu, console, Tab, M, the pointer and
-## the input block. See [DotGameClient].
-var platform: DotGameClient = null
+## the input block. See [GSGameClient].
+var platform: GSGameClient = null
 
 ## What this client hears. See [BfhAudio]. Null only if dot-audio refused its catalogue.
 var audio: BfhAudio = null
@@ -46,7 +46,7 @@ var audio: BfhAudio = null
 var fx: BfhFx = null
 
 ## The player's console, the platform's.
-var console: DotConsoleController = null
+var console: GSConsoleController = null
 
 ## Whether the camera was last put on somebody else's eyes. See [method _process].
 var _spectating: bool = false
@@ -54,8 +54,8 @@ var _spectating: bool = false
 ## Third person: the camera swept back from the eye by dot-core's probe, the own runner
 ## drawn. Presentation only; the server's `mp_forceview` decides whether the key may.
 var third_person: bool = false
-var _probe: DotCameraProbe = null
-var _fade: DotCameraFade = null
+var _probe: GSCameraProbe = null
+var _fade: GSCameraFade = null
 
 ## Behind the eye, in the view's axes (right, up, back); further back from over a bus.
 const THIRD_PERSON_OFFSET := Vector3(0.45, 0.35, 2.8)
@@ -64,15 +64,15 @@ const THIRD_PERSON_BUS_OFFSET := Vector3(0.0, 0.8, 8.0)
 ## they are driving is not what stops it.
 const BUS_PIVOT_RISE := 2.6
 
-var net: DotNetManager = null
+var net: GSNetManager = null
 var bridge: BfhNetBridge = null
 ## Asks a server whether this player may edit it (sv_workbench_remote); null offline.
-var workbench_remote: DotGameWorkbenchRemoteClient = null
+var workbench_remote: GSGameWorkbenchRemoteClient = null
 ## The tuning panel's host: F9 solo or hosting, the admin's remote panel on a server that allows it.
-var workbench: DotGameWorkbench = null
+var workbench: GSGameWorkbench = null
 
 var _offline: bool = true
-var _sampler: DotFpsSampler = null
+var _sampler: GSFpsSampler = null
 
 ## The phone's on-screen buttons; null off a touch device.
 var _touch: BfhTouch = null
@@ -98,11 +98,11 @@ func _physics_process(delta: float) -> void:
 	if _covered():
 		return
 
-	var move := _sampler.sample(delta) if _sampler != null else DotFpsCommand.new()
+	var move := _sampler.sample(delta) if _sampler != null else GSFpsCommand.new()
 
 	# The keys that fly the free camera must not also walk the body that fell.
 	if is_roaming():
-		move = DotFpsCommand.new()
+		move = GSFpsCommand.new()
 		_swinging = false
 
 	if _swinging:
@@ -189,7 +189,7 @@ func _present_viewmodel() -> void:
 		player.hammer, player.health == null or player.health.alive, player.riding, out, third_person))
 
 ## Moves the camera from the eye to behind it in third person, swept by dot-core's
-## [DotCameraProbe] so a wall, a bowl's rim or a bus between stops it short; from over the
+## [GSCameraProbe] so a wall, a bowl's rim or a bus between stops it short; from over the
 ## roof when driving, so the bus being driven is not what stops it.
 func _place_third_person(delta: float) -> void:
 	if not third_person:
@@ -199,7 +199,7 @@ func _place_third_person(delta: float) -> void:
 			_fade.focus = null
 		return
 	if _probe == null:
-		_probe = DotCameraProbe.new(camera.get_world_3d(), 1)
+		_probe = GSCameraProbe.new(camera.get_world_3d(), 1)
 		_probe.add_excluded_object(player.get_rid())
 	var pivot := camera.global_position + (Vector3.UP * BUS_PIVOT_RISE if player.riding else Vector3.ZERO)
 	var offset := THIRD_PERSON_BUS_OFFSET if player.riding else THIRD_PERSON_OFFSET
@@ -237,7 +237,7 @@ static func present_spectator_camera(p_game: BfhGame, own: BfhPlayer, eye: Camer
 		return false
 
 	# The chase and death cameras pulled out of the bowl by dot-spectate, given the level.
-	var manager: DotSpectatorManager = p_game.spectate.manager
+	var manager: GSSpectatorManager = p_game.spectate.manager
 	if manager != null and manager.camera_world == null:
 		manager.camera_world = eye.get_world_3d()
 		manager.camera_mask = 1
@@ -256,7 +256,7 @@ static func present_spectator_camera(p_game: BfhGame, own: BfhPlayer, eye: Camer
 ## every player's body, then every beacon. Returns how many bodies are shown. Static so the net
 ## suite drives exactly this and not a copy of it.
 static func present_frame(
-	p_net: DotNetManager, p_game: BfhGame, own: BfhPlayer, delta: float, alpha: float = -1.0,
+	p_net: GSNetManager, p_game: BfhGame, own: BfhPlayer, delta: float, alpha: float = -1.0,
 	own_seen: bool = false
 ) -> int:
 	var networked := p_net != null and p_net.is_running()
@@ -296,7 +296,7 @@ static func present_frame(
 var _swinging: bool = false
 
 func _unhandled_input(event: InputEvent) -> void:
-	# Tab, M and a click taking the pointer back are the platform's (DotGameClient).
+	# Tab, M and a click taking the pointer back are the platform's (GSGameClient).
 	if event.is_action_pressed("ui_cancel"):
 		# Opens the settings when the menu left this Escape alone, because a released pointer with nothing
 		# on screen to click was a key that did half a job. A second Escape never reaches here: dot-ui's
@@ -316,8 +316,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		if _touch != null and _touch.takes(event):
 			return
 		var touch_sampler := _active_sampler()
-		if touch_sampler is DotFpsTouchSampler:
-			(touch_sampler as DotFpsTouchSampler).set_screen_width(get_viewport().get_visible_rect().size.x)
+		if touch_sampler is GSFpsTouchSampler:
+			(touch_sampler as GSFpsTouchSampler).set_screen_width(get_viewport().get_visible_rect().size.x)
 		if touch_sampler != null:
 			touch_sampler.handle_event(event)
 		return
@@ -368,7 +368,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif _sampler != null:
 			_sampler.handle_event(event)
 
-func _active_sampler() -> DotFpsSampler:
+func _active_sampler() -> GSFpsSampler:
 	if _offline and player != null and player.sampler != null:
 		return player.sampler
 	return _sampler
@@ -399,7 +399,7 @@ func _set_swing(pressed: bool) -> void:
 ## back, and the jump key changes between their eyes and behind them.
 static func spectator_ask(event: InputEvent) -> int:
 	# A tap or a left click; the mouse press the engine emulates from a touch is skipped, so one tap steps once.
-	if DotSpectatorHost.is_next_press(event):
+	if GSSpectatorHost.is_next_press(event):
 		return BfhSpectate.ASK_NEXT
 
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
@@ -425,7 +425,7 @@ func _ask_to_watch(ask: int) -> void:
 		audio.click()
 
 	if _offline:
-		var answered: DotResult = game.spectate.request(player.player_id, ask)
+		var answered: GSResult = game.spectate.request(player.player_id, ask)
 		if not answered.ok and chat != null:
 			chat.notice(answered.error.message)
 	elif bridge != null:
@@ -435,7 +435,7 @@ func _ask_to_watch(ask: int) -> void:
 
 ## The pose the free camera holds between frames, seeded from the camera as it was the frame
 ## the roam began, so the spectator starts where they were looking.
-var _free_cam: DotSpectatorFreeCam = null
+var _free_cam: GSSpectatorFreeCam = null
 var _roam_seeded := false
 var _roam_look := Vector2.ZERO
 
@@ -459,7 +459,7 @@ func toggle_roam() -> void:
 		audio.click()
 
 	if _offline:
-		var res: DotResult = game.spectate.request(player.player_id, BfhSpectate.ASK_ROAM)
+		var res: GSResult = game.spectate.request(player.player_id, BfhSpectate.ASK_ROAM)
 		if not res.ok and chat != null:
 			chat.notice(res.error.message)
 	elif bridge != null:
@@ -469,7 +469,7 @@ func toggle_roam() -> void:
 ## slow, the mouse to look. Only the camera moves; the body stays where it fell.
 func _drive_free_camera() -> void:
 	if _free_cam == null:
-		_free_cam = DotSpectatorFreeCam.new()
+		_free_cam = GSSpectatorFreeCam.new()
 
 	_free_cam.rules = game.spectate.manager.rules
 
@@ -495,7 +495,7 @@ func _drive_free_camera() -> void:
 	camera.global_transform = _free_cam.step(
 		move, shift, alt and not shift, get_process_delta_time())
 
-## Mouse motion while roaming, as radians for [method DotSpectatorFreeCam.look]: positive x
+## Mouse motion while roaming, as radians for [method GSSpectatorFreeCam.look]: positive x
 ## turns left (mouse right is negative), positive y looks up (mouse down is negative).
 func _roam_mouse(motion: InputEventMouseMotion) -> void:
 	var sampler := _sampler if _sampler != null else player.sampler

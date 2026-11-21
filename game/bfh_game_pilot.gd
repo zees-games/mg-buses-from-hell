@@ -16,8 +16,8 @@ const BUS_HALF_LENGTH := 3.2
 @export var config: BfhConfig = null
 
 var arena: BfhArena = null
-var vehicles: DotVehicleSpawner = null
-var ride: DotVehicleRide = null
+var vehicles: GSVehicleSpawner = null
+var ride: GSVehicleRide = null
 
 ## player id -> BfhPlayer.
 var players: Dictionary = {}
@@ -58,7 +58,7 @@ var _bus_block_side: Dictionary = {}
 ## [param aim] (on the way to [param goal]) swung round the nearest block lying across the bus's way, or [param aim] itself, and slows the bot's driver for it.
 ## A block cannot be broken, so a bus that drives onto one sits high-centred on it until the stuck rule hops it off (`bfh_downtown`, `--pace-seed=12`:
 ## two seconds on open floor where an avenue crosses a street). Judged against the bus's heading, so a block beside the way is left alone.
-func _round_the_blocks(player: BfhPlayer, bus: DotVehicleInstance, aim: Vector3, goal: Vector3) -> Vector3:
+func _round_the_blocks(player: BfhPlayer, bus: GSVehicleInstance, aim: Vector3, goal: Vector3) -> Vector3:
 	var at := bus.position()
 	var forward := -bus.body().global_basis.z
 	forward.y = 0.0
@@ -120,17 +120,17 @@ func _drive_buses(delta: float) -> void:
 
 		# `current_command` is what `apply_command` stored and what the next tick would have moved them
 		# with.
-		var command: DotVehicleCommand = null
+		var command: GSVehicleCommand = null
 
 		if player.is_bot:
 			command = _autopilot(player, bus, delta)
 			bus.command = command
 			if bus.chassis != null:
-				(bus.chassis as DotVehicleChassis).drive(command, delta)
+				(bus.chassis as GSVehicleChassis).drive(command, delta)
 			continue
 
 		var pending := player.controller.current_command
-		command = DotVehicleCommand.new()
+		command = GSVehicleCommand.new()
 
 		if pending != null:
 			# `move.y` is forward and `move.x` strafes right. The wheel is the strafe
@@ -138,7 +138,7 @@ func _drive_buses(delta: float) -> void:
 			# and a driver pressing D expects the bus to go right.
 			command.throttle = clampf(pending.move.y, -1.0, 1.0)
 			command.steer = clampf(-pending.move.x, -1.0, 1.0)
-			command.handbrake = pending.is_pressed(DotFpsCommand.BUTTON_CROUCH)
+			command.handbrake = pending.is_pressed(GSFpsCommand.BUTTON_CROUCH)
 			command.aim_yaw = pending.yaw
 			command.aim_pitch = pending.pitch
 			# S brakes while the bus is still rolling forward and reverses once it has (nearly) stopped, as
@@ -149,10 +149,10 @@ func _drive_buses(delta: float) -> void:
 		bus.command = command
 
 		if bus.chassis != null:
-			(bus.chassis as DotVehicleChassis).drive(command, delta)
+			(bus.chassis as GSVehicleChassis).drive(command, delta)
 
 ## Drives a bot's bus at whoever is nearest.
-func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> DotVehicleCommand:
+func _autopilot(player: BfhPlayer, bus: GSVehicleInstance, delta: float) -> GSVehicleCommand:
 	_ensure_autopilot(player)
 	var quarry := _nearest_runner(bus.position())
 
@@ -160,11 +160,11 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 		# Nobody left to chase. Returned idle rather than left holding the last
 		# command: a bus still flooring it at a target that no longer exists is a bus
 		# that drives into the wall for the rest of the round.
-		return DotVehicleCommand.new()
+		return GSVehicleCommand.new()
 
 	# Aimed PAST them, not at them. The driver decides its speed from the distance to its target, so a
 	# target sitting on the runner is a target that is always nearly reached — the bus arrives gently.
-	var skill := DotBotSettings.of(self).profile
+	var skill := GSBotSettings.of(self).profile
 	var target := quarry.global_position + _bot_lead(bus, quarry, skill)
 	var line := target - bus.position()
 	line.y = 0.0
@@ -231,7 +231,7 @@ func _autopilot(player: BfhPlayer, bus: DotVehicleInstance, delta: float) -> Dot
 
 
 ## The bot's target speed for this tick, slowed to the ramp speed when [param bound] up it.
-func _set_pace(player: BfhPlayer, skill: DotBotProfile, bound: bool) -> void:
+func _set_pace(player: BfhPlayer, skill: GSBotProfile, bound: bool) -> void:
 	var pace := config.bus_top_speed * clampf(1.0 + 0.4 * (skill.aggression - _MEDIUM.aggression), 0.5, 1.0)
 	player.autopilot.target_speed = minf(pace, config.bot_ramp_speed) if bound else pace
 	# Written every tick rather than once, so `bfh_bot_steer_clearance` takes effect on the
@@ -243,7 +243,7 @@ func _set_pace(player: BfhPlayer, skill: DotBotProfile, bound: bool) -> void:
 ## The bot driver, made once and tuned for a nine-metre bus.
 func _ensure_autopilot(player: BfhPlayer) -> void:
 	if player.autopilot == null:
-		player.autopilot = DotVehicleDriver.new()
+		player.autopilot = GSVehicleDriver.new()
 		player.autopilot.target_speed = config.bus_top_speed
 		# Wider than the default, because a bus is nine metres long: a waypoint radius tighter than the
 		# vehicle means it can never be "at" its target and it circles the spot for ever.
@@ -256,7 +256,7 @@ func _ensure_autopilot(player: BfhPlayer) -> void:
 
 
 ## The horn, when somebody is lined up in front of the bus.
-func _horn_at_the_quarry(player: BfhPlayer, bus: DotVehicleInstance, line: Vector3) -> void:
+func _horn_at_the_quarry(player: BfhPlayer, bus: GSVehicleInstance, line: Vector3) -> void:
 	# Not every tick — see [method sound_horn] —
 	# and not at somebody behind it or off to one side, because a horn is a bus saying "you", and a bot
 	# that honked at everybody would be saying nothing.
@@ -269,7 +269,7 @@ func _horn_at_the_quarry(player: BfhPlayer, bus: DotVehicleInstance, line: Vecto
 
 ## Whether the bus is on the ramp rules this tick: not while resting from a turn, and not in the
 ## streets until it is near the foot.
-func _bound_for_the_ramp(bus: DotVehicleInstance, beyond: Vector3, delta: float) -> bool:
+func _bound_for_the_ramp(bus: GSVehicleInstance, beyond: Vector3, delta: float) -> bool:
 	var bound := arena.ramp_bound(bus.position(), beyond)
 	var resting := float(_bus_turn_rest.get(bus.instance_id, 0.0))
 	if resting > 0.0:
@@ -287,7 +287,7 @@ var _bus_backing_off: Dictionary = {}
 ## A bot bus that has been throttling against something, backing out of it: reverse with the wheel
 ## over (in reverse it swings the nose towards the side [param toward] is on) for
 ## `bot_unwedge_seconds`, then null so the ordinary drive takes over from where it got to.
-func _back_off(bus: DotVehicleInstance, toward: Vector3, delta: float) -> DotVehicleCommand:
+func _back_off(bus: GSVehicleInstance, toward: Vector3, delta: float) -> GSVehicleCommand:
 	var left := float(_bus_backing_off.get(bus.instance_id, 0.0))
 	var held := float(_bus_stuck.get(bus.instance_id, 0.0))
 	if held <= 0.0:
@@ -311,7 +311,7 @@ func _back_off(bus: DotVehicleInstance, toward: Vector3, delta: float) -> DotVeh
 	to.y = 0.0
 	var side := 1.0 if right.dot(to) >= 0.0 else -1.0
 	var forward: bool = _bus_back_forward.get(bus.instance_id, false)
-	var command := DotVehicleCommand.new()
+	var command := GSVehicleCommand.new()
 	command.throttle = BACK_OFF_THROTTLE if forward else -BACK_OFF_THROTTLE
 	command.steer = side if forward else -side
 	command.sanitise()
@@ -328,7 +328,7 @@ var _bus_routes: Dictionary = {}
 ## The waypoints a bot bus follows through a district to [param beyond], replanned every
 ## `bot_route_replan` seconds or when the quarry has moved on, with the ones it has reached
 ## dropped each tick. Empty when the line is clear.
-func _street_path(bus: DotVehicleInstance, quarry_at: Vector3, beyond: Vector3,
+func _street_path(bus: GSVehicleInstance, quarry_at: Vector3, beyond: Vector3,
 		delta: float) -> PackedVector3Array:
 	var held: Dictionary = _bus_routes.get(bus.instance_id, {})
 	var age := float(held.get("age", INF)) + delta
@@ -356,7 +356,7 @@ const STREET_PASSED := 3.5
 
 ## A bot bus that has to face the other way to get up the ramp turns round in legs, or null to drive
 ## on.
-func _turn_for_the_ramp(bus: DotVehicleInstance, aim: Vector3, delta: float) -> DotVehicleCommand:
+func _turn_for_the_ramp(bus: GSVehicleInstance, aim: Vector3, delta: float) -> GSVehicleCommand:
 	var basis := bus.body().global_basis
 	var forward := -basis.z
 	forward.y = 0.0
@@ -389,11 +389,11 @@ func _turn_for_the_ramp(bus: DotVehicleInstance, aim: Vector3, delta: float) -> 
 	turning["held"] = held
 	_bus_backing[bus.instance_id] = turning
 
-	# +1 steers right (DotVehicleCommand's convention). Forward, the wheel points at the
+	# +1 steers right (GSVehicleCommand's convention). Forward, the wheel points at the
 	# side the point is on; in reverse it goes the other way, which brings the nose round
 	# towards the same side.
 	var toward := 1.0 if wanted.dot(right.normalized()) >= 0.0 else -1.0
-	var command := DotVehicleCommand.new()
+	var command := GSVehicleCommand.new()
 	command.throttle = -RAMP_TURN_THROTTLE if reverse else RAMP_TURN_THROTTLE
 	command.steer = -toward if reverse else toward
 	command.sanitise()
@@ -402,8 +402,8 @@ func _turn_for_the_ramp(bus: DotVehicleInstance, aim: Vector3, delta: float) -> 
 ## A bot bus bound up the ramp that cannot simply drive at it (back to it, or climbing off the
 ## middle) turns or backs down and lines up again. Null when neither applies and the ordinary line-
 ## up drives.
-func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
-		delta: float) -> DotVehicleCommand:
+func _turn_round_for_the_ramp(player: BfhPlayer, bus: GSVehicleInstance,
+		delta: float) -> GSVehicleCommand:
 	var id := bus.instance_id
 	var pos := bus.position()
 	var basis := bus.body().global_basis
@@ -458,7 +458,7 @@ func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
 
 	_ramp_turn_next_phase(plan, off, out, settles, lined, axis, right)
 
-	var command := DotVehicleCommand.new()
+	var command := GSVehicleCommand.new()
 	if plan["phase"] == "line":
 		return _ramp_turn_line(bus, plan, command, pos, forward, right, axis, out, speed, lined)
 	return _ramp_turn_legs(bus, plan, command, pos, forward, right, speed, centre)
@@ -466,7 +466,7 @@ func _turn_round_for_the_ramp(player: BfhPlayer, bus: DotVehicleInstance,
 
 ## A new turn's plan: facing away from the ramp, or climbing its first metres off the middle. Empty
 ## when the bus needs neither; it records the plan and clears the backing-off state when it starts.
-func _ramp_turn_plan(bus: DotVehicleInstance, pos: Vector3, off: float, out: float,
+func _ramp_turn_plan(bus: GSVehicleInstance, pos: Vector3, off: float, out: float,
 		speed: float) -> Dictionary:
 	var plan := {}
 	# Facing away from the ramp, wherever it is: beside the slab, where the buses
@@ -495,7 +495,7 @@ func _ramp_turn_plan(bus: DotVehicleInstance, pos: Vector3, off: float, out: flo
 ## Whether the approach is over: arrived, or going past the turning point, or far enough out that
 ## its tail is clear of the foot and the floor ahead is open (the first leg begins on the way in,
 ## which is two seconds of a twenty-second chase).
-func _ramp_turn_arrived(bus: DotVehicleInstance, pos: Vector3, forward: Vector3, right: Vector3,
+func _ramp_turn_arrived(bus: GSVehicleInstance, pos: Vector3, forward: Vector3, right: Vector3,
 		out: float, speed: float, centre: Vector3, to_centre: Vector3) -> bool:
 	return to_centre.length() < RAMP_TURN_ARRIVE or (
 		to_centre.length() < RAMP_TURN_ARRIVE * 2.0 and forward.dot(to_centre) < 0.0) \
@@ -542,9 +542,9 @@ func _ramp_turn_next_phase(plan: Dictionary, off: float, out: float, settles: fl
 
 ## One tick of the line-up: back for room, then forward onto the centreline. Null once the bus is
 ## onto the slab going forward, where the ordinary climb takes over.
-func _ramp_turn_line(bus: DotVehicleInstance, plan: Dictionary, command: DotVehicleCommand,
+func _ramp_turn_line(bus: GSVehicleInstance, plan: Dictionary, command: GSVehicleCommand,
 		pos: Vector3, forward: Vector3, right: Vector3, axis: Vector3, out: float, speed: float,
-		lined: bool) -> DotVehicleCommand:
+		lined: bool) -> GSVehicleCommand:
 	var held := float(plan["held"])
 	var reverse: bool = plan["reverse"]
 	if out < 0.0 and not reverse and not plan["settling"]:
@@ -593,7 +593,7 @@ func _ramp_turn_line(bus: DotVehicleInstance, plan: Dictionary, command: DotVehi
 ## Onto the centreline the way a lane-keeping controller does it: the heading it wants is the
 ## ramp's axis turned towards the centreline by an angle that grows with how far off it is, so the
 ## offset and the heading are taken out together and the bus arrives on the line pointing along.
-func _ramp_line_forward(command: DotVehicleCommand, pos: Vector3, forward: Vector3, right: Vector3,
+func _ramp_line_forward(command: GSVehicleCommand, pos: Vector3, forward: Vector3, right: Vector3,
 		axis: Vector3, speed: float, lined: bool) -> void:
 	var across := minf(acos(clampf(1.0 - absf(pos.x) / RAMP_LINE_RADIUS, -1.0, 1.0)),
 		deg_to_rad(RAMP_LINE_STEEPEST))
@@ -609,9 +609,9 @@ func _ramp_line_forward(command: DotVehicleCommand, pos: Vector3, forward: Vecto
 
 
 ## One tick of the turn's legs: forward and back with the wheel over, braking to a stop between.
-func _ramp_turn_legs(bus: DotVehicleInstance, plan: Dictionary, command: DotVehicleCommand,
+func _ramp_turn_legs(bus: GSVehicleInstance, plan: Dictionary, command: GSVehicleCommand,
 		pos: Vector3, forward: Vector3, right: Vector3, speed: float,
-		centre: Vector3) -> DotVehicleCommand:
+		centre: Vector3) -> GSVehicleCommand:
 	# `held` is read here: a phase that just began has reset it.
 	var held := float(plan["held"])
 	var reverse: bool = plan["reverse"]
@@ -632,7 +632,7 @@ func _ramp_turn_legs(bus: DotVehicleInstance, plan: Dictionary, command: DotVehi
 			plan["held"] = 0.0
 			plan["settling"] = true
 
-	# +1 steers right (DotVehicleCommand's convention). Forward, the wheel is over to the
+	# +1 steers right (GSVehicleCommand's convention). Forward, the wheel is over to the
 	# side the turn goes; in reverse it is over the other way, which turns the nose the
 	# same way round.
 	var sense: float = plan["sense"]
@@ -651,7 +651,7 @@ func _ramp_turn_legs(bus: DotVehicleInstance, plan: Dictionary, command: DotVehi
 ## Whether the end of [param bus] it is moving towards ([param reverse] for the tail) is about to
 ## run out of floor: any of its two corners and its middle, a margin ahead along the way that point
 ## is moving, inside [constant RAMP_TURN_MARGIN] of an obstacle, the slab or the deck, or, with a.
-func _end_blocked(bus: DotVehicleInstance, pos: Vector3, forward: Vector3, right: Vector3,
+func _end_blocked(bus: GSVehicleInstance, pos: Vector3, forward: Vector3, right: Vector3,
 		reverse: bool, centre: Variant = null) -> bool:
 	var lead := forward * (-BUS_HALF_LENGTH if reverse else BUS_HALF_LENGTH)
 	var spin := bus.body().angular_velocity
@@ -754,25 +754,25 @@ const RAMP_FORWARD_LONGEST := 1.5
 const RAMP_TURN_THROTTLE := 0.7
 
 ## The preset a bot's numbers are taken relative to, so medium drives as before presets.
-static var _MEDIUM: DotBotProfile = DotBotProfile.new()
+static var _MEDIUM: GSBotProfile = GSBotProfile.new()
 
 ## Releases every static resource the game holds, plus the family's shared caches, for a suite
 ## to call before quit(); after it the statics are unusable until the script reloads.
 static func clear_cache() -> void:
 	_MEDIUM = null
 	BfhTextures.clear_cache()
-	DotHumanoidFigure.clear_cache()
-	DotHudPiece.clear_cache()
-	DotMenuKit.clear_cache()
-	DotPropBodyLook.clear_cache()
-	DotPropModel.clear_cache()
-	DotLog.clear_cache()
-	DotRegistry.clear_cache()
+	GSHumanoidFigure.clear_cache()
+	GSHudPiece.clear_cache()
+	GSMenuKit.clear_cache()
+	GSPropBodyLook.clear_cache()
+	GSPropModel.clear_cache()
+	GSLog.clear_cache()
+	GSRegistry.clear_cache()
 
 ## Where a bot aims past a runner, from where they are now: their run times the seconds the
 ## bus needs to get there (capped at two), by how much more (or less) than medium this bot
 ## reads a moving target. Zero at medium.
-func _bot_lead(bus: DotVehicleInstance, quarry: BfhPlayer, skill: DotBotProfile) -> Vector3:
+func _bot_lead(bus: GSVehicleInstance, quarry: BfhPlayer, skill: GSBotProfile) -> Vector3:
 	if quarry.controller == null:
 		return Vector3.ZERO
 	var run: Vector3 = quarry.controller.state.velocity

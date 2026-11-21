@@ -1,6 +1,6 @@
 extends RefCounted
 
-## Per-map settings: dot-game's [DotGameMapConfig] over the tunables a bowl may change.
+## Per-map settings: dot-game's [GSGameMapConfig] over the tunables a bowl may change.
 ##
 ## `cfg/game/mg-buses-from-hell/dot_map/map/<bowl>.yml` (a glob such as `*.yml` covers them all), overridable from `cfg/server/...`. A key outside [constant KEYS] is logged and ignored, so a file can never run a command.
 
@@ -35,8 +35,8 @@ const CLIENT_KEYS := ["bfh_round_seconds", "bfh_bus_top_speed", "bfh_bus_lethal_
 
 
 ## The applier over [param console]'s cvars.
-static func build(console: DotConsole) -> DotGameMapConfig:
-	return DotGameMapConfig.for_console(GAME_ID, console, KEYS)
+static func build(console: GSConsole) -> GSGameMapConfig:
+	return GSGameMapConfig.for_console(GAME_ID, console, KEYS)
 
 
 ## The client's keys: [constant KEYS] restricted to [constant CLIENT_KEYS].

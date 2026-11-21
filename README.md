@@ -114,7 +114,7 @@ Runners who are run over or blown up fly as ragdolls ([dot-player-char](https://
 
 A runner who is out can fly a free camera (G); `mp_freeroam 0` keeps them on players, `mp_forcecamera 1` or `2` restricts the camera and switches it off, and `mp_freeroam_speed` (metres a second) sets the speed.
 
-The bot cvars are the family's shared ones (dot-server's `DotBotQuota`), counted here in driving seats because a bot only ever drives: `bfh_drivers` is how many seats there are and caps the quota.
+The bot cvars are the family's shared ones (dot-server's `GSBotQuota`), counted here in driving seats because a bot only ever drives: `bfh_drivers` is how many seats there are and caps the quota.
 
 Two settings are the map itself, so they are read when the bowl is built and are not cvars: set them in the JSON config, the environment (`BFH_HOOK_LAYOUT`, `BFH_COURTYARD_WEST_LANE`) or the command line (`--bfh-hook-layout`, `--bfh-courtyard-west-lane`) and restart. Connected clients are told them when they join.
 

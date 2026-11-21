@@ -1,6 +1,6 @@
-extends DotGameNetchaosClient
+extends GSGameNetchaosClient
 
-## Buses From Hell's side of `tools/netchaos.sh` (dot-game's DotGameNetchaosClient). No fire action: the pilot only runs and jumps.
+## Buses From Hell's side of `tools/netchaos.sh` (dot-game's GSGameNetchaosClient). No fire action: the pilot only runs and jumps.
 
 
 func _configure() -> void:

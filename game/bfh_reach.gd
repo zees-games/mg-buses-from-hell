@@ -3,7 +3,7 @@ extends RefCounted
 ## What a runner can get onto, as arithmetic over the movement they actually have.
 
 ## The family's margin, owned by the controller.
-const CLIMB_MARGIN := DotFpsTunables.CLIMB_MARGIN
+const CLIMB_MARGIN := GSFpsTunables.CLIMB_MARGIN
 
 ## How a climb is made. Each is held to a different number, which is why it is declared
 ## rather than inferred: a 0.4 m rise is a STEP if you walk into it and a JUMP if there is
@@ -73,19 +73,19 @@ static func launch_speed(gravity: float, height: float) -> float:
 
 
 ## The highest top face a runner standing on flat ground jumps onto, in metres.
-## [method DotFpsTunables.climb_limit] at [constant CLIMB_MARGIN].
-static func climb_limit(t: DotFpsTunables) -> float:
+## [method GSFpsTunables.climb_limit] at [constant CLIMB_MARGIN].
+static func climb_limit(t: GSFpsTunables) -> float:
 	return t.climb_limit(CLIMB_MARGIN)
 
 
 ## The clear air a runner at full ground speed crosses in one jump, landing [param rise] metres
-## higher than they left. [method DotFpsTunables.jump_reach] at `max_speed`.
-static func jump_reach(t: DotFpsTunables, rise: float) -> float:
+## higher than they left. [method GSFpsTunables.jump_reach] at `max_speed`.
+static func jump_reach(t: GSFpsTunables, rise: float) -> float:
 	return t.jump_reach(rise, t.max_speed)
 
 
 ## Why [param climb] is outside what [param t] can do, or "" when it is inside it.
-static func refusal(climb: Climb, t: DotFpsTunables) -> String:
+static func refusal(climb: Climb, t: GSFpsTunables) -> String:
 	match climb.how:
 		How.STEP:
 			if climb.gap > 0.0:

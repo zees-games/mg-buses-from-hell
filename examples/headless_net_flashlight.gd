@@ -6,8 +6,8 @@ func _test_the_flashlight_crosses() -> void:
 	_section("the flashlight is asked for, and the server's state comes back to everybody")
 	var server_me := _server_player()
 	var mine := _client_player()
-	var server_net := server_me.get_node("Net") as DotNetBehaviour
-	_check(server_net.find_var(&"net_flashlight").audience == DotNetVar.Audience.EVERYONE,
+	var server_net := server_me.get_node("Net") as GSNetBehaviour
+	_check(server_net.find_var(&"net_flashlight").audience == GSNetVar.Audience.EVERYONE,
 		"the flag is declared for everybody: the beam is drawn for the others")
 	var was := server_me.flashlight
 	_client_bridge.ask_flashlight()

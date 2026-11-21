@@ -1,10 +1,10 @@
-extends DotCoverServer
+extends GSCoverServer
 
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhGame := preload("../game/bfh_game.gd")
 
 ## A headless dedicated bowl for tools/render_cover.gd to join: the boot examples/dedicated.gd does
-## (DotServer, the world, the module), left running.
+## (GSServer, the world, the module), left running.
 
 var game: BfhGame = null
 
@@ -24,5 +24,5 @@ func _boot(dir: String) -> void:
 	await get_tree().process_frame
 
 	(load("res://game/bfh_module.gd") as GDScript).set("punishments_file", "%s/punishments.json" % dir)
-	var loaded: DotResult = await server.modules.load_module("res://game/bfh_module.gd")
+	var loaded: GSResult = await server.modules.load_module("res://game/bfh_module.gd")
 	print("cover_server: module loaded=%s port=%d" % [loaded.ok, port])

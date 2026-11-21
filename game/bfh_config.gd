@@ -1,6 +1,6 @@
-extends DotConfig
+extends GSConfig
 
-## Every cvar this game has, layered like every other [DotConfig] in the family.
+## Every cvar this game has, layered like every other [GSConfig] in the family.
 
 @export_group("Round")
 
@@ -169,7 +169,7 @@ extends DotConfig
 @export var bowl_ids: PackedStringArray = PackedStringArray()
 
 ## The file that says which bowls this server ROTATES: `cfg/maps.yml` (dot-map's
-## `DotMapRotationFile`: named rotations, `random` or `cycle`, wildcards, command names), looked for
+## `GSMapRotationFile`: named rotations, `random` or `cycle`, wildcards, command names), looked for
 ## in the `--config` directory. Empty, or no such file, rotates every bowl.
 @export var map_rotation_file: String = "cfg/maps.yml"
 
@@ -227,8 +227,8 @@ const CFG_FILES := {
 
 
 ## The binder every entry point uses: [param config] layered, one cfg file per [constant CFG_FILES] entry.
-static func make_binder(config: DotConfig, json_path := "") -> DotGameConfigBinder:
-	var b := DotGameConfigBinder.create(config, "mg-buses-from-hell", "bfh", json_path)
+static func make_binder(config: GSConfig, json_path := "") -> GSGameConfigBinder:
+	var b := GSGameConfigBinder.create(config, "mg-buses-from-hell", "bfh", json_path)
 	b.grouped = true
 	b.group_files = CFG_FILES
 	return b
@@ -242,19 +242,19 @@ func cli_prefix() -> String:
 	return "--bfh-"
 
 
-func validate() -> DotResult:
+func validate() -> GSResult:
 	if round_seconds <= 0.0:
-		return DotResult.fail(DotError.CODE_INVALID, "round_seconds must be positive.")
+		return GSResult.fail(GSError.CODE_INVALID, "round_seconds must be positive.")
 
 	if driver_count < 1:
-		return DotResult.fail(DotError.CODE_INVALID, "A round needs at least one driver.")
+		return GSResult.fail(GSError.CODE_INVALID, "A round needs at least one driver.")
 
 	# A lethal speed at or above the top speed is a bus that can never kill anybody,
 	# which reads as the collision code being broken rather than as two numbers that
 	# disagree. Refused here, where the message can say which two.
 	if bus_lethal_speed >= bus_top_speed:
-		return DotResult.fail(
-			DotError.CODE_INVALID,
+		return GSResult.fail(
+			GSError.CODE_INVALID,
 			"bus_lethal_speed (%.1f) is at or above bus_top_speed (%.1f), so no bus could ever reach it."
 				% [bus_lethal_speed, bus_top_speed],
 		)
@@ -262,16 +262,16 @@ func validate() -> DotResult:
 	# Breaking what is under it is the first thing the stuck rule does, so a reset sooner
 	# than that would put a bus back on its start line for every crate it ever sat on.
 	if bus_stuck_reset_seconds < bus_stuck_break_seconds:
-		return DotResult.fail(
-			DotError.CODE_INVALID,
+		return GSResult.fail(
+			GSError.CODE_INVALID,
 			"bus_stuck_reset_seconds (%.1f) is below bus_stuck_break_seconds (%.1f)."
 				% [bus_stuck_reset_seconds, bus_stuck_break_seconds],
 		)
 
 	if arena_radius < 8.0:
-		return DotResult.fail(DotError.CODE_INVALID, "The bowl needs room to drive in.")
+		return GSResult.fail(GSError.CODE_INVALID, "The bowl needs room to drive in.")
 
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
 func describe() -> Dictionary:

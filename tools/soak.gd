@@ -5,7 +5,7 @@ const BfhGame := preload("../game/bfh_game.gd")
 const BfhBowls := preload("../game/bfh_bowls.gd")
 
 ## Bot soak on the real game: N bot-driven buses chase idle runners in one bowl for M simulated
-## minutes through dot-bot's DotBotSoak, fed by dot-spawn's DotSpawnWatch. A "map" here is a bowl
+## minutes through dot-bot's GSBotSoak, fed by dot-spawn's GSSpawnWatch. A "map" here is a bowl
 ## id.
 
 const DEFAULT_MAP := &"bfh_bowl"
@@ -22,7 +22,7 @@ var _bots: Array[StringName] = []
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	GSLog.set_level(GSLog.Level.ERROR)
 	_run.call_deferred()
 
 
@@ -36,7 +36,7 @@ func _arg(name: String, fallback: String) -> String:
 
 func _run() -> void:
 	var map_id := StringName(_arg("map", String(DEFAULT_MAP)))
-	var cfg := DotBotSoakConfig.new()
+	var cfg := GSBotSoakConfig.new()
 	cfg.minutes = DEFAULT_MINUTES
 	cfg.bots = DEFAULT_BOTS
 	# The object count saws with each round's props and wrecks; a real leak keeps climbing.
@@ -82,11 +82,11 @@ func _run() -> void:
 		_game.simulate(1.0 / float(TICK_RATE))
 		await get_tree().physics_frame
 
-	var watch := DotSpawnWatch.new()
+	var watch := GSSpawnWatch.new()
 	watch.rules.enabled = true
 	watch.rules.kill_y = -20.0
 
-	var soak := DotBotSoak.new(cfg)
+	var soak := GSBotSoak.new(cfg)
 	soak.watch = watch
 	soak.movers_fn = _movers
 	soak.object_count_fn = func() -> int: return int(Performance.get_monitor(Performance.OBJECT_COUNT))
@@ -102,8 +102,8 @@ func _run() -> void:
 	report["map"] = String(map_id)
 	report["rounds"] = _game.round_number
 	report["rounds_over"] = _rounds_over
-	print(DotBotSoak.summary(report))
-	print(DotBotSoak.report_line(report))
+	print(GSBotSoak.summary(report))
+	print(GSBotSoak.report_line(report))
 	var path := ProjectSettings.globalize_path("res://.godot/test-logs/soak-%s.json" % map_id)
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	if soak.write_report(report, path) != OK:
@@ -135,7 +135,7 @@ func _movers() -> Array:
 
 
 ## `--trace` prints each bus once a second: position, speed, the nearest runner, and the ramp plan.
-func _trace_bus(id: StringName, bus: DotVehicleInstance) -> void:
+func _trace_bus(id: StringName, bus: GSVehicleInstance) -> void:
 	if not OS.get_cmdline_user_args().has("--trace"):
 		return
 	var sec := (Engine.get_physics_frames() - _first_frame) / TICK_RATE

@@ -193,7 +193,7 @@ func _scaffold_bus_brings_them_down() -> void:
 		# Standing still, and told so every tick: a tick with no command REPEATS the last one, which is
 		# what a netcode wants of a lost packet — and the last one was "run along the top step", so the
 		# first version of this watched the runner walk off the far end 0.7 s before the bus arrived and.
-		var still := DotFpsCommand.new()
+		var still := GSFpsCommand.new()
 		still.yaw = runner.controller.state.yaw
 		runner.controller.apply_command(still)
 		game.simulate(TICK)
@@ -372,7 +372,7 @@ func _yard_bus_comes_in(south: int) -> void:
 	var reset := false
 	var took := 0
 	for _i in range(600):
-		var still := DotFpsCommand.new()
+		var still := GSFpsCommand.new()
 		still.yaw = runner.controller.state.yaw
 		runner.controller.apply_command(still)
 		game.simulate(TICK)
@@ -505,7 +505,7 @@ func _test_the_second_lane() -> void:
 	var reset := false
 	var took := 0
 	for _i in range(600):
-		var still := DotFpsCommand.new()
+		var still := GSFpsCommand.new()
 		still.yaw = runner.controller.state.yaw
 		runner.controller.apply_command(still)
 		game.simulate(TICK)
@@ -700,7 +700,7 @@ func _colonnade_chase(what: String, hide: Vector3, start: Vector3, as_spawned: b
 	var reset := false
 	var took := 0
 	for i in range(720):
-		var still := DotFpsCommand.new()
+		var still := GSFpsCommand.new()
 		still.yaw = runner.controller.state.yaw
 		runner.controller.apply_command(still)
 		game.simulate(TICK)

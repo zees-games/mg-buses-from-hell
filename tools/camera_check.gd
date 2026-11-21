@@ -1,7 +1,7 @@
 extends Node
 
 ## The third-person camera and the spectator's chase camera flown round the bowl in the real offline
-## game (dot-core's DotCameraCheck: never inside, armed by the unprotected camera being in or behind
+## game (dot-core's GSCameraCheck: never inside, armed by the unprotected camera being in or behind
 ## the level on some frames), `mp_forceview` through the view key's path, and with `--render` both.
 
 const BfhClient := preload("../game/bfh_client.gd")
@@ -54,25 +54,25 @@ func _fly(game: BfhGame) -> void:
 			if hit.is_empty():
 				continue
 			var eye: Vector3 = (hit["position"] as Vector3) + Vector3.UP * BfhPlayer.EYE_HEIGHT
-			if not DotCameraProbe.is_inside(space, eye, 0.3, 1):
+			if not GSCameraProbe.is_inside(space, eye, 0.3, 1):
 				pivots.append(eye)
 	var world := _client.get_viewport().world_3d
 	var cases := {"third_person": BfhClient.THIRD_PERSON_OFFSET, "chase": Vector3(0.0, 0.8, 3.5)}
 	for name in cases:
 		var total := {}
 		for pivot in pivots:
-			total = DotCameraCheck.add(total, DotCameraCheck.fly(world, DotCameraCheck.orbit_path(pivot), cases[name], 1))
-		_check(DotCameraCheck.passed(total), "%s round %d places in the bowl: %s" % [name, pivots.size(), DotCameraCheck.summary(total)])
+			total = GSCameraCheck.add(total, GSCameraCheck.fly(world, GSCameraCheck.orbit_path(pivot), cases[name], 1))
+		_check(GSCameraCheck.passed(total), "%s round %d places in the bowl: %s" % [name, pivots.size(), GSCameraCheck.summary(total)])
 
 
 func _views_rule(game: BfhGame) -> void:
 	_client.set("third_person", false)
 	_client.call("toggle_view")
 	_check(bool(_client.get("third_person")), "the view key goes to third person")
-	game.view_rules.force_view = DotPlayerViewRules.FIRST_ONLY
+	game.view_rules.force_view = GSPlayerViewRules.FIRST_ONLY
 	_client.call("toggle_view")
 	_check(not bool(game.view_rules.resolve(_client.get("third_person"))), "mp_forceview 1 holds first person")
-	game.view_rules.force_view = DotPlayerViewRules.ANY
+	game.view_rules.force_view = GSPlayerViewRules.ANY
 	_client.set("third_person", false)
 
 
@@ -95,7 +95,7 @@ func _views(game: BfhGame) -> void:
 			break
 	if other == null:
 		return
-	var fade: DotCameraFade = _client.get("_fade")
+	var fade: GSCameraFade = _client.get("_fade")
 	var figures: Callable = fade.bodies_fn
 	fade.bodies_fn = Callable()
 	await _held_at_lens(me, other, camera, "buses_walk_in_before")

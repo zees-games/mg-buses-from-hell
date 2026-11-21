@@ -7,21 +7,21 @@ const BfhSpectate := preload("bfh_spectate.gd")
 
 @export_range(1, 240, 1) var tick_rate: int = 60
 
-var carry: DotPropCarry = null
+var carry: GSPropCarry = null
 
 var _tick: int = 0
 
-## Every world object this game has an id for. See [DotEntityTable].
-var entities := DotEntityTable.new()
+## Every world object this game has an id for. See [GSEntityTable].
+var entities := GSEntityTable.new()
 
-var match_node: DotMatch = null
+var match_node: GSMatch = null
 
 
 ## Whether [method start] has laid the bowl out, after which somebody arriving is placed on
 ## arrival rather than left at the origin until the next round.
 var _started: bool = false
 
-var random: DotRandomManager = null
+var random: GSRandomManager = null
 
 ## Somebody is in the world. The bridge answers this by making them an entity.
 signal player_added(player_id: StringName)
@@ -29,7 +29,7 @@ signal player_added(player_id: StringName)
 ## And is not any more.
 signal player_removed(player_id: StringName)
 
-## dot-team's block rules (`!block`, `!noblock`, `mp_teamblock`), set by the server module or `DotGameClient.add_noblock`. They feed [member body_rules]'s `pair_fn`.
+## dot-team's block rules (`!block`, `!noblock`, `mp_teamblock`), set by the server module or `GSGameClient.add_noblock`. They feed [member body_rules]'s `pair_fn`.
 var block_rules: Object = null:
 	set(value):
 		if block_rules != null and block_rules.is_connected(&"changed", body_rules.refresh):
@@ -41,7 +41,7 @@ var block_rules: Object = null:
 var round_number: int = 0
 
 ## dot-player-controller's body rules, there for dot-team's block rules to feed. Players are never solid to each other here (no hull is built), so it changes nothing physical; `mp_solidplayers` is deliberately not bound.
-var body_rules: DotPlayerBodyRules = DotPlayerBodyRules.new()
+var body_rules: GSPlayerBodyRules = GSPlayerBodyRules.new()
 
 ## The scaffold's crates this round, by prop instance id. A crate of it is an ordinary
 ## crate in every other respect — it breaks, it is shoved, it counts as cover — and this
@@ -56,27 +56,27 @@ signal player_died(player_id: StringName, by: StringName)
 
 ## Death reactions: dot-player-char's `sv_ragdoll*` cvars, bound by the module and followed by the client.
 ## Exaggerated by default so a bus throws what it hits; sv_ragdoll_exaggerate 0 turns it back.
-var ragdoll_rules: DotPlayerRagdollRules = _throwing_rules()
+var ragdoll_rules: GSPlayerRagdollRules = _throwing_rules()
 
-func _throwing_rules() -> DotPlayerRagdollRules:
-	var rules := DotPlayerRagdollRules.new()
+func _throwing_rules() -> GSPlayerRagdollRules:
+	var rules := GSPlayerRagdollRules.new()
 	rules.exaggerate = true
 	return rules
 
 ## The fall a death gets: dot-player-char's reaction rule over the server's weights, seeded from the
 ## player and the tick.
-func decide_death(player: BfhPlayer, damage: DotDamage) -> DotPlayerDeath:
+func decide_death(player: BfhPlayer, damage: GSDamage) -> GSPlayerDeath:
 	var why: StringName = damage.context.get("why", &"")
 	var thrown := why == KILLED_BY_BUS or why == KILLED_BY_BARREL
-	return DotPlayerDeath.decide(
+	return GSPlayerDeath.decide(
 		ragdoll_rules.reactions(), damage.is_headshot(), damage.amount, damage.direction,
-		DotPlayerDeath.seed_of(player.entity_id, _tick), null,
-		1.0 if thrown else 0.0, DotPlayerDeathReactions.POWER_LAUNCH if thrown else &""
+		GSPlayerDeath.seed_of(player.entity_id, _tick), null,
+		1.0 if thrown else 0.0, GSPlayerDeathReactions.POWER_LAUNCH if thrown else &""
 	)
 
-func _on_player_died(player: BfhPlayer, damage: DotDamage) -> void:
+func _on_player_died(player: BfhPlayer, damage: GSDamage) -> void:
 	# One dictionary read. This walked every player on the server comparing ints, which is the reverse
-	# index [DotEntityTable] keeps so nobody has to -- and it ran on every death, which on this game is
+	# index [GSEntityTable] keeps so nobody has to -- and it ran on every death, which on this game is
 	# a lot of them.
 	var by := entities.key_for_id(damage.attacker)
 
@@ -85,13 +85,13 @@ func _on_player_died(player: BfhPlayer, damage: DotDamage) -> void:
 		player.death = decide_death(player, damage)
 
 	player_died.emit(player.player_id, by)
-	DotLog.debug(CHANNEL, "player died", {"id": String(player.player_id), "by": String(by)})
+	GSLog.debug(CHANNEL, "player died", {"id": String(player.player_id), "by": String(by)})
 
 	if spectate != null:
 		spectate.on_death(player.player_id, player.global_position, by, _tick)
 
 ## Where one person stands at the top of a round, or on arriving during one.
-func _place_one(player: BfhPlayer, team: int, stream: DotRandomStream) -> void:
+func _place_one(player: BfhPlayer, team: int, stream: GSRandomStream) -> void:
 	if team == TEAM_DRIVERS:
 		player.global_position = arena.ledge_centre() + Vector3(0.0, 1.0, 0.0)
 	else:
@@ -151,7 +151,7 @@ func add_player(
 	add_child(player)
 
 	var opened := entities.open(
-		DotEntity.KIND_PLAYER,
+		GSEntity.KIND_PLAYER,
 		player,
 		&"",
 		player_id,
@@ -161,13 +161,13 @@ func add_player(
 	if not opened.ok:
 		# A refusal here means this player id is already an entity, which cannot happen -- `add_player`
 		# returns early on a duplicate.
-		DotLog.error(CHANNEL, "could not open an entity for a player", {
+		GSLog.error(CHANNEL, "could not open an entity for a player", {
 			"id": String(player_id), "why": opened.error.message,
 		})
 
-	player.entity_id = (opened.value as DotEntityHandle).id if opened.ok else 0
+	player.entity_id = (opened.value as GSEntityHandle).id if opened.ok else 0
 
-	var health := DotHealth.new()
+	var health := GSHealth.new()
 	health.name = "Health"
 	health.max_health = config.runner_health
 	health.health = config.runner_health
@@ -175,7 +175,7 @@ func add_player(
 	player.health = health
 	combat.register_health(player.entity_id, health)
 
-	health.died.connect(func(damage: DotDamage) -> void: _on_player_died(player, damage))
+	health.died.connect(func(damage: GSDamage) -> void: _on_player_died(player, damage))
 
 	players[player_id] = player
 	sides[player_id] = team
@@ -186,7 +186,7 @@ func add_player(
 		# Not fatal to the join -- they can still move and be seen -- but the round rule
 		# cannot count them, which is a round decided without them. Said out loud because
 		# the last time this was refused, nothing did.
-		DotLog.error(CHANNEL, "dot-match refused a player's side", {
+		GSLog.error(CHANNEL, "dot-match refused a player's side", {
 			"id": String(player_id), "team": team, "why": joined.error.message,
 		})
 
@@ -199,7 +199,7 @@ func add_player(
 	if authoritative and _started:
 		_place_one(player, team, random.stream(&"late_spawns"))
 
-	DotLog.debug(CHANNEL, "player joined", {"id": String(player_id), "team": team})
+	GSLog.debug(CHANNEL, "player joined", {"id": String(player_id), "team": team})
 
 	# Last, after the hammer and the health: the bridge answers this by building the
 	# replicated entity and announcing the join, and an entity built over a half-made
@@ -251,12 +251,12 @@ func remove_player(player_id: StringName) -> void:
 	if ride != null and ride.is_riding(player_id):
 		ride.exit(vehicles.get_vehicle(ride.vehicle_id_of(player_id)), player_id, true)
 
-	# Before the node goes. dot-combat keyed a `DotHealth` on this entity and NOTHING in this game had
+	# Before the node goes. dot-combat keyed a `GSHealth` on this entity and NOTHING in this game had
 	# ever told it to let go -- so every player who had ever joined left a health record behind,
 	# pointing at a node freed with them.
 	if combat != null and is_instance_valid(combat) and player.entity_id != 0:
 		combat.forget(player.entity_id)
-		entities.close(player.entity_id, DotEntityTable.REASON_OWNER_LEFT)
+		entities.close(player.entity_id, GSEntityTable.REASON_OWNER_LEFT)
 
 	# And dot-match, which kept counting them as present: towards `min_players`, and on
 	# the side they left from. Their scoreboard record stays, which is dot-match's own rule.
@@ -330,7 +330,7 @@ func sound_horn(player: BfhPlayer) -> bool:
 ## Flips a player between walking and driving. Called by the ride, never directly.
 func _set_riding(
 	player_id: StringName, value: bool, at: Vector3 = Vector3.ZERO,
-	vehicle: DotVehicleInstance = null
+	vehicle: GSVehicleInstance = null
 ) -> void:
 	var player: BfhPlayer = players.get(player_id)
 	if player == null:

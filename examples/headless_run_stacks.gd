@@ -44,9 +44,9 @@ func _test_bowl_layout() -> void:
 	# [b]Seeded, so two servers on the same seed lay the same round out.[/b] Asserted against the
 	# SCATTER rather than against where the crates ended up, and the first version of this check did
 	# the latter: it built a second world, stepped it, and compared prop positions.
-	var left := DotRandomStream.new(4242, &"bowl")
-	var right := DotRandomStream.new(4242, &"bowl")
-	var drifted := DotRandomStream.new(4243, &"bowl")
+	var left := GSRandomStream.new(4242, &"bowl")
+	var right := GSRandomStream.new(4242, &"bowl")
+	var drifted := GSRandomStream.new(4243, &"bowl")
 
 	var same := true
 	var differs := false
@@ -83,7 +83,7 @@ func _test_bowl_layout() -> void:
 			in_lane += 1
 	_check(lanes == maxi(game.config.driver_count, 1) and in_lane == 0,
 		"nothing scattered lies in the lane in front of a bus start", "%d lanes, %d props in one" % [lanes, in_lane])
-	var kept := DotRandomStream.new(777, &"bowl")
+	var kept := GSRandomStream.new(777, &"bowl")
 	var sampled_in := 0
 	for _i in range(400):
 		var at := game.arena.scatter_point(kept, 12.0, 0.5)
@@ -92,7 +92,7 @@ func _test_bowl_layout() -> void:
 	_check(sampled_in == 0, "and 400 more scatter points avoid it", "%d in a lane" % sampled_in)
 	var saved_lanes := game.arena.start_lanes.duplicate()
 	game.arena.start_lanes.clear()
-	var loose := DotRandomStream.new(777, &"bowl")
+	var loose := GSRandomStream.new(777, &"bowl")
 	var would := 0
 	for _i in range(400):
 		var at := game.arena.scatter_point(loose, 12.0, 0.5)
@@ -117,7 +117,7 @@ func _test_bowl_layout() -> void:
 		nearest = minf(nearest, Vector2(dx, dz).length())
 	_check(footprint.size == Vector3.ZERO or nearest >= margin,
 		"nothing scattered lies within %.1f m of the scaffold" % margin, "nearest %.2f m" % nearest)
-	var near_scaffold := func(stream: DotRandomStream) -> int:
+	var near_scaffold := func(stream: GSRandomStream) -> int:
 		var n := 0
 		for _i in range(400):
 			var at := game.arena.scatter_point(stream, 12.0, 0.5)
@@ -126,10 +126,10 @@ func _test_bowl_layout() -> void:
 			if Vector2(dx, dz).length() < margin:
 				n += 1
 		return n
-	var kept_out: int = near_scaffold.call(DotRandomStream.new(778, &"bowl"))
+	var kept_out: int = near_scaffold.call(GSRandomStream.new(778, &"bowl"))
 	var saved_margin: float = game.arena.scaffold_keep_out
 	game.arena.scaffold_keep_out = 0.0
-	var without: int = near_scaffold.call(DotRandomStream.new(778, &"bowl"))
+	var without: int = near_scaffold.call(GSRandomStream.new(778, &"bowl"))
 	game.arena.scaffold_keep_out = saved_margin
 	_check(footprint.size == Vector3.ZERO or (kept_out == 0 and without > 0),
 		"and 400 more scatter points keep the margin, where the obstacles' 2.2 m alone does not",
@@ -283,7 +283,7 @@ func _test_driving_the_stacks() -> void:
 
 
 ## How far ahead of a running target a bot bus aims, by difficulty.
-func _stacks_bot_difficulty(game: BfhGame, bus: DotVehicleInstance) -> void:
+func _stacks_bot_difficulty(game: BfhGame, bus: GSVehicleInstance) -> void:
 	# bot_difficulty at the wheel: how far ahead of a running target a bus aims, relative to
 	# medium (which aims where this game always did) -- ahead of the run at nightmare, behind
 	# it at easy -- and how fast it drives.
@@ -294,18 +294,18 @@ func _stacks_bot_difficulty(game: BfhGame, bus: DotVehicleInstance) -> void:
 		running.controller.state.velocity = Vector3(6.0, 0.0, 0.0)
 	var leads := {}
 	for preset in ["easy", "medium", "nightmare"]:
-		var s := DotBotSettings.new()
+		var s := GSBotSettings.new()
 		var _p := s.set_difficulty(preset)
 		leads[preset] = game._bot_lead(bus, running, s.profile).x if running != null else NAN
 	_check(is_zero_approx(float(leads["medium"])) and float(leads["nightmare"]) > 0.0 and float(leads["easy"]) < 0.0,
 		"a bot bus leads a runner at nightmare, trails one at easy, and aims as before at medium", str(leads))
-	_check(DotBotSettings.of(game).difficulty() == "medium", "and the world's bots are medium unless told otherwise")
+	_check(GSBotSettings.of(game).difficulty() == "medium", "and the world's bots are medium unless told otherwise")
 	if running != null and running.controller != null:
 		running.controller.state.velocity = Vector3.ZERO
 
 
 ## A bus lined up on a pillar with the quarry behind it comes round at a speed that kills.
-func _stacks_round_the_pillar(game: BfhGame, bus: DotVehicleInstance, quarry: BfhPlayer) -> void:
+func _stacks_round_the_pillar(game: BfhGame, bus: GSVehicleInstance, quarry: BfhPlayer) -> void:
 	var arena := game.arena
 	var pillar := arena.pillars()[5]
 	var body := bus.body()
@@ -371,7 +371,7 @@ func _stacks_round_the_pillar(game: BfhGame, bus: DotVehicleInstance, quarry: Bf
 
 
 ## The same drive through the hook's pillars.
-func _stacks_through_the_hook(game: BfhGame, bus: DotVehicleInstance, quarry: BfhPlayer) -> void:
+func _stacks_through_the_hook(game: BfhGame, bus: GSVehicleInstance, quarry: BfhPlayer) -> void:
 	var arena := game.arena
 	var body := bus.body()
 	# --- Through the hook
@@ -737,7 +737,7 @@ func _test_the_throw() -> void:
 	game.prop_damage.break_now(barrel.instance_id, &"r")
 	var apex := before
 	for _i in range(90):
-		var keys := DotFpsCommand.new()
+		var keys := GSFpsCommand.new()
 		keys.yaw = -90.0
 		keys.move = Vector2(0.0, 1.0)
 		runner.controller.apply_command(keys)

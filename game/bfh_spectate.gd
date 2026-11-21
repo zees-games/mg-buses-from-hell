@@ -1,8 +1,8 @@
-extends DotSpectatorHost
+extends GSSpectatorHost
 
 const BfhPlayer := preload("bfh_player.gd")
 
-## Where a runner who has been run down looks until the next round: [DotSpectatorHost] with this game's numbers and a bus's cab for a driver's eyes.
+## Where a runner who has been run down looks until the next round: [GSSpectatorHost] with this game's numbers and a bus's cab for a driver's eyes.
 
 const CHANNEL := "bfh.spectate"
 
@@ -40,7 +40,7 @@ func _init() -> void:
 
 
 ## Builds the manager. [param is_authority] false builds a mirror.
-func setup_world(world: Node3D, is_authority: bool, rate: int) -> DotResult:
+func setup_world(world: Node3D, is_authority: bool, rate: int) -> GSResult:
 	_world = world
 	authoritative = is_authority
 	tick_rate = rate
@@ -51,21 +51,21 @@ func setup_world(world: Node3D, is_authority: bool, rate: int) -> DotResult:
 
 	# INFO because it is the policy an admin is asked about.
 	if authoritative:
-		DotLog.info(CHANNEL, "spectating is set up", {
+		GSLog.info(CHANNEL, "spectating is set up", {
 			"watch_anybody": manager.rules.force_camera == 0,
 			"roaming": manager.rules.allow_roaming,
 			"death_cam_ticks": manager.rules.death_cam_ticks,
 			"freeze_cam_ticks": manager.rules.freeze_cam_ticks,
 		})
 
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 func _channel() -> String:
 	return CHANNEL
 
 
-func _tune_rules(r: DotSpectatorRules) -> DotSpectatorRules:
+func _tune_rules(r: GSSpectatorRules) -> GSSpectatorRules:
 	r.force_camera = 0
 	r.allow_while_alive = false
 	r.allow_while_dead = true
@@ -138,7 +138,7 @@ func on_death(player_id: StringName, at: Vector3, by: StringName, tick_number: i
 
 	# DEBUG: a transition. "My camera went somewhere odd when I was run over" is answered by
 	# who it was put on.
-	DotLog.debug(CHANNEL, "a runner who is out is watching", {
+	GSLog.debug(CHANNEL, "a runner who is out is watching", {
 		"player": String(player_id), "killer": String(by), "view": describe_view(player_id),
 	})
 
@@ -162,11 +162,11 @@ func on_leave(player_id: StringName) -> void:
 # --- What a spectator asks
 
 ## A click, on the authority. [param ask] is one of the ASK_* constants.
-func request(player_id: StringName, ask: int) -> DotResult:
+func request(player_id: StringName, ask: int) -> GSResult:
 	if manager == null:
-		return DotResult.fail(DotError.CODE_STATE, "Spectating is not set up.")
+		return GSResult.fail(GSError.CODE_STATE, "Spectating is not set up.")
 	if not authoritative:
-		return DotResult.fail(DotError.CODE_FORBIDDEN, "A client asks the server; it does not decide.")
+		return GSResult.fail(GSError.CODE_FORBIDDEN, "A client asks the server; it does not decide.")
 
 	var key := String(player_id)
 
@@ -178,19 +178,19 @@ func request(player_id: StringName, ask: int) -> DotResult:
 		ASK_VIEW:
 			var view := manager.view(key)
 			if not view.follows_target() or view.is_timed():
-				return DotResult.fail(
-					DotError.CODE_STATE, "There is nobody to change the view of yet."
+				return GSResult.fail(
+					GSError.CODE_STATE, "There is nobody to change the view of yet."
 				)
 			var wanted := (
-				DotSpectatorView.Mode.CHASE if view.mode == DotSpectatorView.Mode.FIRST_PERSON
-				else DotSpectatorView.Mode.FIRST_PERSON
+				GSSpectatorView.Mode.CHASE if view.mode == GSSpectatorView.Mode.FIRST_PERSON
+				else GSSpectatorView.Mode.FIRST_PERSON
 			)
 			return manager.set_mode(key, wanted)
 
 		ASK_ROAM:
 			return toggle_roam(key)
 
-	return DotResult.fail(DotError.CODE_INVALID, "Unknown spectator request %d." % ask)
+	return GSResult.fail(GSError.CODE_INVALID, "Unknown spectator request %d." % ask)
 
 
 ## Who they are looking at: the target, or on a death camera the killer it looks at.
@@ -200,7 +200,7 @@ func target_of(player_id: StringName) -> StringName:
 
 	var view := manager.view(String(player_id))
 
-	if view.mode == DotSpectatorView.Mode.DEATH_CAM:
+	if view.mode == GSSpectatorView.Mode.DEATH_CAM:
 		return StringName(view.killer)
 
 	return StringName(view.target)
@@ -215,7 +215,7 @@ func adopt(player_id: StringName, mode: int, target: StringName) -> void:
 	var view := manager.view(key)
 	var was_watching := view.is_watching()
 
-	if mode <= 0 or mode >= DotSpectatorView.Mode.size():
+	if mode <= 0 or mode >= GSSpectatorView.Mode.size():
 		if was_watching:
 			manager.stop(key)
 		return
@@ -225,12 +225,12 @@ func adopt(player_id: StringName, mode: int, target: StringName) -> void:
 		if player != null and player.controller != null:
 			view.death_position = player.controller.state.position
 
-	var as_mode := mode as DotSpectatorView.Mode
+	var as_mode := mode as GSSpectatorView.Mode
 	var wire := {"m": mode, "t": "", "k": "", "u": -1}
 
-	if as_mode == DotSpectatorView.Mode.DEATH_CAM:
+	if as_mode == GSSpectatorView.Mode.DEATH_CAM:
 		wire["k"] = String(target)
-	elif as_mode == DotSpectatorView.Mode.FREEZE_CAM:
+	elif as_mode == GSSpectatorView.Mode.FREEZE_CAM:
 		wire["k"] = String(target)
 		wire["t"] = String(target)
 	else:
@@ -244,5 +244,5 @@ func describe_view(player_id: StringName) -> String:
 		return "playing"
 
 	return "%s %s" % [
-		DotSpectatorView.Mode.keys()[mode_of(player_id)], String(target_of(player_id))
+		GSSpectatorView.Mode.keys()[mode_of(player_id)], String(target_of(player_id))
 	]

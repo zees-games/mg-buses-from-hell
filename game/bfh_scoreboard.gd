@@ -14,7 +14,7 @@ var _own: Callable = Callable()
 var game: BfhGame = null
 
 ## The board it draws on: the menu's, or one of its own when bound without one (a suite).
-var board: DotMenuScoreboard = null
+var board: GSMenuScoreboard = null
 
 ## Tab is down.
 var held: bool = false
@@ -38,7 +38,7 @@ var _started_msec: int = Time.get_ticks_msec()
 
 ## [param p_board] is the menu's board; null builds one here. [param link] is the client
 ## link, whose roster is drawn when there is one; null draws the local world.
-func bind(p_game: BfhGame, own: Callable = Callable(), p_board: DotMenuScoreboard = null, link: Object = null) -> void:
+func bind(p_game: BfhGame, own: Callable = Callable(), p_board: GSMenuScoreboard = null, link: Object = null) -> void:
 	game = p_game
 	_own = own
 	board = p_board
@@ -46,7 +46,7 @@ func bind(p_game: BfhGame, own: Callable = Callable(), p_board: DotMenuScoreboar
 		_layer = CanvasLayer.new()
 		_layer.layer = 50
 		add_child(_layer)
-		board = DotMenuScoreboard.new()
+		board = GSMenuScoreboard.new()
 		board.name = "Board"
 		_layer.add_child(board)
 
@@ -54,8 +54,8 @@ func bind(p_game: BfhGame, own: Callable = Callable(), p_board: DotMenuScoreboar
 	board.columns = [
 		{"key": &"name", "title": "Player", "width": 3.0},
 		{"key": &"status", "title": "", "width": 1.4, "align": HORIZONTAL_ALIGNMENT_RIGHT},
-		{"key": &"seconds", "title": "Time", "kind": DotMenuScoreboard.KIND_DURATION},
-		{"key": &"ping", "title": "Ping", "kind": DotMenuScoreboard.KIND_PING},
+		{"key": &"seconds", "title": "Time", "kind": GSMenuScoreboard.KIND_DURATION},
+		{"key": &"ping", "title": "Ping", "kind": GSMenuScoreboard.KIND_PING},
 	]
 	board.sort_with = func(a: Dictionary, b: Dictionary) -> bool:
 		if (a.get(&"status", "") == "up") != (b.get(&"status", "") == "up"):
@@ -219,7 +219,7 @@ static func header_line(p_game: BfhGame, team: int) -> String:
 
 
 static func side_name(p_game: BfhGame, team: int) -> String:
-	var side: DotTeam = null
+	var side: GSTeam = null
 	if p_game.match_node != null and p_game.match_node.teams != null:
 		side = p_game.match_node.teams.team(team)
 	if side != null and side.display_name != "":
@@ -228,7 +228,7 @@ static func side_name(p_game: BfhGame, team: int) -> String:
 
 
 static func side_colour(p_game: BfhGame, team: int) -> Color:
-	var side: DotTeam = null
+	var side: GSTeam = null
 	if p_game.match_node != null and p_game.match_node.teams != null:
 		side = p_game.match_node.teams.team(team)
 	return side.colour if side != null else Color(1, 1, 1)

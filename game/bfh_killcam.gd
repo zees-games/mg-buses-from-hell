@@ -3,8 +3,8 @@ extends Node
 const BfhPlayer := preload("bfh_player.gd")
 
 ## The killcam at a round's end. Client side: every frame drawn goes into dot-replay's
-## [DotKillcamBuffer], every decisive moment (a runner going under a bus) is noted, and when the
-## round ends [DotKillcam] replays the last one from the eyes of whoever caused it.
+## [GSKillcamBuffer], every decisive moment (a runner going under a bus) is noted, and when the
+## round ends [GSKillcam] replays the last one from the eyes of whoever caused it.
 
 const CHANNEL := "bfh.killcam"
 
@@ -35,18 +35,18 @@ var now_fn: Callable = func() -> float: return Time.get_ticks_usec() / 1000000.0
 ## Nodes hidden while the replay runs (the HUD, the chat box, the lying bodies).
 var hide_while_playing: Array = []
 
-var buffer := DotKillcamBuffer.new()
-var killcam: DotKillcam = null
+var buffer := GSKillcamBuffer.new()
+var killcam: GSKillcam = null
 var camera: Camera3D = null
 
-## Where the camera sits ([enum DotKillViewRules.Camera]): the server's `mp_killview_camera`.
-var camera_mode_fn: Callable = func() -> int: return DotKillViewRules.Camera.EYE
+## Where the camera sits ([enum GSKillViewRules.Camera]): the server's `mp_killview_camera`.
+var camera_mode_fn: Callable = func() -> int: return GSKillViewRules.Camera.EYE
 
 ## Layers the camera boom stops against (the level's).
 var world_mask: int = 1
 
 var _previous_camera: Camera3D = null
-var _framing: DotKillcamFraming = null
+var _framing: GSKillcamFraming = null
 var _base_fov: float = 75.0
 var _touched: Dictionary = {}
 var _buses: Dictionary = {}
@@ -54,7 +54,7 @@ var _hidden: Dictionary = {}
 
 
 func _ready() -> void:
-	killcam = DotKillcam.new()
+	killcam = GSKillcam.new()
 	killcam.name = "Killcam"
 	killcam.skip_actions = SKIP_ACTIONS
 	add_child(killcam)
@@ -74,7 +74,7 @@ func is_playing() -> bool:
 ## re-applies the replayed frame instead, over what presentation just drew.
 func frame() -> void:
 	if is_playing():
-		if killcam.state == DotKillcam.State.WAITING:
+		if killcam.state == GSKillcam.State.WAITING:
 			_record()
 		return
 	_record()
@@ -105,7 +105,7 @@ func round_ended() -> bool:
 		"hint": "Jump to skip",
 	})
 	if not played.ok:
-		DotLog.debug(CHANNEL, "no killcam", {"why": played.error.message})
+		GSLog.debug(CHANNEL, "no killcam", {"why": played.error.message})
 		over.emit(false)
 		return false
 	return true
@@ -140,7 +140,7 @@ func _state_of(p: Node) -> Array:
 	var controller: Object = p.get(&"controller")
 	if controller == null:
 		return []
-	var st: DotFpsState = controller.get(&"state")
+	var st: GSFpsState = controller.get(&"state")
 	var bus: Variant = null
 	var at: Vector3 = p.call(&"drawn_position")
 	if bool(p.get(&"riding")):
@@ -166,7 +166,7 @@ func _on_started(_kill: Dictionary) -> void:
 		if n is Object and is_instance_valid(n) and (n as Object).get(&"visible") != null:
 			_hidden[n] = bool((n as Object).get(&"visible"))
 			(n as Object).set(&"visible", false)
-	DotLog.info(CHANNEL, "round killcam", killcam.describe())
+	GSLog.info(CHANNEL, "round killcam", killcam.describe())
 
 
 func _apply(s: Dictionary) -> void:
@@ -175,7 +175,7 @@ func _apply(s: Dictionary) -> void:
 	var alpha: float = s["alpha"]
 	var subject := String(killcam.kill()["data"].get("subject", ""))
 	var victim := String(killcam.kill()["data"].get("victim", ""))
-	var behind := int(camera_mode_fn.call()) == DotKillViewRules.Camera.BEHIND
+	var behind := int(camera_mode_fn.call()) == GSKillViewRules.Camera.BEHIND
 	var eye := Transform3D.IDENTITY
 	var target: Variant = null
 	var seen := false
@@ -207,7 +207,7 @@ func _apply(s: Dictionary) -> void:
 		_place_body(p, at, yaw, alive and not riding and (behind or String(id) != subject), pitch, lerpf(ra[4], rb[4], alpha))
 	if seen:
 		if _framing == null:
-			_framing = DotKillcamFraming.new(camera.get_world_3d() if is_inside_tree() else null, world_mask)
+			_framing = GSKillcamFraming.new(camera.get_world_3d() if is_inside_tree() else null, world_mask)
 		_framing.probe.collision_mask = world_mask
 		var v := _framing.place(int(camera_mode_fn.call()), eye, _base_fov, target, get_process_delta_time())
 		camera.global_transform = v["transform"]

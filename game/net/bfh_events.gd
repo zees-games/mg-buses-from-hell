@@ -29,7 +29,7 @@ enum Kind {
 	BLAST,
 	## Text for one player or for everybody.
 	NOTICE,
-	## One chat line, already routed, sanitised and addressed by [DotChatRouter].
+	## One chat line, already routed, sanitised and addressed by [GSChatRouter].
 	CHAT,
 	## Something in the bowl made a noise: which one of `BfhSounds.WORLD`, and where.
 	SOUND,
@@ -82,8 +82,8 @@ static func ask_name(ask: int) -> String:
 	return String(names[ask]) if ask >= 0 and ask < names.size() else "?"
 
 
-static func _w() -> DotNetWriter:
-	return DotNetWriter.new()
+static func _w() -> GSNetWriter:
+	return GSNetWriter.new()
 
 
 # --- Hello
@@ -98,7 +98,7 @@ static func write_toys(map_id: StringName, net_ids: PackedInt64Array) -> PackedB
 	return w.to_bytes()
 
 
-static func read_toys(r: DotNetReader) -> Dictionary:
+static func read_toys(r: GSNetReader) -> Dictionary:
 	var map_id := StringName(r.read_string(ID_BYTES))
 	var count := r.read_varint()
 	var ids := PackedInt64Array()
@@ -153,7 +153,7 @@ static func write_bowl(arena_radius: float, hook_layout: String, courtyard_west_
 	return w.to_bytes()
 
 
-static func read_bowl(r: DotNetReader) -> Dictionary:
+static func read_bowl(r: GSNetReader) -> Dictionary:
 	var arena_radius := r.read_float_range(0.0, 512.0, 16)
 	var hook_layout := r.read_string(LAYOUT_NAME_BYTES)
 	var courtyard_west_lane := r.read_float_range(0.0, LAYOUT_MAX, LAYOUT_BITS)
@@ -169,7 +169,7 @@ static func read_bowl(r: DotNetReader) -> Dictionary:
 	}
 
 
-static func read_hello(r: DotNetReader) -> Dictionary:
+static func read_hello(r: GSNetReader) -> Dictionary:
 	var player_id := r.read_varint()
 	var tick_rate := r.read_uint(9)
 	var server_tick := r.read_varint()
@@ -198,7 +198,7 @@ static func read_hello(r: DotNetReader) -> Dictionary:
 ## A join, or a change to who somebody is: their name, their side, their avatar.
 static func write_join(
 	player_id: int, net_id: int, display_name: String, team: int,
-	avatar: DotAvatar = null
+	avatar: GSAvatar = null
 ) -> PackedByteArray:
 	var w := _w()
 	w.write_varint(player_id)
@@ -209,13 +209,13 @@ static func write_join(
 	return w.to_bytes()
 
 
-static func read_join(r: DotNetReader) -> Dictionary:
+static func read_join(r: GSNetReader) -> Dictionary:
 	var player_id := r.read_varint()
 	var net_id := r.read_varint()
 	var display_name := r.read_string(NAME_BYTES)
 	var team := r.read_uint(2)
 	var text := r.read_string(AVATAR_BYTES)
-	var avatar: DotAvatar = null
+	var avatar: GSAvatar = null
 
 	# A document that does not parse is the stock person, not a refused join: an avatar is
 	# cosmetic, and somebody who cannot be drawn as themselves can still be drawn.
@@ -223,7 +223,7 @@ static func read_join(r: DotNetReader) -> Dictionary:
 		var parsed: Variant = JSON.parse_string(text)
 
 		if parsed is Dictionary:
-			var built := DotAvatar.from_dict(parsed)
+			var built := GSAvatar.from_dict(parsed)
 
 			if built.ok:
 				avatar = built.value
@@ -244,7 +244,7 @@ static func write_player(player_id: int) -> PackedByteArray:
 	return w.to_bytes()
 
 
-static func read_player(r: DotNetReader) -> int:
+static func read_player(r: GSNetReader) -> int:
 	return r.read_varint()
 
 
@@ -257,7 +257,7 @@ static func write_team(player_id: int, team: int) -> PackedByteArray:
 	return w.to_bytes()
 
 
-static func read_team(r: DotNetReader) -> Dictionary:
+static func read_team(r: GSNetReader) -> Dictionary:
 	var player_id := r.read_varint()
 	var team := r.read_uint(2)
 	return {"player_id": player_id, "team": team, "ok": r.ok()}
@@ -277,7 +277,7 @@ static func write_prop(
 	return w.to_bytes()
 
 
-static func read_prop(r: DotNetReader) -> Dictionary:
+static func read_prop(r: GSNetReader) -> Dictionary:
 	var net_id := r.read_varint()
 	var kind_id := r.read_string(ID_BYTES)
 	var at := r.read_vector3_range(-WORLD_EXTENT, WORLD_EXTENT, POS_BITS)
@@ -298,7 +298,7 @@ static func write_prop_gone(net_id: int, reason: StringName) -> PackedByteArray:
 	return w.to_bytes()
 
 
-static func read_prop_gone(r: DotNetReader) -> Dictionary:
+static func read_prop_gone(r: GSNetReader) -> Dictionary:
 	var net_id := r.read_varint()
 	var reason := r.read_string(ID_BYTES)
 	return {"net_id": net_id, "reason": StringName(reason), "ok": r.ok()}
@@ -313,7 +313,7 @@ static func write_seat(player_id: int, net_id: int, seated: bool) -> PackedByteA
 	return w.to_bytes()
 
 
-static func read_seat(r: DotNetReader) -> Dictionary:
+static func read_seat(r: GSNetReader) -> Dictionary:
 	var player_id := r.read_varint()
 	var net_id := r.read_varint()
 	var seated := r.read_bool()
@@ -340,7 +340,7 @@ static func write_clock(
 	return w.to_bytes()
 
 
-static func read_clock(r: DotNetReader) -> Dictionary:
+static func read_clock(r: GSNetReader) -> Dictionary:
 	var round_number := r.read_varint()
 	var elapsed := r.read_float_range(0.0, CLOCK_MAX, CLOCK_BITS)
 	var cover := r.read_uint(10)
@@ -369,16 +369,16 @@ static func write_round(number: int, began: bool, winner: int) -> PackedByteArra
 	return w.to_bytes()
 
 
-static func read_round(r: DotNetReader) -> Dictionary:
+static func read_round(r: GSNetReader) -> Dictionary:
 	var number := r.read_varint()
 	var began := r.read_bool()
 	var winner := r.read_uint(2)
 	return {"round": number, "began": began, "winner": winner, "ok": r.ok()}
 
 
-## [param death] is how the body falls (dot-player-char's [DotPlayerDeath], the server's pick),
+## [param death] is how the body falls (dot-player-char's [GSPlayerDeath], the server's pick),
 ## last and optional, so every client draws the same fall and an older one reads the rest.
-static func write_death(player_id: int, by: int, death: DotPlayerDeath = null) -> PackedByteArray:
+static func write_death(player_id: int, by: int, death: GSPlayerDeath = null) -> PackedByteArray:
 	var w := _w()
 	w.write_varint(player_id)
 	w.write_varint(by)
@@ -387,13 +387,13 @@ static func write_death(player_id: int, by: int, death: DotPlayerDeath = null) -
 	return w.to_bytes()
 
 
-static func read_death(r: DotNetReader) -> Dictionary:
+static func read_death(r: GSNetReader) -> Dictionary:
 	var player_id := r.read_varint()
 	var by := r.read_varint()
 	var out := {"player_id": player_id, "by": by}
 	# A byte or more left is the fall; less is the padding to the last byte.
 	if r.bits_remaining() >= 8:
-		out["death"] = DotPlayerDeath.read_from(r)
+		out["death"] = GSPlayerDeath.read_from(r)
 	out["ok"] = r.ok()
 	return out
 
@@ -406,7 +406,7 @@ static func write_blast(at: Vector3, radius: float) -> PackedByteArray:
 	return w.to_bytes()
 
 
-static func read_blast(r: DotNetReader) -> Dictionary:
+static func read_blast(r: GSNetReader) -> Dictionary:
 	var at := r.read_vector3_range(-WORLD_EXTENT, WORLD_EXTENT, POS_BITS)
 	var radius := r.read_float_range(0.0, 64.0, 12)
 	return {"position": at, "radius": radius, "ok": r.ok()}
@@ -422,20 +422,20 @@ const CHAT_KEY_BYTES := 48
 const CHAT_KIND_BITS := 4
 
 
-## Whether every [enum DotChatMessage.Kind] fits in [constant CHAT_KIND_BITS]. dot-chat owns
+## Whether every [enum GSChatMessage.Kind] fits in [constant CHAT_KIND_BITS]. dot-chat owns
 ## that enum, so it can grow under this game; headless_net reads this.
 static func chat_kinds_fit() -> bool:
-	return DotChatMessage.KIND_NAMES.size() <= (1 << CHAT_KIND_BITS)
+	return GSChatMessage.KIND_NAMES.size() <= (1 << CHAT_KIND_BITS)
 
 
-## One routed line, in [DotChatMessage]'s own wire shape.
+## One routed line, in [GSChatMessage]'s own wire shape.
 static func write_chat(wire: Dictionary) -> PackedByteArray:
 	var w := _w()
 	w.write_varint(int(wire.get("n", 0)))
 	w.write_uint(int(wire.get("t", 0)), 32)
 	w.write_string(str(wire.get("c", "")), CHAT_CHANNEL_BYTES)
 	w.write_uint(
-		maxi(0, DotChatMessage.kind_from_name(str(wire.get("k", "say")))), CHAT_KIND_BITS
+		maxi(0, GSChatMessage.kind_from_name(str(wire.get("k", "say")))), CHAT_KIND_BITS
 	)
 	w.write_string(str(wire.get("s", "")), CHAT_KEY_BYTES)
 	w.write_string(str(wire.get("d", "")), NAME_BYTES)
@@ -452,7 +452,7 @@ static func write_chat(wire: Dictionary) -> PackedByteArray:
 	return w.to_bytes()
 
 
-static func read_chat(r: DotNetReader) -> Dictionary:
+static func read_chat(r: GSNetReader) -> Dictionary:
 	var out := {
 		"n": r.read_varint(),
 		"t": r.read_uint(32),
@@ -461,7 +461,7 @@ static func read_chat(r: DotNetReader) -> Dictionary:
 
 	var kind := r.read_uint(CHAT_KIND_BITS)
 	out["k"] = (
-		DotChatMessage.KIND_NAMES[kind] if kind >= 0 and kind < DotChatMessage.KIND_NAMES.size()
+		GSChatMessage.KIND_NAMES[kind] if kind >= 0 and kind < GSChatMessage.KIND_NAMES.size()
 		else "say"
 	)
 
@@ -487,7 +487,7 @@ static func write_say(channel_id: StringName, text: String) -> PackedByteArray:
 	return w.to_bytes()
 
 
-static func read_say(r: DotNetReader) -> Dictionary:
+static func read_say(r: GSNetReader) -> Dictionary:
 	var out := {
 		"channel": r.read_string(CHAT_CHANNEL_BYTES),
 		"text": r.read_string(CHAT_BYTES),
@@ -506,7 +506,7 @@ static func write_sound(index: int, at: Vector3) -> PackedByteArray:
 	return w.to_bytes()
 
 
-static func read_sound(r: DotNetReader) -> Dictionary:
+static func read_sound(r: GSNetReader) -> Dictionary:
 	var index := r.read_uint(BfhSounds.WORLD_BITS)
 	var at := r.read_vector3_range(-WORLD_EXTENT, WORLD_EXTENT, POS_BITS)
 	return {"index": index, "position": at, "ok": r.ok()}
@@ -519,7 +519,7 @@ static func write_watch(ask: int) -> PackedByteArray:
 	return w.to_bytes()
 
 
-static func read_watch(r: DotNetReader) -> Dictionary:
+static func read_watch(r: GSNetReader) -> Dictionary:
 	var ask := r.read_uint(2)
 	return {"ask": ask, "ok": r.ok()}
 
@@ -530,6 +530,6 @@ static func write_notice(text: String) -> PackedByteArray:
 	return w.to_bytes()
 
 
-static func read_notice(r: DotNetReader) -> Dictionary:
+static func read_notice(r: GSNetReader) -> Dictionary:
 	var text := r.read_string(TEXT_BYTES)
 	return {"text": text, "ok": r.ok()}

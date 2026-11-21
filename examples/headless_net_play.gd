@@ -18,7 +18,7 @@ func _test_the_hammer() -> void:
 
 	# Put a crate directly in front of them and look at it. Aiming a runner at whatever
 	# the scatter happened to put nearby is a test that passes on some seeds.
-	var aim := DotFpsCommand.new()
+	var aim := GSFpsCommand.new()
 	aim.yaw = 0.0
 	aim.pitch = 0.0
 
@@ -31,7 +31,7 @@ func _test_the_hammer() -> void:
 	await _steps(4)
 
 	var swings_before := server_player.hammer.swings
-	var swing := DotFpsCommand.new()
+	var swing := GSFpsCommand.new()
 	swing.buttons |= BfhNetCommand.BUTTON_SWING
 	await _steps(30, swing)
 
@@ -140,9 +140,9 @@ func _test_the_clock() -> void:
 func _test_chat() -> void:
 	_section("a line crosses the wire")
 
-	# The router, driven directly: this harness has no `DotServer`, so the parts of the
+	# The router, driven directly: this harness has no `GSServer`, so the parts of the
 	# services layer that need sessions cannot run — and the parts that carry a line can.
-	var router := DotChatRouter.new()
+	var router := GSChatRouter.new()
 	router.name = "Chat"
 	router.rules = BfhServices.chat_rules()
 	router.rules_file = ""
@@ -242,10 +242,10 @@ func _test_chat() -> void:
 func _test_voice() -> void:
 	_section("voice crosses the wire")
 
-	var router := DotVoiceRouter.new()
+	var router := GSVoiceRouter.new()
 	router.name = "Voice"
 	router.config = BfhServices.voice_format()
-	router.default_channel = DotVoiceRouter.Channel.ALL
+	router.default_channel = GSVoiceRouter.Channel.ALL
 	router.send_fn = func(peer_id: int, payload: PackedByteArray) -> void:
 		_server_bridge.link.send_voice(peer_id, payload)
 	add_child(router)
@@ -260,7 +260,7 @@ func _test_voice() -> void:
 	)
 
 	# A frame from the OTHER peer, which is the direction that reaches this client.
-	var packet := DotVoicePacket.new()
+	var packet := GSVoicePacket.new()
 	packet.speaker = CLIENT_PEER + 1
 	packet.sequence = 1
 	packet.codec_id = BfhServices.voice_format().codec_id
@@ -285,7 +285,7 @@ func _test_voice() -> void:
 	# nobody puts a voice in the game with no name on it.
 	var orphan := _server_bridge.receive_voice(4242, packet.to_bytes())
 	_check(
-		not orphan.ok and orphan.error.code == DotError.CODE_FORBIDDEN,
+		not orphan.ok and orphan.error.code == GSError.CODE_FORBIDDEN,
 		"a frame from a peer with nobody in the world is refused"
 	)
 
@@ -296,20 +296,20 @@ func _test_voice() -> void:
 	var client_chat: Node = client_chat_script.new()
 	client_chat.name = "VoiceClientChat"
 	add_child(client_chat)
-	var attached: DotResult = client_chat.call(&"attach", _client_bridge)
-	var talker: DotVoiceManager = client_chat.get(&"voice")
+	var attached: GSResult = client_chat.call(&"attach", _client_bridge)
+	var talker: GSVoiceManager = client_chat.get(&"voice")
 	_check(attached.ok and talker != null and not talker.is_capturing(),
 		"the client's microphone is not open before the talk key")
 	if talker != null:
-		var mic := DotVoiceSourceBuffer.new()
+		var mic := GSVoiceSourceBuffer.new()
 		mic.sample_rate = talker.config.sample_rate
-		mic.write(DotVoiceSourceBuffer.tone(440.0, 0.2, mic.sample_rate, 0.4))
+		mic.write(GSVoiceSourceBuffer.tone(440.0, 0.2, mic.sample_rate, 0.4))
 		talker.source = mic
-		Input.action_press(DotVoiceManager.TALK_ACTION)
+		Input.action_press(GSVoiceManager.TALK_ACTION)
 		await _steps(4)
 		_flush()
 		await _steps(2)
-		Input.action_release(DotVoiceManager.TALK_ACTION)
+		Input.action_release(GSVoiceManager.TALK_ACTION)
 	_check(talker != null and talker.frames_sent > 0 and heard_at_server.size() == talker.frames_sent,
 		"holding it sends the player's speech to the server (%d sent, %d relayed)" % [talker.frames_sent if talker != null else 0, heard_at_server.size()])
 	_server_bridge.voice_relay_fn = Callable()
@@ -328,24 +328,24 @@ func _test_a_gag() -> void:
 	var store_path := "user://bfh_net_test_punishments.json"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(store_path))
 
-	var moderation := DotModerationManager.new()
+	var moderation := GSModerationManager.new()
 	moderation.name = "Moderation"
-	moderation.store = DotPunishmentStoreFile.new(store_path)
+	moderation.store = GSPunishmentStoreFile.new(store_path)
 	moderation.server_scope = ""
 	moderation.register_mute_source = true
 	moderation.register_ban_source = false
 	moderation.key_for_peer = func(peer_id: int) -> String:
-		return DotPunishmentSubject.for_uid("peer%d" % peer_id)
+		return GSPunishmentSubject.for_uid("peer%d" % peer_id)
 	add_child(moderation)
 	moderation.load_all()
 
-	var router := DotChatRouter.new()
+	var router := GSChatRouter.new()
 	router.name = "GaggedChat"
 	router.rules = BfhServices.chat_rules()
 	router.rules_file = ""
 	router.install_default_channels = false
 	router.register_as = &""
-	router.mute_service = DotModerationManager.MUTE_SERVICE
+	router.mute_service = GSModerationManager.MUTE_SERVICE
 	router.send_fn = func(_wire: Dictionary, _to: PackedInt32Array) -> void:
 		pass
 	router.peers_fn = func() -> PackedInt32Array:
@@ -370,9 +370,9 @@ func _test_a_gag() -> void:
 	# Through `issue`, with the SUBJECT spelling dot-moderation uses — `key_for_peer` above answers the
 	# same way, and a gag against a differently-spelled subject is a gag that silences nobody and
 	# reports success.
-	var gagged: DotResult = await moderation.issue(
-		DotPunishment.Kind.GAG,
-		DotPunishmentSubject.for_uid("peer%d" % CLIENT_PEER),
+	var gagged: GSResult = await moderation.issue(
+		GSPunishment.Kind.GAG,
+		GSPunishmentSubject.for_uid("peer%d" % CLIENT_PEER),
 		"talking about the bus",
 		"console",
 		600
@@ -447,7 +447,7 @@ func _test_a_lossy_link() -> void:
 
 
 
-## A snapshot bigger than [member DotNetConfig.mtu] arrives in parts, through this game's own link
+## A snapshot bigger than [member GSNetConfig.mtu] arrives in parts, through this game's own link
 ## and bridge, and every body ends up where the server's is.
 func _test_a_snapshot_in_parts() -> void:
 	_section("a snapshot over the MTU arrives in parts")
@@ -536,11 +536,11 @@ func _test_blind_and_beacon() -> void:
 
 	var bot_session := BfhNetBridge.FIRST_BOT_SESSION
 	var bot_key := BfhNetBridge.player_key(bot_session)
-	var server_net := _server_player().get_node("Net") as DotNetBehaviour
+	var server_net := _server_player().get_node("Net") as GSNetBehaviour
 
 	_check(
-		server_net.find_var(&"net_blind").audience == DotNetVar.Audience.OWNER
-		and server_net.find_var(&"net_beacon").audience == DotNetVar.Audience.EVERYONE,
+		server_net.find_var(&"net_blind").audience == GSNetVar.Audience.OWNER
+		and server_net.find_var(&"net_beacon").audience == GSNetVar.Audience.EVERYONE,
 		"the blind is declared owner-only and the beacon for everybody"
 	)
 
@@ -554,14 +554,14 @@ func _test_blind_and_beacon() -> void:
 			_server_game.ride.exit(buses[0], sitting, true)
 		_server_game.ride.enter(buses[0], bot_key, bot, &"driver")
 
-	var results: Array[DotResult] = [
+	var results: Array[GSResult] = [
 		blind.call(StringName(str(SESSION)), {"on": true}),
 		blind.call(StringName(str(bot_session)), {"on": true}),
 		beacon.call(StringName(str(SESSION)), {"on": true}),
 		beacon.call(StringName(str(bot_session)), {"on": true}),
 	]
 	_check(
-		results.all(func(r: DotResult) -> bool: return r.ok),
+		results.all(func(r: GSResult) -> bool: return r.ok),
 		"the server blinds and beacons this client's player and the bot driver"
 	)
 
@@ -615,8 +615,8 @@ func _test_blind_and_beacon() -> void:
 	)
 
 	for id in [StringName(str(SESSION)), StringName(str(bot_session))]:
-		var _b: DotResult = blind.call(id, {"on": false})
-		var _c: DotResult = beacon.call(id, {"on": false})
+		var _b: GSResult = blind.call(id, {"on": false})
+		var _c: GSResult = beacon.call(id, {"on": false})
 
 	await _steps(12)
 

@@ -21,16 +21,16 @@ var settings: BfhSettings = null
 ## Records every frame and replays the round's last moment, then the reveal ([BfhKillcam]).
 var killcam: BfhKillcam = null
 ## Where the dead lie: dot-player-char's ragdolls under the game's (the server's) rules.
-var ragdolls: DotPlayerRagdolls = null
+var ragdolls: GSPlayerRagdolls = null
 var link: Node = null
-var winner_reveal: DotWinnerReveal = null
+var winner_reveal: GSWinnerReveal = null
 
 
 ## The server's `mp_killcam_time`; -1 until it has said, so the config's number stands.
 var _killcam_sec: float = -1.0
 
-## The server's `mp_killview_camera` ([enum DotKillViewRules.Camera]); the eye until it has said.
-var _killcam_camera: int = DotKillViewRules.Camera.EYE
+## The server's `mp_killview_camera` ([enum GSKillViewRules.Camera]); the eye until it has said.
+var _killcam_camera: int = GSKillViewRules.Camera.EYE
 var _round_ending: bool = false
 var _round_end_number: int = 0
 var _round_end_winner: int = 0
@@ -49,7 +49,7 @@ func _build_killcam() -> void:
 	killcam.world_mask = 1
 	killcam.over.connect(func(_skipped: bool) -> void: _reveal_round())
 	add_child(killcam)
-	winner_reveal = DotWinnerReveal.new()
+	winner_reveal = GSWinnerReveal.new()
 	winner_reveal.name = "WinnerReveal"
 	winner_reveal.skip_actions = BfhKillcam.SKIP_ACTIONS
 	winner_reveal.hold_seconds = 4.0
@@ -72,7 +72,7 @@ func _on_killcam_cvar(cvar_name: String, value: String) -> void:
 	if cvar_name == "mp_killcam_time" and value.strip_edges().is_valid_float():
 		_killcam_sec = maxf(value.to_float(), 0.0)
 	elif cvar_name == "mp_killview_camera" and value.strip_edges().is_valid_float():
-		_killcam_camera = DotKillViewRules.Camera.BEHIND if value.to_float() >= 0.5 else DotKillViewRules.Camera.EYE
+		_killcam_camera = GSKillViewRules.Camera.BEHIND if value.to_float() >= 0.5 else GSKillViewRules.Camera.EYE
 
 
 ## A death is the round's last moment if nothing follows it. A bus puts the runner in its

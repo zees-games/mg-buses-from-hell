@@ -3,10 +3,10 @@ extends "bfh_net_bridge_apply.gd"
 
 # --- Server: players
 
-## Puts a connected peer into the game. What [DotGameRoster] calls.
-func add_player(peer_id: int, session_id: int, display_name: String) -> DotResult:
+## Puts a connected peer into the game. What [GSGameRoster] calls.
+func add_player(peer_id: int, session_id: int, display_name: String) -> GSResult:
 	if net == null or not net.is_server:
-		return DotResult.fail(DotError.CODE_FORBIDDEN, "Only the server adds players.")
+		return GSResult.fail(GSError.CODE_FORBIDDEN, "Only the server adds players.")
 
 	if peer_id > 0:
 		# FIRST, because `game.add_player` emits `player_added` and the handler has to be
@@ -19,13 +19,13 @@ func add_player(peer_id: int, session_id: int, display_name: String) -> DotResul
 	if player == null:
 		_player_of_peer.erase(peer_id)
 		_peer_of_player.erase(session_id)
-		return DotResult.fail(DotError.CODE_STATE, "The game refused the player.")
+		return GSResult.fail(GSError.CODE_STATE, "The game refused the player.")
 
 	if _ready_unseated.has(peer_id):
 		_ready_unseated.erase(peer_id)
 		_admit(peer_id)
 
-	return DotResult.success(player)
+	return GSResult.success(player)
 
 ## Somebody the world drives itself: a bot driver, or a test's stand-in for one.
 func add_bot(display_name: String, team: int = 0) -> BfhPlayer:
@@ -90,7 +90,7 @@ func _on_player_added(id: StringName) -> void:
 	# added a player called `bot` would replicate it under session 0 — which is also dot-net's
 	# broadcast address — and a second one would silently replace the first in this table.
 	if player_key(session_id) != id:
-		DotLog.warn(CHANNEL, "a player whose id is not a session key is not replicated", {
+		GSLog.warn(CHANNEL, "a player whose id is not a session key is not replicated", {
 			"id": String(id), "hint": "use add_bot() or BfhNetBridge.player_key()",
 		})
 		return
@@ -104,13 +104,13 @@ func _on_player_added(id: StringName) -> void:
 	var registered := net.registry.register(identity, 0, net.clock.tick, net.config)
 
 	if not registered.ok:
-		DotLog.warn(CHANNEL, "could not replicate a player", {"error": str(registered.error)})
+		GSLog.warn(CHANNEL, "could not replicate a player", {"error": str(registered.error)})
 		return
 
 	# Before the JOIN, so the first thing anybody hears about this person is their face.
 	if player.avatar == null and avatar_fn.is_valid():
 		var avatar: Variant = avatar_fn.call(session_id)
-		player.avatar = avatar as DotAvatar if avatar is DotAvatar else null
+		player.avatar = avatar as GSAvatar if avatar is GSAvatar else null
 
 	_broadcast(BfhEvents.Kind.JOIN, _join_body(session_id))
 	roster_changed.emit(session_id)
@@ -127,7 +127,7 @@ func _on_player_removed(id: StringName) -> void:
 # --- Server: what is in the bowl
 
 ## Every crate, barrel and block the world puts out becomes a replicated entity.
-func _on_prop_spawned(prop: DotPropInstance) -> void:
+func _on_prop_spawned(prop: GSPropInstance) -> void:
 	if net == null or not net.is_server or prop == null or prop.node == null:
 		return
 
@@ -153,11 +153,11 @@ func _on_prop_spawned(prop: DotPropInstance) -> void:
 		net_id, prop.def.id, body.global_position, false
 	))
 
-func _on_prop_removed(prop: DotPropInstance, reason: StringName) -> void:
+func _on_prop_removed(prop: GSPropInstance, reason: StringName) -> void:
 	_forget_body("p%d" % prop.instance_id, reason)
 
-## A bus, which replicates through [DotVehicleNetSync] rather than as a plain body.
-func _on_vehicle_spawned(vehicle: DotVehicleInstance) -> void:
+## A bus, which replicates through [GSVehicleNetSync] rather than as a plain body.
+func _on_vehicle_spawned(vehicle: GSVehicleInstance) -> void:
 	if net == null or not net.is_server or vehicle == null:
 		return
 
@@ -184,24 +184,24 @@ func _on_vehicle_spawned(vehicle: DotVehicleInstance) -> void:
 		net_id, vehicle.def.id, body.global_position, true
 	))
 
-func _on_vehicle_removed(vehicle: DotVehicleInstance, reason: StringName) -> void:
+func _on_vehicle_removed(vehicle: GSVehicleInstance, reason: StringName) -> void:
 	_forget_body("v%d" % vehicle.instance_id, reason)
 
 ## The half a crate and a bus do identically: an identity, a registration, a table entry.
-func _replicate_body(behaviour: DotNetBehaviour, body: Node3D) -> int:
-	var identity := DotNetIdentity.new()
+func _replicate_body(behaviour: GSNetBehaviour, body: Node3D) -> int:
+	var identity := GSNetIdentity.new()
 	identity.name = "Identity"
 	identity.owner_peer_id = 0
 	# SERVER, not SHARED: nothing about a rigid body is predicted here, so there is no
 	# owner to share with. See [BfhPropNet] for why that is a decision and not a gap.
-	identity.authority = DotNetIdentity.Authority.SERVER
+	identity.authority = GSNetIdentity.Authority.SERVER
 	identity.always_relevant = true
 	body.add_child(identity)
 
 	var registered := net.registry.register(identity, 0, net.clock.tick, net.config)
 
 	if not registered.ok:
-		DotLog.warn(CHANNEL, "could not replicate a body", {"error": str(registered.error)})
+		GSLog.warn(CHANNEL, "could not replicate a body", {"error": str(registered.error)})
 		return 0
 
 	_bodies[identity.net_id] = behaviour
@@ -221,16 +221,16 @@ func _forget_body(key: String, reason: StringName) -> void:
 # --- Server: the round
 
 func _on_ride_entered(
-	vehicle: DotVehicleInstance, rider_id: StringName, _seat: DotVehicleSeat
+	vehicle: GSVehicleInstance, rider_id: StringName, _seat: GSVehicleSeat
 ) -> void:
 	_announce_seat(vehicle, rider_id, true)
 
 func _on_ride_exited(
-	vehicle: DotVehicleInstance, rider_id: StringName, _seat: DotVehicleSeat, _at: Vector3
+	vehicle: GSVehicleInstance, rider_id: StringName, _seat: GSVehicleSeat, _at: Vector3
 ) -> void:
 	_announce_seat(vehicle, rider_id, false)
 
-func _announce_seat(vehicle: DotVehicleInstance, rider_id: StringName, seated: bool) -> void:
+func _announce_seat(vehicle: GSVehicleInstance, rider_id: StringName, seated: bool) -> void:
 	if net == null or not net.is_server:
 		return
 

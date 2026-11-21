@@ -1,15 +1,15 @@
 extends "bfh_net_bridge_server.gd"
 
-## [param p_game] and [param p_net], in the shape [DotGameNetcode] calls it.
-func attach(p_game: Object, p_net: DotNetManager) -> DotResult:
+## [param p_game] and [param p_net], in the shape [GSGameNetcode] calls it.
+func attach(p_game: Object, p_net: GSNetManager) -> GSResult:
 	var world := p_game as BfhGame
 
 	if world == null or p_net == null:
-		return DotResult.fail(DotError.CODE_INVALID, "A bridge needs a world and a manager.")
+		return GSResult.fail(GSError.CODE_INVALID, "A bridge needs a world and a manager.")
 
 	if world.authoritative != p_net.is_server:
-		return DotResult.fail(
-			DotError.CODE_STATE,
+		return GSResult.fail(
+			GSError.CODE_STATE,
 			"The world and the manager disagree about who is authoritative.",
 			"world=%s net.is_server=%s" % [world.authoritative, p_net.is_server]
 		)
@@ -25,14 +25,14 @@ func attach(p_game: Object, p_net: DotNetManager) -> DotResult:
 
 	var event := net.messages.register(
 		BfhEvent.NAME, BfhEvent,
-		DotNetMessage.Delivery.RELIABLE, DotNetMessage.Direction.TO_CLIENT
+		GSNetMessage.Delivery.RELIABLE, GSNetMessage.Direction.TO_CLIENT
 	)
 	if not event.ok:
 		return event
 
 	var request := net.messages.register(
 		BfhRequest.NAME, BfhRequest,
-		DotNetMessage.Delivery.RELIABLE, DotNetMessage.Direction.TO_SERVER
+		GSNetMessage.Delivery.RELIABLE, GSNetMessage.Direction.TO_SERVER
 	)
 	if not request.ok:
 		return request
@@ -41,7 +41,7 @@ func attach(p_game: Object, p_net: DotNetManager) -> DotResult:
 	net.messages.on(BfhRequest.NAME, _on_request)
 
 	# Edited profiles reach every client, so a remote admin's panel shows what the server holds; edits themselves go through the remote workbench.
-	profile_link = DotNetProfileLink.attach(net, world.ensure_runtime())
+	profile_link = GSNetProfileLink.attach(net, world.ensure_runtime())
 
 	# Both ends: a world still running its own `_physics_process` would move every player twice.
 	game.external_tick = true
@@ -74,7 +74,7 @@ func attach(p_game: Object, p_net: DotNetManager) -> DotResult:
 		game.noise.connect(_on_noise)
 		game.earned.connect(_on_earned)
 
-	return DotResult.success(true)
+	return GSResult.success(true)
 
 ## Opens the link under [param parent], whose NAME is half the RPC routing.
 func open_link(parent: Node) -> void:
@@ -84,7 +84,7 @@ func open_link(parent: Node) -> void:
 	link = BfhNetLink.attached_to(parent, self, net != null and net.is_server) as BfhNetLink
 	# Not a bare add_child: nothing would free the link when the module unloads, a reload
 	# would add a second, and the live one would be renamed @Node@n and lose every RPC.
-	DotGameLink.attach(link, parent, self, BfhNetLink.NODE_NAME)
+	GSGameLink.attach(link, parent, self, BfhNetLink.NODE_NAME)
 
 ## The other end of [method watch_state]: a client is told its own view. Client side.
 func adopt_watch(player_id: StringName, mode: int, target_session: int) -> void:
@@ -137,7 +137,7 @@ func ensure_game_ticked(tick: int) -> void:
 	game.tick_once(tick)
 
 	# The toys where the physics left them, before the snapshot.
-	for behaviour: DotGameToyNet in _toy_nets:
+	for behaviour: GSGameToyNet in _toy_nets:
 		behaviour.pull()
 
 	# The hammer, from the button the command carried. AFTER the movement, because a
@@ -188,7 +188,7 @@ func _drive_hammer(session_id: int, behaviour: BfhPlayerNet) -> void:
 
 # --- The client tick
 
-func client_tick(tick: int, command: DotFpsCommand) -> void:
+func client_tick(tick: int, command: GSFpsCommand) -> void:
 	if net == null or net.is_server or game == null:
 		return
 
@@ -197,7 +197,7 @@ func client_tick(tick: int, command: DotFpsCommand) -> void:
 	var packet := BfhNetCommand.new()
 	packet.tick = tick
 	packet.delta = net.clock.tick_duration()
-	packet.move = command if command != null else DotFpsCommand.new()
+	packet.move = command if command != null else GSFpsCommand.new()
 
 	# Into the local history BEFORE predicting: reconciliation replays it.
 	net.local_inputs().push(packet)
@@ -218,8 +218,8 @@ func client_tick(tick: int, command: DotFpsCommand) -> void:
 
 	if link != null:
 		var payload := net.encode_ack()
-		var writer := DotNetWriter.new()
-		DotNetInput.write_batch(writer, _input_copies(packet))
+		var writer := GSNetWriter.new()
+		GSNetInput.write_batch(writer, _input_copies(packet))
 		payload.append_array(writer.to_bytes())
 		link.send_input(payload)
 
@@ -240,59 +240,59 @@ func client_tick(tick: int, command: DotFpsCommand) -> void:
 
 ## [param packet] and the commands before it from the local replay history, oldest first,
 ## for one input packet. See [constant INPUT_COPIES].
-func _input_copies(packet: DotNetInput) -> Array:
+func _input_copies(packet: GSNetInput) -> Array:
 	var batch: Array = Array(net.local_inputs().recent(INPUT_COPIES, packet.tick - 1))
 	batch = batch.slice(maxi(0, batch.size() - (INPUT_COPIES - 1)))
 	batch.append(packet)
 	return batch
 
-func receive_input(peer_id: int, payload: PackedByteArray) -> DotResult:
+func receive_input(peer_id: int, payload: PackedByteArray) -> GSResult:
 	if net == null or not net.is_server:
-		return DotResult.fail(DotError.CODE_FORBIDDEN, "Only the server takes input.")
+		return GSResult.fail(GSError.CODE_FORBIDDEN, "Only the server takes input.")
 	if not _player_of_peer.has(peer_id):
-		return DotResult.fail(DotError.CODE_FORBIDDEN, "That peer has no player.")
+		return GSResult.fail(GSError.CODE_FORBIDDEN, "That peer has no player.")
 	if payload.size() <= ACK_BYTES:
-		return DotResult.fail(DotError.CODE_PARSE, "Input packet is too short.")
+		return GSResult.fail(GSError.CODE_PARSE, "Input packet is too short.")
 
 	net.receive_ack_payload(peer_id, payload.slice(0, ACK_BYTES))
 
 	# A batch: this tick's command and the ones before it (see [constant INPUT_COPIES]).
 	# Copies of ticks already simulated are skipped rather than pushed, or each would count
 	# as a late input; the packet's own tick is always pushed, so a late one still counts.
-	var batch := DotNetInput.read_batch(
-		DotNetReader.new(payload.slice(ACK_BYTES)),
-		func() -> DotNetInput: return BfhNetCommand.new()
+	var batch := GSNetInput.read_batch(
+		GSNetReader.new(payload.slice(ACK_BYTES)),
+		func() -> GSNetInput: return BfhNetCommand.new()
 	)
 	if batch.is_empty():
-		return DotResult.fail(DotError.CODE_PARSE, "Input packet carries no command.")
+		return GSResult.fail(GSError.CODE_PARSE, "Input packet carries no command.")
 	var buffer := net.input_buffer_for(peer_id)
 	var newest := batch[batch.size() - 1]
-	var pushed := DotResult.success(false)
+	var pushed := GSResult.success(false)
 	for input in batch:
 		if input != newest and input.tick <= buffer.last_consumed_tick():
 			continue
 		pushed = buffer.push(input)
 	return pushed
 
-## One routed line to one peer. What [DotGameServices] sends through, via the link.
+## One routed line to one peer. What [GSGameServices] sends through, via the link.
 func send_chat(peer_id: int, wire: Dictionary) -> void:
 	_tell(peer_id, BfhEvents.Kind.CHAT, BfhEvents.write_chat(wire))
 
 ## A voice frame off [method BfhNetLink.send_voice], in whichever direction.
-func receive_voice(peer_id: int, payload: PackedByteArray) -> DotResult:
+func receive_voice(peer_id: int, payload: PackedByteArray) -> GSResult:
 	if payload.is_empty():
-		return DotResult.fail(DotError.CODE_INVALID, "An empty voice frame.")
+		return GSResult.fail(GSError.CODE_INVALID, "An empty voice frame.")
 
 	if net != null and net.is_server:
 		if peer_id <= 0 or player_for_peer(peer_id) == 0:
 			# A peer with nobody in the world. Refused rather than relayed: the router
 			# stamps the speaker from this id, so relaying one that belongs to nobody puts
 			# a voice in the game with no name on it.
-			return DotResult.fail(
-				DotError.CODE_FORBIDDEN, "That peer has nobody in the world."
+			return GSResult.fail(
+				GSError.CODE_FORBIDDEN, "That peer has nobody in the world."
 			)
 
-		# [b]One path or the other, never both.[/b] [DotGameModule] assigns `voice_relay_fn` to the
+		# [b]One path or the other, never both.[/b] [GSGameModule] assigns `voice_relay_fn` to the
 		# services layer's `relay_voice`; a game that ALSO connected `voice_requested` to the same router
 		# would relay every frame twice — which is a doubled talk spurt, a doubled rate limit, and a.
 		if voice_relay_fn.is_valid():
@@ -300,14 +300,14 @@ func receive_voice(peer_id: int, payload: PackedByteArray) -> DotResult:
 		else:
 			voice_requested.emit(peer_id, payload)
 
-		return DotResult.success(null)
+		return GSResult.success(null)
 
 	voice_arrived.emit(payload)
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 # --- Server: what a joining peer is told
 
-func _on_request(message: DotNetMessage) -> void:
+func _on_request(message: GSNetMessage) -> void:
 	var ask := message as BfhRequest
 
 	if ask == null or net == null or not net.is_server:
@@ -333,7 +333,7 @@ func _on_request(message: DotNetMessage) -> void:
 
 			if bool(said["ok"]):
 				# Emitted rather than acted on: everything about what a line means is
-				# [DotChatRouter]'s, and the router is the module's.
+				# [GSChatRouter]'s, and the router is the module's.
 				say_requested.emit(
 					peer_id, StringName(str(said["channel"])), str(said["text"])
 				)
@@ -350,14 +350,14 @@ func _answer_watch(peer_id: int, asked: Dictionary) -> void:
 	if session_id == 0:
 		return
 
-	var answered: DotResult = game.spectate.request(player_key(session_id), int(asked["ask"]))
+	var answered: GSResult = game.spectate.request(player_key(session_id), int(asked["ask"]))
 
 	if not answered.ok:
 		notice(peer_id, answered.error.message)
 
 ## Tells everybody who somebody is now: a profile that arrived after they were seated, a wardrobe
 ## change, an operator's rename. Server only.
-func refresh_player(session_id: int, display_name: String, avatar: DotAvatar) -> bool:
+func refresh_player(session_id: int, display_name: String, avatar: GSAvatar) -> bool:
 	if net == null or not net.is_server or game == null:
 		return false
 

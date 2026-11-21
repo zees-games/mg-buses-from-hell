@@ -107,12 +107,12 @@ func _test_bus() -> void:
 	_check(not runner.health.alive, "and a bus at speed kills outright")
 
 	# How the body falls: a bus always throws it, along the way it was going.
-	_check(runner.death != null and runner.death.reaction == DotPlayerDeathReactions.POWER_LAUNCH
+	_check(runner.death != null and runner.death.reaction == GSPlayerDeathReactions.POWER_LAUNCH
 		and runner.death.direction.z > 0.5, "and throws the body, away from the grille",
 		str(runner.death.describe()) if runner.death != null else "none")
-	var carried := BfhEvents.read_death(DotNetReader.new(BfhEvents.write_death(2, 1, runner.death)))
-	_check(bool(carried["ok"]) and carried.has("death") and (carried["death"] as DotPlayerDeath).reaction == runner.death.reaction
-		and not BfhEvents.read_death(DotNetReader.new(BfhEvents.write_death(2, 1))).has("death"),
+	var carried := BfhEvents.read_death(GSNetReader.new(BfhEvents.write_death(2, 1, runner.death)))
+	_check(bool(carried["ok"]) and carried.has("death") and (carried["death"] as GSPlayerDeath).reaction == runner.death.reaction
+		and not BfhEvents.read_death(GSNetReader.new(BfhEvents.write_death(2, 1))).has("death"),
 		"DEATH carries the fall, and one without it still reads")
 	var client := BfhClient.new()
 	client.game = game
@@ -347,7 +347,7 @@ func _test_bus_propulsion() -> void:
 	var fastest := 0.0
 
 	for _i in range(90):
-		var keys := DotFpsCommand.new()
+		var keys := GSFpsCommand.new()
 		keys.move = Vector2(0.0, 1.0)
 		driver.controller.apply_command(keys)
 		game.simulate(TICK)
@@ -443,7 +443,7 @@ func _bus_stop(game: BfhGame, driver: BfhPlayer, how: String) -> Dictionary:
 
 	var guard := 300
 	while bus.forward_speed() < 15.0 and guard > 0:
-		var keys := DotFpsCommand.new()
+		var keys := GSFpsCommand.new()
 		keys.move = Vector2(0.0, 1.0)
 		driver.controller.apply_command(keys)
 		game.simulate(TICK)
@@ -465,16 +465,16 @@ func _bus_stop(game: BfhGame, driver: BfhPlayer, how: String) -> Dictionary:
 			if how != "back" or after >= 120:
 				break
 			after += 1
-		var keys := DotFpsCommand.new()
+		var keys := GSFpsCommand.new()
 		if how == "back":
 			keys.move = Vector2(0.0, -1.0)
-		keys.set_button(DotFpsCommand.BUTTON_CROUCH, how == "handbrake")
+		keys.set_button(GSFpsCommand.BUTTON_CROUCH, how == "handbrake")
 		driver.controller.apply_command(keys)
 		game.simulate(TICK)
 		if how == "brake":
 			# After the game's own drive from the driver's (empty) keys, so this is the
 			# command the physics step sees: the foot brake, which only the bot presses.
-			(bus.chassis as DotVehicleChassis).drive(DotVehicleCommand.make(0.0, 0.0, 1.0), TICK)
+			(bus.chassis as GSVehicleChassis).drive(GSVehicleCommand.make(0.0, 0.0, 1.0), TICK)
 		await get_tree().physics_frame
 		guard -= 1
 
@@ -552,7 +552,7 @@ func _bus_turn(game: BfhGame, driver: BfhPlayer, handbrake: bool) -> Dictionary:
 
 	var guard := 300
 	while bus.forward_speed() < 12.0 and guard > 0:
-		var keys := DotFpsCommand.new()
+		var keys := GSFpsCommand.new()
 		keys.move = Vector2(0.0, 1.0)
 		driver.controller.apply_command(keys)
 		game.simulate(TICK)
@@ -562,9 +562,9 @@ func _bus_turn(game: BfhGame, driver: BfhPlayer, handbrake: bool) -> Dictionary:
 	var yaw := 0.0
 	var slip := -INF
 	for i in range(60):
-		var keys := DotFpsCommand.new()
+		var keys := GSFpsCommand.new()
 		keys.move = Vector2(1.0, 0.0)
-		keys.set_button(DotFpsCommand.BUTTON_CROUCH, handbrake)
+		keys.set_button(GSFpsCommand.BUTTON_CROUCH, handbrake)
 		driver.controller.apply_command(keys)
 		game.simulate(TICK)
 		await get_tree().physics_frame
@@ -580,7 +580,7 @@ func _bus_turn(game: BfhGame, driver: BfhPlayer, handbrake: bool) -> Dictionary:
 	var speed := bus.speed()
 
 	for i in range(60):
-		driver.controller.apply_command(DotFpsCommand.new())
+		driver.controller.apply_command(GSFpsCommand.new())
 		game.simulate(TICK)
 		await get_tree().physics_frame
 
@@ -602,25 +602,25 @@ func _run_straight(game: BfhGame, runner: BfhPlayer, jump: int, ticks: int) -> D
 
 	for i in range(ticks):
 		var state := runner.controller.state
-		var keys := DotFpsCommand.new()
+		var keys := GSFpsCommand.new()
 		keys.yaw = 180.0
 		keys.move = Vector2(0.0, 1.0)
 		if jump == 1:
-			keys.set_button(DotFpsCommand.BUTTON_JUMP, true)
+			keys.set_button(GSFpsCommand.BUTTON_JUMP, true)
 		elif jump == 2:
-			pressed = state.mode == DotFpsState.Mode.GROUND and not pressed
-			keys.set_button(DotFpsCommand.BUTTON_JUMP, pressed)
+			pressed = state.mode == GSFpsState.Mode.GROUND and not pressed
+			keys.set_button(GSFpsCommand.BUTTON_JUMP, pressed)
 		runner.controller.apply_command(keys)
 		game.simulate(TICK)
 		await get_tree().physics_frame
 
 		var now := runner.controller.state
 		track.append(now.position)
-		if now.mode == DotFpsState.Mode.GROUND:
+		if now.mode == GSFpsState.Mode.GROUND:
 			grounded += 1
 		elif was_ground:
 			jumps += 1
-		was_ground = now.mode == DotFpsState.Mode.GROUND
+		was_ground = now.mode == GSFpsState.Mode.GROUND
 
 	var a := track[track.size() - 61]
 	var b := track[track.size() - 1]
@@ -657,7 +657,7 @@ func _drive_straight(game: BfhGame, driver: BfhPlayer, runner: BfhPlayer, bot: b
 	for _i in range(600):
 		_put(runner, quarry_at)
 		if not bot:
-			var keys := DotFpsCommand.new()
+			var keys := GSFpsCommand.new()
 			keys.move = Vector2(0.0, 1.0)
 			driver.controller.apply_command(keys)
 		game.simulate(TICK)

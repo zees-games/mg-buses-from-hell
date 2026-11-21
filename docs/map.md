@@ -80,11 +80,11 @@ The ledge (deck) along the north edge is height for a runner; the buses start on
 
 Crates, barrels and concrete blocks are scattered each round from a seeded stream, with keep-outs from `_obstacles` (radius + 2.2 m), the scaffold margin, and **lanes in front of every bus start** (`keep_start_lanes`, set by `_lay_out_bowl`; `scatter_clears_bus_lanes` on, `bus_lane_width` 6 m, `bus_lane_length` 24 m, cvar `bfh_bus_lane_width`, 0 for off). A block once landed 13 m in front of the east start and the bus spent its first seconds against it.
 
-**Concrete blocks** are the floor under the round: whatever the drivers flatten, this much cover remains. A sixth as many as crates and never fewer than three. Same `DotPropDef` as a crate with three fields different (`max_health = 0`, `rideable = false`, `break_impact_speed = 0`): the design is data.
+**Concrete blocks** are the floor under the round: whatever the drivers flatten, this much cover remains. A sixth as many as crates and never fewer than three. Same `GSPropDef` as a crate with three fields different (`max_health = 0`, `rideable = false`, `break_impact_speed = 0`): the design is data.
 
 ## What a runner can climb
 
-`bfh_reach.gd`'s `jump_reach` and `climb_limit` delegate to `DotFpsTunables.jump_reach` and `climb_limit(CLIMB_MARGIN)` on the tunables `BfhPlayer.tunables_for(config)` builds, so there is no copy of the numbers or the formula. A climb is held to 0.9 of the standing jump's apex, the family's margin.
+`bfh_reach.gd`'s `jump_reach` and `climb_limit` delegate to `GSFpsTunables.jump_reach` and `climb_limit(CLIMB_MARGIN)` on the tunables `BfhPlayer.tunables_for(config)` builds, so there is no copy of the numbers or the formula. A climb is held to 0.9 of the standing jump's apex, the family's margin.
 
 **`BfhArena.climbs(config)` is the part worth copying**: the map declares which two surfaces are a route and how (STEP, JUMP, WALK up a slope, THROW by a barrel), and every number is measured off the colliders (props through `BfhContent`'s size constants, asserted against the scenes; the ramp off its built transform; the scaffold off its cells). `headless_run` prints each with its margin before asserting it.
 

@@ -17,10 +17,10 @@ static var BLAST_SCENE := BfhPaths.rebase("res://fx/bfh_blast.tscn")
 ## A blast's lifetime in dot-fx, in milliseconds. The scene fades out inside it.
 const BLAST_MS := 1400
 
-var fx: DotFxManager = null
+var fx: GSFxManager = null
 
 ## Splinters where a crate breaks. The crate's crack is already BfhAudio's, so this draws only.
-var break_fx: DotFxBreak = null
+var break_fx: GSFxBreak = null
 
 ## The last blast this client drew, or null. For a check and for `describe`.
 var last_blast: Node3D = null
@@ -39,10 +39,10 @@ const SWING_MATCH_M := 0.5
 var swings_drawn: int = 0
 
 
-static func catalogue() -> DotFxCatalogue:
-	var c := DotFxCatalogue.new()
+static func catalogue() -> GSFxCatalogue:
+	var c := GSFxCatalogue.new()
 
-	var blast := DotFxDef.new()
+	var blast := GSFxDef.new()
 	blast.id = BLAST
 	blast.scene_path = BLAST_SCENE
 	blast.lifetime_ms = BLAST_MS
@@ -58,13 +58,13 @@ static func catalogue() -> DotFxCatalogue:
 
 
 ## Builds the manager and listens to [param world].
-func setup(world: Node) -> DotResult:
+func setup(world: Node) -> GSResult:
 	_world = world
 
-	fx = DotFxManager.new()
+	fx = GSFxManager.new()
 	fx.name = "Manager"
 	fx.catalogue = catalogue()
-	fx.config = DotFxConfig.new()
+	fx.config = GSFxConfig.new()
 	# Not registered: a server and a client in one process, and the net suite, are two of
 	# these, and a registry name is the last one's.
 	fx.register_as_service = false
@@ -79,18 +79,18 @@ func setup(world: Node) -> DotResult:
 	# was never shipped goes unnoticed for good.
 	var missing := fx.catalogue.missing_scenes()
 	if not missing.is_empty():
-		DotLog.warn(CHANNEL, "effect scenes missing; those effects will not draw", {
+		GSLog.warn(CHANNEL, "effect scenes missing; those effects will not draw", {
 			"paths": ", ".join(missing),
 		})
 
-	break_fx = DotFxBreak.new()
+	break_fx = GSFxBreak.new()
 	break_fx.name = "Break"
 	break_fx.config.sounds = false
 	add_child(break_fx)
 
 	world.connect("barrel_exploded", _on_blast)
 	world.connect("noise", _on_noise)
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 ## Once a frame: where the viewer is, for dot-fx's distance cull, and the clock it retires

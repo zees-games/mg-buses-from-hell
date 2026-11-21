@@ -49,7 +49,7 @@ func _ready() -> void:
 	var repaired := BfhArt.paint(_art, BfhArt.CAR_ATLAS)
 
 	if repaired > 0:
-		DotLog.debug(CHANNEL, "the bus was repainted from the mount", {"materials": repaired})
+		GSLog.debug(CHANNEL, "the bus was repainted from the mount", {"materials": repaired})
 
 	for name_of in ART_FRONT_WHEELS:
 		var wheel := _find_mesh(_art, name_of)

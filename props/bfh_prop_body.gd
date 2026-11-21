@@ -15,6 +15,6 @@ func _ready() -> void:
 	var repaired := BfhArt.paint(self, atlas_path)
 
 	if repaired > 0:
-		DotLog.debug(CHANNEL, "the art was repainted from the mount", {
+		GSLog.debug(CHANNEL, "the art was repainted from the mount", {
 			"materials": repaired, "body": name,
 		})

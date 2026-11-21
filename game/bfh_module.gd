@@ -1,9 +1,9 @@
 extends "bfh_module_chat.gd"
 ## This game, as a module a dedicated server loads.
 
-# [b]No `const CHANNEL` here, and its absence is the point.[/b] [DotGameModule] already declares one
+# [b]No `const CHANNEL` here, and its absence is the point.[/b] [GSGameModule] already declares one
 # and GDScript refuses to let a subclass redeclare it — which is the right refusal: a module logs
-# through [method DotModule.log_info], which stamps the module's own name, so a second.
+# through [method GSModule.log_info], which stamps the module's own name, so a second.
 
 func _module_name() -> String:
 	return "buses"
@@ -19,8 +19,8 @@ func _game_missing_hint() -> String:
 	)
 
 ## The netcode's numbers, which are the game's and not the addon's.
-func _net_config() -> DotNetConfig:
-	var config := DotNetConfig.new()
+func _net_config() -> GSNetConfig:
+	var config := GSNetConfig.new()
 	config.tick_rate = (game as BfhGame).tick_rate
 	config.snapshot_rate = BfhGame.NET_SNAPSHOT_RATE
 	config.world_extent = BfhGame.NET_WORLD_EXTENT
@@ -36,32 +36,32 @@ func _net_config() -> DotNetConfig:
 func _make_bridge() -> Node:
 	return BfhNetBridge.new()
 
-## Chat, voice and moderation, over [DotGameServices].
+## Chat, voice and moderation, over [GSGameServices].
 func _make_services() -> Node:
 	var services := BfhServices.new()
 	services.bridge = bridge
 	services.punishments_file = punishments_file
 	return services
 
-## Profiles, avatars and admission: dot-platform's [DotPlatformIdentity] over this game's one-slot
-## schema. [DotGameModule] builds it before the services and loads dot-platform's own module beside
+## Profiles, avatars and admission: dot-platform's [GSPlatformIdentity] over this game's one-slot
+## schema. [GSGameModule] builds it before the services and loads dot-platform's own module beside
 ## it.
 func _make_identity() -> Node:
-	var identity_layer := DotPlatformIdentity.new()
+	var identity_layer := GSPlatformIdentity.new()
 	identity_layer.avatar_schema = BfhAvatars.schema()
 	identity_layer.stock_avatar_fn = BfhAvatars.stock_avatar
 	identity_layer.avatar_translate_fn = BfhAvatars.from_site
 	return identity_layer
 
-func _game_load() -> DotResult:
+func _game_load() -> GSResult:
 	var world := game as BfhGame
 
 	if world == null:
-		return DotResult.fail(
-			DotError.CODE_STATE, "The registered game is not a BfhGame."
+		return GSResult.fail(
+			GSError.CODE_STATE, "The registered game is not a BfhGame."
 		)
 
-	# Nobody is hurt behind a loading cover: the roster is DotGameModule's, so ask it by userid
+	# Nobody is hurt behind a loading cover: the roster is GSGameModule's, so ask it by userid
 	# (a bot's key has none, and the roster holds nobody it did not seat).
 	world.loading_fn = func(key: StringName) -> bool:
 		return is_loading(BfhNetBridge.session_of(key))
@@ -88,7 +88,7 @@ func _game_load() -> DotResult:
 	# REPLICATED: the clients play the killcam, the server only lengthens the intermission for it.
 	var killcam := add_cvar("mp_killcam_time", _number(world.config.killcam_seconds),
 		"Seconds the killcam of a round's last moment plays, added to the intermission (0 for none)",
-		DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
+		GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY | GSConVar.FLAG_REPLICATED)
 	if killcam != null:
 		var _floor := killcam.with_min(0.0)  # no ceiling; below 0 is refused
 		killcam.changed.connect(func(_old: String, new_value: String) -> void:
@@ -97,22 +97,22 @@ func _game_load() -> DotResult:
 
 	# REPLICATED: where the clients' killcam camera sits (0 the killer's eye, 1 behind the killer).
 	var _camera := add_cvar("mp_killview_camera", "0",
-		"Killcam camera: 0 the killer's eye, 1 behind the killer (dot-replay DotKillcamFraming)",
-		DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
+		"Killcam camera: 0 the killer's eye, 1 behind the killer (dot-replay GSKillcamFraming)",
+		GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY | GSConVar.FLAG_REPLICATED)
 
 	_bots = add_cvar(
 		"bfh_bots", "1",
 		"Bots in empty driving seats: 1 keeps as many as bot_quota and bot_quota_mode say, 0 none at all."
 	)
 
-	# [b]How many is dot-server's [DotBotQuota], so `bot_quota` and `bot_quota_mode` mean the same
+	# [b]How many is dot-server's [GSBotQuota], so `bot_quota` and `bot_quota_mode` mean the same
 	# thing on every server in the family[/b] — counted in DRIVING SEATS here, because a bot only ever
 	# drives.
-	_quota = DotBotQuota.install(self, world.config.driver_count)
+	_quota = GSBotQuota.install(self, world.config.driver_count)
 
 	# How well the bots drive: dot-bot's `bot_difficulty` and its `bot_*` settings, held on
 	# the world (`BfhGame._autopilot` reads `bot_prediction` and `bot_aggression`).
-	var _bot_cvars := DotBotSettings.of(world).bind_cvars(add_cvar, DotConVar.FLAG_NOTIFY, add_command)
+	var _bot_cvars := GSBotSettings.of(world).bind_cvars(add_cvar, GSConVar.FLAG_NOTIFY, add_command)
 
 	# After every hand-written cvar, so the binder skips those and makes the rest.
 	var configured := _bind_config(world)
@@ -125,7 +125,7 @@ func _game_load() -> DotResult:
 	world.start()
 
 	log_info("the bowl is open", world.describe())
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
 ## The cvar sets the world's rule objects own (ragdolls, toys, ambience, view, spectating), each
@@ -134,31 +134,31 @@ func _bind_rule_cvars(world: BfhGame) -> void:
 	# Dead bodies: dot-player-char's sv_ragdoll* set. The server only picks each death's reaction
 	# from them; REPLICATED, because the clients draw the bodies (see the client's _build_netcode).
 	var _ragdolls := world.ragdoll_rules.bind_cvars(
-		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
+		add_cvar, GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY | GSConVar.FLAG_REPLICATED
 	)
 	# The bowl's toys: dot-props' sv_toys* set. REPLICATED, because a client hides the toys the
 	# server took away.
 	var _toys := world.toy_rules.bind_cvars(
-		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
+		add_cvar, GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY | GSConVar.FLAG_REPLICATED
 	)
 
 	# bfh_ambient*: REPLICATED, because each client plays its own ambience under the server's intent; the directory cvar stays local.
 	var _ambient := world.ambient_rules.bind_cvars(
-		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED,
-		DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY
+		add_cvar, GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY | GSConVar.FLAG_REPLICATED,
+		GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY
 	)
 
 	# dot-player-controller's mp_forceview: first or third person, the player's choice or one
 	# held. REPLICATED, because each client places its own camera under it.
 	var _views := world.view_rules.bind_cvars(
-		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
+		add_cvar, GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY | GSConVar.FLAG_REPLICATED
 	)
 
 	# dot-spectate's mp_forcecamera, mp_freeroam and mp_freeroam_speed: whether a runner who is
 	# out may fly a free camera. REPLICATED, because the client flies it and hides the key.
 	if world.spectate != null and world.spectate.manager != null:
 		_spectate_cvars = world.spectate.manager.rules.bind_cvars(
-			add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
+			add_cvar, GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY | GSConVar.FLAG_REPLICATED
 		)
 
 
@@ -231,7 +231,7 @@ const HAND_RENAMES := {
 }
 
 ## The workbench: the F9 panel off a dedicated server, the HTTP page only with `workbench.enabled` in cfg/server.yml.
-var workbench: DotGameWorkbench = null
+var workbench: GSGameWorkbench = null
 
 ## The hand-written cvar of a config field, or "" when the binder makes its own.
 func _hand_cvar(key: String) -> String:
@@ -239,16 +239,16 @@ func _hand_cvar(key: String) -> String:
 	return name if console.has_name(name) else ""
 
 ## Every config field as a `bfh_<field>` cvar (the hand-written ones keep their handlers and follow workbench edits), the cfg/ diff commands, the workbench and dot-team's block rules.
-func _bind_config(world: BfhGame) -> DotResult:
+func _bind_config(world: BfhGame) -> GSResult:
 	var _fl := world.flashlight_conf()
 	if world.flashlight_binder != null:
-		var _flash_cvars := world.flashlight_binder.bind_cvars(add_cvar, DotConVar.FLAG_ARCHIVE,
+		var _flash_cvars := world.flashlight_binder.bind_cvars(add_cvar, GSConVar.FLAG_ARCHIVE,
 			func(name: String) -> bool: return console.has_name(name))
 		world.flashlight_binder.bind_commands(add_command)
 	var binder := world.config_binder
 	if binder == null:
-		return DotResult.success(null)
-	workbench = DotGameWorkbench.new()
+		return GSResult.success(null)
+	workbench = GSGameWorkbench.new()
 	workbench.name = "Workbench"
 	workbench.lazy_panel = true
 	workbench.dedicated = DisplayServer.get_name() == "headless"
@@ -257,12 +257,12 @@ func _bind_config(world: BfhGame) -> DotResult:
 	workbench.permit_fn = func(actor: Variant, flag: String) -> bool:
 		return server != null and server.admins != null and actor is String \
 			and bool(server.admins.uid_has_permission(actor, flag))
-	for set: DotProfileSet in binder.profile_sets():
+	for set: GSProfileSet in binder.profile_sets():
 		workbench.add_set(set, "Game settings: %s" % set.rel_path.trim_prefix("config_"))
 	if world.flashlight_binder != null:
-		for set: DotProfileSet in world.flashlight_binder.profile_sets():
+		for set: GSProfileSet in world.flashlight_binder.profile_sets():
 			workbench.add_set(set, "Flashlight")
-	var ambient_set := DotGameWorkbench.cvar_set(console, BfhAmbience.cvar_types(), AMBIENT_KIND)
+	var ambient_set := GSGameWorkbench.cvar_set(console, BfhAmbience.cvar_types(), AMBIENT_KIND)
 	if ambient_set != null:
 		workbench.add_set(ambient_set, "Ambience (bfh_ambient*)")
 	add_child(workbench)
@@ -270,11 +270,11 @@ func _bind_config(world: BfhGame) -> DotResult:
 	# Off until the owner sets sv_workbench_remote 1; then flagged admins edit from a client.
 	if started.ok and net != null:
 		var _served := workbench.serve_remote(net)
-	var runtime: DotProfileRuntime = workbench.api.runtime if started.ok and workbench.api != null else null
+	var runtime: GSProfileRuntime = workbench.api.runtime if started.ok and workbench.api != null else null
 	if not started.ok:
 		log_warn("the workbench did not start", {"why": started.error.message})
 
-	binder.bind_cvars(add_cvar, DotConVar.FLAG_ARCHIVE,
+	binder.bind_cvars(add_cvar, GSConVar.FLAG_ARCHIVE,
 		func(name: String) -> bool: return console.has_name(name))
 	binder.bind_commands(add_command)
 	binder.field_changed.connect(_on_config_field)
@@ -283,8 +283,8 @@ func _bind_config(world: BfhGame) -> DotResult:
 		if world.flashlight_binder != null:
 			world.flashlight_binder.attach(runtime)
 		if ambient_set != null:
-			var _applied := DotGameWorkbench.bind_cvar_set(ambient_set, runtime, console)
-	return DotResult.success(null)
+			var _applied := GSGameWorkbench.bind_cvar_set(ambient_set, runtime, console)
+	return GSResult.success(null)
 
 ## Drivers and runners are the two sides dot-team's block rules compare.
 func _noblock_side(id: Variant) -> Variant:
@@ -295,7 +295,7 @@ func _noblock_runtime() -> Object:
 	return workbench.api.runtime if workbench != null and workbench.api != null else null
 
 ## The block commands are keyed by the player ids the world uses (`u<userid>`), not the bare userid.
-func _build_noblock() -> DotResult:
+func _build_noblock() -> GSResult:
 	var built := super()
 	if built.ok and noblock != null and noblock.commands != null:
 		noblock.commands.set(&"key_fn", func(ctx: Object) -> Variant:
@@ -324,8 +324,8 @@ static func _number(value: float) -> String:
 ## maps.yml: `sv_map_rotation_file`, `bfh_rotation` (switch or list) and `bfh_maps_reload`.
 func _add_rotation(world: BfhGame) -> void:
 	add_command("bfh_rotation", _cmd_rotation,
-		"bfh_rotation [name]: switch to a rotation in maps.yml, or list them", DotAdminFlags.CHANGEMAP)
-	add_command("bfh_maps_reload", _cmd_maps_reload, "Re-read maps.yml", DotAdminFlags.CHANGEMAP)
+		"bfh_rotation [name]: switch to a rotation in maps.yml, or list them", GSAdminFlags.CHANGEMAP)
+	add_command("bfh_maps_reload", _cmd_maps_reload, "Re-read maps.yml", GSAdminFlags.CHANGEMAP)
 	var file_cvar := add_cvar("sv_map_rotation_file", world.config.map_rotation_file,
 		"maps.yml: the bowls that rotate, in named rotations. Unlisted bowls stay installed.")
 	file_cvar.changed.connect(func(_old: String, new_value: String) -> void:
@@ -334,7 +334,7 @@ func _add_rotation(world: BfhGame) -> void:
 		if vote != null:
 			vote.refresh_maps())
 
-func _cmd_rotation(ctx: DotCmdContext) -> void:
+func _cmd_rotation(ctx: GSCmdContext) -> void:
 	var world := game as BfhGame
 
 	if world == null or not world.has_rotation_file():
@@ -358,7 +358,7 @@ func _cmd_rotation(ctx: DotCmdContext) -> void:
 
 	ctx.reply("Rotation: %s" % ctx.arg(0))
 
-func _cmd_maps_reload(ctx: DotCmdContext) -> void:
+func _cmd_maps_reload(ctx: GSCmdContext) -> void:
 	var world := game as BfhGame
 	var read := world.load_rotation()
 
@@ -399,8 +399,8 @@ func _tunable(
 		log_info("a tunable changed", {"cvar": cvar_name, "now": new_value})
 	)
 
-## [b]Nothing to undo.[/b] The commands are the module's own and [DotModule] removes them; the
-## netcode, the bridge and the roster are [DotGameModule]'s and it tears them down in the reverse
+## [b]Nothing to undo.[/b] The commands are the module's own and [GSModule] removes them; the
+## netcode, the bridge and the roster are [GSGameModule]'s and it tears them down in the reverse
 ## order it built them.
 func _game_unload() -> void:
 	if workbench != null:
@@ -419,7 +419,7 @@ func _game_unload() -> void:
 		vote.queue_free()
 		vote = null
 
-## The server slept or woke. The vote's director follows it on its own (DotGameModule finds
+## The server slept or woke. The vote's director follows it on its own (GSGameModule finds
 ## it); the bowl ballot's timer is this game's, so it starts again here on waking.
 func _game_hibernation(hibernating: bool) -> void:
 	if not hibernating and vote != null:
@@ -429,10 +429,10 @@ func _game_hibernation(hibernating: bool) -> void:
 const BOT_INTERVAL := 2.0
 
 ## The `bfh_bots` cvar, held so the tick does not look it up sixty times a second.
-var _bots: DotConVar = null
+var _bots: GSConVar = null
 
 ## How many bots drive, from how many people are driving. See [method _keep_the_seats_full].
-var _quota: DotBotQuota = null
+var _quota: GSBotQuota = null
 
 var _since_bot_check: float = 0.0
 
@@ -513,7 +513,7 @@ static func _bot_name(world: BfhGame) -> String:
 	var taken: Array = []
 	for player in world.runners() + world.drivers():
 		taken.append(player.display_name)
-	return DotBotNames.pick(taken, taken.size())
+	return GSBotNames.pick(taken, taken.size())
 
 ## Joins the bridge's two chat seams to the services layer's router.
 func _build_vote(world: BfhGame) -> void:
@@ -530,9 +530,9 @@ func _build_vote(world: BfhGame) -> void:
 	vote.commands_spec_fn = world.rotation_commands
 	vote.in_rotation_fn = func(id: StringName) -> bool: return not world.has_rotation_file() or world.in_rotation(id)
 	vote.rotation_order_fn = func() -> Array: return world.rotating_ids()
-	vote.apply_fn = func(id: StringName) -> DotResult:
+	vote.apply_fn = func(id: StringName) -> GSResult:
 		world.next_bowl_id = id
-		return DotResult.success(id)
+		return GSResult.success(id)
 	# People only: a bot is not a voter, and a ballot it could swing is not the players'.
 	vote.voters_fn = func() -> Array:
 		var out: Array = []
@@ -558,7 +558,7 @@ func _build_vote(world: BfhGame) -> void:
 			server.broadcast_message(line)
 	vote.is_admin_fn = func(voter: StringName) -> bool:
 		var session := server.session_by_userid(String(voter).to_int()) if server != null else null
-		return session != null and session.has_permission(DotAdminFlags.CHANGEMAP)
+		return session != null and session.has_permission(GSAdminFlags.CHANGEMAP)
 	vote.ballot_fn = func(state: Dictionary) -> void:
 		if server == null:
 			return
@@ -566,7 +566,7 @@ func _build_vote(world: BfhGame) -> void:
 		for session in server.playing_sessions():
 			var data := state.duplicate()
 			data["you"] = str(session.userid)
-			server.send_notice(session, DotNotice.make(
+			server.send_notice(session, GSNotice.make(
 				&"", "", float(state.get("seconds", -1.0)), BOWL_BALLOT_TOPIC, data
 			))
 	vote.people_fn = func(voter: StringName) -> Dictionary:
@@ -588,13 +588,13 @@ func _build_vote(world: BfhGame) -> void:
 	var ready := vote.setup()
 
 	if not ready.ok:
-		DotLog.result(CHANNEL, "the bowl vote; the server's own bowl stays", ready)
+		GSLog.result(CHANNEL, "the bowl vote; the server's own bowl stays", ready)
 		vote.queue_free()
 		vote = null
 		return
 
 	var commanded := vote.install_commands(self)
-	DotLog.result(CHANNEL, "the bowl vote's commands", commanded)
+	GSLog.result(CHANNEL, "the bowl vote's commands", commanded)
 
 	# The map menu (M), dot-vote's: a player holding the owner's `sv_map_menu_flag` changes the
 	# bowl now, not next round, and sees the same rows a solo player does. Read by name,
@@ -621,7 +621,7 @@ func _build_vote(world: BfhGame) -> void:
 	)
 
 	if server != null:
-		server.client_disconnected.connect(func(session: DotClientSession, _reason: String) -> void:
+		server.client_disconnected.connect(func(session: GSClientSession, _reason: String) -> void:
 			if vote != null:
 				vote.forget_voter(StringName(str(session.userid)))
 		)

@@ -128,7 +128,7 @@ func _test_spectating() -> void:
 	var to_bus := (spectate.pose_of("d").origin - eye.origin).normalized()
 	_check(
 		not out.health.alive
-		and spectate.mode_of(&"r1") == DotSpectatorView.Mode.DEATH_CAM
+		and spectate.mode_of(&"r1") == GSSpectatorView.Mode.DEATH_CAM
 		and spectate.target_of(&"r1") == &"d"
 		and (-eye.basis.z).dot(to_bus) > 0.95,
 		"run over, they look from where they fell at the bus that did it",
@@ -138,7 +138,7 @@ func _test_spectating() -> void:
 	await _step(game, int(BfhSpectate.DEATH_CAM_SEC * 60.0) + 2)
 	var cab := spectate.camera_for(&"r1").origin
 	_check(
-		spectate.mode_of(&"r1") == DotSpectatorView.Mode.FREEZE_CAM
+		spectate.mode_of(&"r1") == GSSpectatorView.Mode.FREEZE_CAM
 		and spectate.target_of(&"r1") == &"d"
 		and cab.distance_to(bus.global_position) < 5.0
 		and cab.distance_to(driver.global_position) > 5.0,
@@ -158,7 +158,7 @@ func _test_spectating() -> void:
 func _spectate_follow(game: BfhGame, spectate: BfhSpectate, out: BfhPlayer) -> void:
 	var first := spectate.target_of(&"r1")
 	_check(
-		spectate.mode_of(&"r1") == DotSpectatorView.Mode.FIRST_PERSON
+		spectate.mode_of(&"r1") == GSSpectatorView.Mode.FIRST_PERSON
 		and (first == &"d" or first == &"r2"),
 		"and then somebody to follow, through their eyes",
 		spectate.describe_view(&"r1")
@@ -182,7 +182,7 @@ func _spectate_follow(game: BfhGame, spectate: BfhSpectate, out: BfhPlayer) -> v
 	var viewed := spectate.request(&"r1", BfhSpectate.ASK_VIEW)
 	var behind := spectate.camera_for(&"r1").origin
 	_check(
-		viewed.ok and spectate.mode_of(&"r1") == DotSpectatorView.Mode.CHASE
+		viewed.ok and spectate.mode_of(&"r1") == GSSpectatorView.Mode.CHASE
 		and behind.distance_to(eyes) > 5.0 and behind.distance_to(eyes) < 10.0,
 		"space puts the camera behind them rather than in their head",
 		"%s, %.1f m from their eyes" % [spectate.describe_view(&"r1"), behind.distance_to(eyes)]
@@ -221,7 +221,7 @@ func _spectate_roam(game: BfhGame, spectate: BfhSpectate, out: BfhPlayer) -> voi
 		BfhHud.watching_line(game, out)
 	)
 
-	var fly := DotSpectatorFreeCam.new()
+	var fly := GSSpectatorFreeCam.new()
 	fly.rules = rules
 	fly.seed_from(spectate.camera_for(&"r1"))
 	var flown := fly.step(Vector3(0.0, 0.0, 1.0), false, false, 1.0).origin.distance_to(
@@ -326,7 +326,7 @@ func _test_the_sounds() -> void:
 	var audio := BfhAudio.new()
 	add_child(audio)
 	var built := audio.setup(game, func() -> BfhPlayer: return runner)
-	var sink := audio.audio.sink as DotAudioSinkNull if audio.audio != null else null
+	var sink := audio.audio.sink as GSAudioSinkNull if audio.audio != null else null
 	_check(
 		built.ok and sink != null,
 		"headless, a client's audio builds on the sink that writes down what it would play",
@@ -363,7 +363,7 @@ func _sounds_catalogue_checks() -> void:
 	_check(catalogue.validate().ok, "the catalogue is a document dot-audio accepts")
 
 	# dot-audio's stock footsteps and beds are files the addon ships, so they need no stand-in.
-	var stock := DotAudioStock.ids()
+	var stock := GSAudioStock.ids()
 	var silent := PackedStringArray()
 	for id in catalogue.ids():
 		if not recipes.has(id) and not stock.has(id):
@@ -400,7 +400,7 @@ func _sounds_catalogue_checks() -> void:
 		str(outside)
 	)
 
-	var bank := DotAudioSynth.bank(catalogue, recipes)
+	var bank := GSAudioSynth.bank(catalogue, recipes)
 	var unbaked := PackedStringArray()
 	for id in catalogue.ids():
 		if not bank.has(id) and not stock.has(id):
@@ -477,7 +477,7 @@ func _sounds_horn_and_bump(game: BfhGame, driver: BfhPlayer, runner: BfhPlayer, 
 
 
 ## Every one of those reached the client's ears, plus the round's flat cues.
-func _sounds_reached_the_ears(game: BfhGame, sink: DotAudioSinkNull) -> void:
+func _sounds_reached_the_ears(game: BfhGame, sink: GSAudioSinkNull) -> void:
 	# And every one of those reached the client's ears, plus the flat cues of a round that
 	# ended with the drivers' win — this client is a runner, so it is a loss.
 	await _step(game, 30)
@@ -499,7 +499,7 @@ func _sounds_reached_the_ears(game: BfhGame, sink: DotAudioSinkNull) -> void:
 
 
 ## The engine, from the bus as drawn, and an empty bus.
-func _sounds_engine(game: BfhGame, driver: BfhPlayer, audio: BfhAudio, sink: DotAudioSinkNull) -> void:
+func _sounds_engine(game: BfhGame, driver: BfhPlayer, audio: BfhAudio, sink: GSAudioSinkNull) -> void:
 	# The engine, from the bus as drawn. Still, it idles; moved at 18 m/s it pulses faster and the
 	# client hears the speed it is being drawn at.
 	var bus := driver.ridden
@@ -636,7 +636,7 @@ func _progress_crates_broken(
 		]
 	)
 
-	var held := DotStatsValues.new()
+	var held := GSStatsValues.new()
 	held.values = {String(BfhStats.RUNNERS_FLATTENED): 10.0}
 	progress.rank.seed_baseline(&"r", held)
 	progress.publish_rank(&"r")

@@ -3,7 +3,7 @@ extends "headless_net_drawn.gd"
 
 
 var _out_ears: BfhAudio
-var _out_sink: DotAudioSinkNull
+var _out_sink: GSAudioSinkNull
 var _out_eye: Camera3D
 
 
@@ -20,10 +20,10 @@ func _test_a_runner_who_is_out() -> void:
 	var other := _server_bridge.add_bot("Cy", BfhGame.TEAM_RUNNERS)
 	await _steps(6)
 
-	var server_net := mine_on_server.get_node("Net") as DotNetBehaviour
+	var server_net := mine_on_server.get_node("Net") as GSNetBehaviour
 	_check(
-		server_net.find_var(&"net_watch").audience == DotNetVar.Audience.OWNER
-		and server_net.find_var(&"net_watch_target").audience == DotNetVar.Audience.OWNER,
+		server_net.find_var(&"net_watch").audience == GSNetVar.Audience.OWNER
+		and server_net.find_var(&"net_watch_target").audience == GSNetVar.Audience.OWNER,
 		"where a runner who is out looks is sent to them and to nobody else"
 	)
 
@@ -48,7 +48,7 @@ func _out_death_camera(mine_on_server: BfhPlayer, bot: BfhPlayer, bot_key: Strin
 	add_child(ears)
 	var _built := ears.setup(_client_game, func() -> BfhPlayer: return _client_player())
 	_out_ears = ears
-	_out_sink = ears.audio.sink as DotAudioSinkNull
+	_out_sink = ears.audio.sink as GSAudioSinkNull
 	var heard: Array = []
 	_client_game.noise.connect(func(id: StringName, at: Vector3) -> void:
 		heard.append({"id": id, "at": at}))
@@ -64,7 +64,7 @@ func _out_death_camera(mine_on_server: BfhPlayer, bot: BfhPlayer, bot_key: Strin
 	var spectate := _client_game.spectate
 	_check(
 		spectate != null and not spectate.manager.authoritative
-		and spectate.mode_of(mine.player_id) == DotSpectatorView.Mode.DEATH_CAM
+		and spectate.mode_of(mine.player_id) == GSSpectatorView.Mode.DEATH_CAM
 		and spectate.target_of(mine.player_id) == bot_key,
 		"the client's mirror is put on the death camera, looking at the bus that did it",
 		spectate.describe_view(mine.player_id) if spectate != null else "no spectate"
@@ -114,7 +114,7 @@ func _out_then_through_eyes() -> void:
 	var watched: BfhPlayer = _client_game.players.get(following)
 	var _drew := BfhClient.present_spectator_camera(_client_game, mine, eye)
 	_check(
-		spectate.mode_of(mine.player_id) == DotSpectatorView.Mode.FIRST_PERSON
+		spectate.mode_of(mine.player_id) == GSSpectatorView.Mode.FIRST_PERSON
 		and watched != null
 		and eye.global_position.distance_to(spectate.pose_of(String(following)).origin) < 0.01,
 		"then through somebody's eyes, as this client draws them",
@@ -135,7 +135,7 @@ func _out_then_through_eyes() -> void:
 	_exchange()
 	await _steps(4)
 	_check(
-		spectate.mode_of(mine.player_id) == DotSpectatorView.Mode.CHASE,
+		spectate.mode_of(mine.player_id) == GSSpectatorView.Mode.CHASE,
 		"and space asks for the view behind them",
 		spectate.describe_view(mine.player_id)
 	)
@@ -385,8 +385,8 @@ func _test_the_scoreboard() -> void:
 	board.bind(_client_game, func() -> BfhPlayer: return _client_player())
 
 	var client_match := _client_game.match_node
-	var drivers_side: DotTeam = client_match.teams.team(BfhGame.TEAM_DRIVERS)
-	var runners_side: DotTeam = client_match.teams.team(BfhGame.TEAM_RUNNERS)
+	var drivers_side: GSTeam = client_match.teams.team(BfhGame.TEAM_DRIVERS)
+	var runners_side: GSTeam = client_match.teams.team(BfhGame.TEAM_RUNNERS)
 	_check(
 		drivers_side != null and drivers_side.display_name == "Drivers"
 		and runners_side != null and runners_side.display_name == "Runners",
