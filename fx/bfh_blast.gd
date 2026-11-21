@@ -10,7 +10,7 @@ var radius: float = 1.0
 ## Seconds since it went off.
 var age: float = 0.0
 
-## How long it draws. dot-fx retires the node on its own lifetime; this is the same number
+## How long it draws. gs-fx retires the node on its own lifetime; this is the same number
 ## so the last frame drawn is a faded one rather than a cut.
 const LIFETIME := 1.4
 
@@ -42,7 +42,7 @@ func _ready() -> void:
 	_apply()
 
 
-## Sizes it to [param reach]. Called by [BfhFx] the moment dot-fx hands the node over.
+## Sizes it to [param reach]. Called by [BfhFx] the moment gs-fx hands the node over.
 func configure(reach: float) -> void:
 	radius = maxf(reach, 0.1)
 	age = 0.0

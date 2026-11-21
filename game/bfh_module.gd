@@ -43,8 +43,8 @@ func _make_services() -> Node:
 	services.punishments_file = punishments_file
 	return services
 
-## Profiles, avatars and admission: dot-platform's [GSPlatformIdentity] over this game's one-slot
-## schema. [GSGameModule] builds it before the services and loads dot-platform's own module beside
+## Profiles, avatars and admission: gs-platform's [GSPlatformIdentity] over this game's one-slot
+## schema. [GSGameModule] builds it before the services and loads gs-platform's own module beside
 ## it.
 func _make_identity() -> Node:
 	var identity_layer := GSPlatformIdentity.new()
@@ -97,7 +97,7 @@ func _game_load() -> GSResult:
 
 	# REPLICATED: where the clients' killcam camera sits (0 the killer's eye, 1 behind the killer).
 	var _camera := add_cvar("mp_killview_camera", "0",
-		"Killcam camera: 0 the killer's eye, 1 behind the killer (dot-replay GSKillcamFraming)",
+		"Killcam camera: 0 the killer's eye, 1 behind the killer (gs-replay GSKillcamFraming)",
 		GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY | GSConVar.FLAG_REPLICATED)
 
 	_bots = add_cvar(
@@ -105,12 +105,12 @@ func _game_load() -> GSResult:
 		"Bots in empty driving seats: 1 keeps as many as bot_quota and bot_quota_mode say, 0 none at all."
 	)
 
-	# [b]How many is dot-server's [GSBotQuota], so `bot_quota` and `bot_quota_mode` mean the same
+	# [b]How many is gs-server's [GSBotQuota], so `bot_quota` and `bot_quota_mode` mean the same
 	# thing on every server in the family[/b] — counted in DRIVING SEATS here, because a bot only ever
 	# drives.
 	_quota = GSBotQuota.install(self, world.config.driver_count)
 
-	# How well the bots drive: dot-bot's `bot_difficulty` and its `bot_*` settings, held on
+	# How well the bots drive: gs-bot's `bot_difficulty` and its `bot_*` settings, held on
 	# the world (`BfhGame._autopilot` reads `bot_prediction` and `bot_aggression`).
 	var _bot_cvars := GSBotSettings.of(world).bind_cvars(add_cvar, GSConVar.FLAG_NOTIFY, add_command)
 
@@ -131,12 +131,12 @@ func _game_load() -> GSResult:
 ## The cvar sets the world's rule objects own (ragdolls, toys, ambience, view, spectating), each
 ## bound under its addon's own names.
 func _bind_rule_cvars(world: BfhGame) -> void:
-	# Dead bodies: dot-player-char's sv_ragdoll* set. The server only picks each death's reaction
+	# Dead bodies: gs-player-char's sv_ragdoll* set. The server only picks each death's reaction
 	# from them; REPLICATED, because the clients draw the bodies (see the client's _build_netcode).
 	var _ragdolls := world.ragdoll_rules.bind_cvars(
 		add_cvar, GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY | GSConVar.FLAG_REPLICATED
 	)
-	# The bowl's toys: dot-props' sv_toys* set. REPLICATED, because a client hides the toys the
+	# The bowl's toys: gs-props' sv_toys* set. REPLICATED, because a client hides the toys the
 	# server took away.
 	var _toys := world.toy_rules.bind_cvars(
 		add_cvar, GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY | GSConVar.FLAG_REPLICATED
@@ -148,13 +148,13 @@ func _bind_rule_cvars(world: BfhGame) -> void:
 		GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY
 	)
 
-	# dot-player-controller's mp_forceview: first or third person, the player's choice or one
+	# gs-player-controller's mp_forceview: first or third person, the player's choice or one
 	# held. REPLICATED, because each client places its own camera under it.
 	var _views := world.view_rules.bind_cvars(
 		add_cvar, GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY | GSConVar.FLAG_REPLICATED
 	)
 
-	# dot-spectate's mp_forcecamera, mp_freeroam and mp_freeroam_speed: whether a runner who is
+	# gs-spectate's mp_forcecamera, mp_freeroam and mp_freeroam_speed: whether a runner who is
 	# out may fly a free camera. REPLICATED, because the client flies it and hides the key.
 	if world.spectate != null and world.spectate.manager != null:
 		_spectate_cvars = world.spectate.manager.rules.bind_cvars(
@@ -162,7 +162,7 @@ func _bind_rule_cvars(world: BfhGame) -> void:
 		)
 
 
-## A bowl's file (`cfg/game/mg-buses-from-hell/dot_map/map/`) may set only [constant BfhMapConfig.KEYS].
+## A bowl's file (`cfg/game/mg-buses-from-hell/gs_map/map/`) may set only [constant BfhMapConfig.KEYS].
 func _map_config_keys() -> Dictionary:
 	return BfhMapConfig.KEYS
 
@@ -238,7 +238,7 @@ func _hand_cvar(key: String) -> String:
 	var name: String = HAND_RENAMES.get(key, "bfh_%s" % key)
 	return name if console.has_name(name) else ""
 
-## Every config field as a `bfh_<field>` cvar (the hand-written ones keep their handlers and follow workbench edits), the cfg/ diff commands, the workbench and dot-team's block rules.
+## Every config field as a `bfh_<field>` cvar (the hand-written ones keep their handlers and follow workbench edits), the cfg/ diff commands, the workbench and gs-team's block rules.
 func _bind_config(world: BfhGame) -> GSResult:
 	var _fl := world.flashlight_conf()
 	if world.flashlight_binder != null:
@@ -253,7 +253,7 @@ func _bind_config(world: BfhGame) -> GSResult:
 	workbench.lazy_panel = true
 	workbench.dedicated = DisplayServer.get_name() == "headless"
 	workbench.listen_host_fn = func() -> bool: return DisplayServer.get_name() != "headless"
-	# Admission: the console's admins, and dot-game's ticket login for the uids and groups listed under `workbench:` in cfg/server.yml.
+	# Admission: the console's admins, and gs-game's ticket login for the uids and groups listed under `workbench:` in cfg/server.yml.
 	workbench.permit_fn = func(actor: Variant, flag: String) -> bool:
 		return server != null and server.admins != null and actor is String \
 			and bool(server.admins.uid_has_permission(actor, flag))
@@ -286,7 +286,7 @@ func _bind_config(world: BfhGame) -> GSResult:
 			var _applied := GSGameWorkbench.bind_cvar_set(ambient_set, runtime, console)
 	return GSResult.success(null)
 
-## Drivers and runners are the two sides dot-team's block rules compare.
+## Drivers and runners are the two sides gs-team's block rules compare.
 func _noblock_side(id: Variant) -> Variant:
 	return game.call(&"team_of_side", id) if game != null else ""
 
@@ -507,7 +507,7 @@ func _keep_the_seats_full() -> void:
 		var leaving: BfhPlayer = bots.pop_back()
 		bridge.call("remove_player", BfhNetBridge.session_of(leaving.player_id))
 
-## A bot's name from dot-bot's pool that nobody in [param world] has (it was "Bus driver"
+## A bot's name from gs-bot's pool that nobody in [param world] has (it was "Bus driver"
 ## for every bot, so a board of three read as one name three times).
 static func _bot_name(world: BfhGame) -> String:
 	var taken: Array = []
@@ -596,9 +596,9 @@ func _build_vote(world: BfhGame) -> void:
 	var commanded := vote.install_commands(self)
 	GSLog.result(CHANNEL, "the bowl vote's commands", commanded)
 
-	# The map menu (M), dot-vote's: a player holding the owner's `sv_map_menu_flag` changes the
+	# The map menu (M), gs-vote's: a player holding the owner's `sv_map_menu_flag` changes the
 	# bowl now, not next round, and sees the same rows a solo player does. Read by name,
-	# because a server on a dot-vote older than the menu has no `map_menu` and runs without it.
+	# because a server on a gs-vote older than the menu has no `map_menu` and runs without it.
 	var menu_half: Variant = vote.commands.get(&"map_menu") if vote.commands != null else null
 	if menu_half is Object:
 		(menu_half as Object).set(&"change_fn", world.change_bowl_now)

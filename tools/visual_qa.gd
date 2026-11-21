@@ -1,6 +1,6 @@
 extends GSGameVisualQaCapture
 
-## Buses from Hell's visual QA capture (docs/testing.md, "Visual QA"; the loop is dot-game's docs/visual-qa.md).
+## Buses from Hell's visual QA capture (docs/testing.md, "Visual QA"; the loop is gs-game's docs/visual-qa.md).
 ## Each item is recorded frame by frame at --fps in three views (f first person, t behind-right, o in front):
 ##   person_<letter>  the six runners (a b c e f k) and the driver on foot (j), BfhFigure; f is a runner 2.5 m in front.
 ##   hammer           f is the runner's own BfhViewmodel at the eye; t and o draw a runner holding and swinging it.

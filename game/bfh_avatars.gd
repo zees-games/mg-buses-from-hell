@@ -1,6 +1,6 @@
 extends RefCounted
 
-## What a player looks like, as a dot-user-avatar document: the schema, the stock avatar a player
+## What a player looks like, as a gs-user-avatar document: the schema, the stock avatar a player
 ## without one of their own wears, and which skin a document asks for.
 
 const SCHEMA_ID := &"bfh_people"

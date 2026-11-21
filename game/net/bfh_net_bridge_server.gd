@@ -87,7 +87,7 @@ func _on_player_added(id: StringName) -> void:
 		return
 
 	# [b]Every id on the wire is `u<session>`, and anything else parses back to zero.[/b] A world that
-	# added a player called `bot` would replicate it under session 0 — which is also dot-net's
+	# added a player called `bot` would replicate it under session 0 — which is also gs-net's
 	# broadcast address — and a second one would silently replace the first in this table.
 	if player_key(session_id) != id:
 		GSLog.warn(CHANNEL, "a player whose id is not a session key is not replicated", {
@@ -250,7 +250,7 @@ func _on_round_began(number: int) -> void:
 	_broadcast(BfhEvents.Kind.ROUND, BfhEvents.write_round(number, true, 0))
 
 func _on_round_over(number: int, winner: int) -> void:
-	# The CLOCK first, carrying the tally dot-match has just counted this round into, so a client's
+	# The CLOCK first, carrying the tally gs-match has just counted this round into, so a client's
 	# world has the new score by the time its `round_over` fires — which is when a scoreboard shows
 	# itself.
 	_broadcast(BfhEvents.Kind.CLOCK, _clock_bytes())

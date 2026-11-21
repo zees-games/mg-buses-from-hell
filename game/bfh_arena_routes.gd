@@ -362,7 +362,7 @@ const OBSTACLE_MARGIN := PILLAR_KEEP_OUT - PILLAR_RADIUS
 
 # --- Toys
 
-## Where the bowl's toys stand (dot-props' loose toys: beach balls, barrels, a tyre): a ring two
+## Where the bowl's toys stand (gs-props' loose toys: beach balls, barrels, a tyre): a ring two
 ## thirds of the way out, clear of every pillar, tank and the scaffold. Not of the bus lanes: they
 ## are the game's per round and a client never sets them, and a bus ploughing a ball is the point.
 var _toy_spots: Array[Vector3] = []

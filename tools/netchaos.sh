@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
-# Network chaos rig: the shared script lives in dot-game (tools/netchaos.sh); this game supplies tools/netchaos_{server,client}.tscn.
+# Network chaos rig: the shared script lives in gs-game (tools/netchaos.sh); this game supplies tools/netchaos_{server,client}.tscn.
 cd "$(dirname "$0")/.." || exit 2
-exec "$(dirname "$0")/../../dot-game/tools/netchaos.sh" "$@"
+exec "$(dirname "$0")/../../gs-game/tools/netchaos.sh" "$@"

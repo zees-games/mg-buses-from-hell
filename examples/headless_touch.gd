@@ -1,6 +1,6 @@
 extends GSGameCheckSuite
 
-## The phone's controls: the layout fits a phone, nothing overlaps, and dot-mobile's overlay drives the client's sampler: the stick, the look half, the swing and the handbrake.
+## The phone's controls: the layout fits a phone, nothing overlaps, and gs-mobile's overlay drives the client's sampler: the stick, the look half, the swing and the handbrake.
 
 const BfhTouch := preload("../game/bfh_touch.gd")
 const BfhHud := preload("../game/bfh_hud.gd")
@@ -40,7 +40,7 @@ func _run() -> void:
 	_report_sections(1, 1, 1, CHECKS)
 
 
-## The top-right HUD label stays clear of the Menu button at the corner this game's spec puts it in (dot-menu's default is the
+## The top-right HUD label stays clear of the Menu button at the corner this game's spec puts it in (gs-menu's default is the
 ## top right, which sat on the label), and the button stays on screen.
 func _hud_clear_of_menu() -> void:
 	# A headless window is 64 px square, so the HUD lays out in a phone-sized viewport of its own.

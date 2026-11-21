@@ -4,7 +4,7 @@ const BfhPaths := preload("bfh_paths.gd")
 
 ## What this game makes a noise about, as a document, and which stand-in voice says it.
 
-# No `const CHANNEL`: a static document. dot-audio's manager validates it and logs there,
+# No `const CHANNEL`: a static document. gs-audio's manager validates it and logs there,
 # and `BfhAudio` is what plays it.
 
 # --- The world: positional, decided by the server, sent by index
@@ -89,7 +89,7 @@ static func catalogue(root: String = "") -> GSAudioCatalogue:
 	var dir := sound_dir(root)
 	var c := GSAudioCatalogue.new()
 
-	# Runners' footsteps in the sand and the bowl's wind: dot-audio's stock (CC0, the addon's
+	# Runners' footsteps in the sand and the bowl's wind: gs-audio's stock (CC0, the addon's
 	# stock/CREDITS.md), under the addon's own path, which an addon pack overlays at boot.
 	GSAudioStock.add_to(c)
 
@@ -164,7 +164,7 @@ static func catalogue(root: String = "") -> GSAudioCatalogue:
 	# A click is a click, and two in one frame is one.
 	c.find(UI_CLICK).cooldown_ms = 60
 
-	# A body landing: dot-player-char's stock death sounds (Kenney, CC0), shipped in the addon,
+	# A body landing: gs-player-char's stock death sounds (Kenney, CC0), shipped in the addon,
 	# so their paths are the addon's own whatever the game's root.
 	for row: Dictionary in GSPlayerDeathSounds.rows():
 		var fall := GSAudioDef.new()
@@ -182,7 +182,7 @@ static func catalogue(root: String = "") -> GSAudioCatalogue:
 		fall.priority = 50
 		c.add(fall)
 
-	# The bowl's toys: dot-props' stock toy sounds (Kenney, CC0), shipped in the addon, under
+	# The bowl's toys: gs-props' stock toy sounds (Kenney, CC0), shipped in the addon, under
 	# the buses in priority.
 	for row: Dictionary in GSPropBodySounds.rows():
 		var toy := GSAudioDef.new()
@@ -223,7 +223,7 @@ static func sound_recipes() -> Dictionary:
 		SIDE_SWAP: GSAudioSynth.Voice.SPAWN,
 		UI_CLICK: GSAudioSynth.Voice.CLICK,
 		UI_NOTICE: GSAudioSynth.Voice.BLIP,
-		# Stand-ins only for a build without dot-props' toy files.
+		# Stand-ins only for a build without gs-props' toy files.
 		GSPropBodySounds.BOUNCE: GSAudioSynth.Voice.IMPACT,
 		GSPropBodySounds.THUMP: GSAudioSynth.Voice.IMPACT,
 		GSPropBodySounds.KNOCK: GSAudioSynth.Voice.IMPACT,
@@ -237,7 +237,7 @@ static func sound_recipes() -> Dictionary:
 		GSPropBodySounds.WATER: GSAudioSynth.Voice.STEP,
 		GSPropBodySounds.BOING: GSAudioSynth.Voice.SPAWN,
 		GSPropBodySounds.HORN: GSAudioSynth.Voice.BLIP,
-		# Stand-ins only for a build without dot-player-char's files.
+		# Stand-ins only for a build without gs-player-char's files.
 		GSPlayerDeathReactions.SOUND_THUD: GSAudioSynth.Voice.IMPACT,
 		GSPlayerDeathReactions.SOUND_FACE_PLANT: GSAudioSynth.Voice.IMPACT,
 		GSPlayerDeathReactions.SOUND_SLUMP: GSAudioSynth.Voice.STEP,

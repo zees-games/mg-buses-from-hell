@@ -175,7 +175,7 @@ func _test_somebody_else_is_drawn() -> void:
 
 ## What the client draws of the other runner, and of the bot drivers and itself.
 func _check_other_is_drawn(mine: BfhPlayer, theirs: BfhPlayer, other: BfhPlayer, shown: int) -> void:
-	# Your own runner is drawn at the clock's render alpha (dot-player-controller's
+	# Your own runner is drawn at the clock's render alpha (gs-player-controller's
 	# `render_clock`), so a clock slip does not stall or double the eye.
 	_check(
 		mine != null and mine.controller != null
@@ -466,7 +466,7 @@ func _workbench_rig(flags: Dictionary, state: Dictionary) -> Dictionary:
 func _test_the_remote_workbench() -> void:
 	_section("[a flagged admin edits the server's profiles, and nobody else can]")
 	if not GSGameWorkbench.available():
-		print("  dot-workbench is not linked: skipped")
+		print("  gs-workbench is not linked: skipped")
 		_passed += 16
 		_done()
 		return

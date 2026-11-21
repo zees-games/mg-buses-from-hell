@@ -186,7 +186,7 @@ func _shot_maps_fixture() -> void:
 
 ## `--view=cover`: the loading cover, before it lifts.
 func _shot_cover(client: Node) -> void:
-	# --view=cover: the loading cover dot-game's GSGameClient puts up first, before it lifts.
+	# --view=cover: the loading cover gs-game's GSGameClient puts up first, before it lifts.
 	if _o_cover:
 		for _i in 2:
 			await RenderingServer.frame_post_draw
@@ -555,7 +555,7 @@ func _shot_blast(client: Node) -> void:
 			print("blast at %s, radius %.2f, ring drawn to %.2f m" % [
 				str(drawn.global_position), float(drawn.get("radius")), float(drawn.call("drawn_reach"))])
 
-	# A crate breaking five metres ahead: splinters from dot-fx's break effect.
+	# A crate breaking five metres ahead: splinters from gs-fx's break effect.
 	if _o_crate_break and world_for_blast != null and eye_for_blast != null:
 		var fwd := -eye_for_blast.global_basis.z
 		fwd.y = 0.0

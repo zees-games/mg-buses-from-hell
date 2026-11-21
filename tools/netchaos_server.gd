@@ -3,7 +3,7 @@ extends GSGameNetchaosServer
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhGame := preload("../game/bfh_game.gd")
 
-## Buses From Hell's side of `tools/netchaos.sh` (dot-game's GSGameNetchaosServer): the world and the module, no warmup or intermission.
+## Buses From Hell's side of `tools/netchaos.sh` (gs-game's GSGameNetchaosServer): the world and the module, no warmup or intermission.
 ## The module fills empty driving seats with its own bots (bot_quota), so the roster holds those too.
 
 var _game: BfhGame = null

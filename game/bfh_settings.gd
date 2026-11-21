@@ -7,10 +7,10 @@ const BfhBindings := preload("bfh_bindings.gd")
 
 const SCHEMA_VERSION := 1
 
-## Where this game's own document lives. The shared account document is dot-settings'.
+## Where this game's own document lives. The shared account document is gs-settings'.
 const SETTINGS_DIR := "user://buses_settings"
 
-## The app's namespace. ACCOUNT settings are shared under dot-menu's `tmc_account`.
+## The app's namespace. ACCOUNT settings are shared under gs-menu's `tmc_account`.
 const APP_NAMESPACE := &"buses_from_hell"
 
 ## The field of view the camera had before this existed, and still the default.

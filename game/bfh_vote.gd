@@ -1,7 +1,7 @@
 extends GSVoteRoundGame
 
-## The players choose the next bowl: dot-vote's [GSVoteRoundGame] with Buses From Hell's names. Every round is a play and owes a
-## ballot, opened [member open_after_sec] into it and applied at its end; the rest is dot-vote's settings
+## The players choose the next bowl: gs-vote's [GSVoteRoundGame] with Buses From Hell's names. Every round is a play and owes a
+## ballot, opened [member open_after_sec] into it and applied at its end; the rest is gs-vote's settings
 ## (`user://cfg/buses_vote.json`, `game.yml` metadata `bowl_vote:`).
 
 const CHANNEL := "buses.vote"

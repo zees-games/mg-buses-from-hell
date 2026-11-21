@@ -1,7 +1,7 @@
 extends Node
 
 ## The third-person camera and the spectator's chase camera flown round the bowl in the real offline
-## game (dot-core's GSCameraCheck: never inside, armed by the unprotected camera being in or behind
+## game (gs-core's GSCameraCheck: never inside, armed by the unprotected camera being in or behind
 ## the level on some frames), `mp_forceview` through the view key's path, and with `--render` both.
 
 const BfhClient := preload("../game/bfh_client.gd")

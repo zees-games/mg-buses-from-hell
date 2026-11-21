@@ -2,7 +2,7 @@ extends GSNetInput
 
 ## One tick of a player's intent, on the wire: a [GSFpsCommand] and nothing else.
 
-## The hammer. `BUTTON_USER_0`, which is what dot-player-controller reserves for a game.
+## The hammer. `BUTTON_USER_0`, which is what gs-player-controller reserves for a game.
 const BUTTON_SWING := GSFpsCommand.BUTTON_USER_0
 
 var move: GSFpsCommand = GSFpsCommand.new()

@@ -96,7 +96,7 @@ func _shut_down() -> void:
 	await get_tree().process_frame
 
 
-## Profiles, names and faces on a real server: dot-platform's identity layer, its module, the three
+## Profiles, names and faces on a real server: gs-platform's identity layer, its module, the three
 ## events this game redraws a player on, and the key what they keep is filed under.
 func _test_who_they_are() -> void:
 	print("who somebody is")
@@ -104,8 +104,8 @@ func _test_who_they_are() -> void:
 	var module := _module()
 	var identity: Object = module.get("identity") if module != null else null
 
-	_check(identity is GSPlatformIdentity, "the module built dot-platform's identity layer")
-	_check(server.modules.has_module("platform"), "and dot-game loaded the platform module")
+	_check(identity is GSPlatformIdentity, "the module built gs-platform's identity layer")
+	_check(server.modules.has_module("platform"), "and gs-game loaded the platform module")
 	_check(
 		identity is GSPlatformIdentity and (identity as GSPlatformIdentity).avatars != null
 			and (identity as GSPlatformIdentity).avatars.schema.id == BfhAvatars.SCHEMA_ID,
@@ -285,7 +285,7 @@ func _test_no_message_preloads_itself() -> void:
 func _extends_message(source: String) -> bool:
 	for line in source.split("\n"):
 		if line.begins_with("extends "):
-			return line.contains("GSNetMessage") or line.contains("dot_net_message.gd")
+			return line.contains("GSNetMessage") or line.contains("gs_net_message.gd")
 	return false
 
 
@@ -394,7 +394,7 @@ func _test_the_module_loads() -> void:
 
 	var module := _module()
 	_check(game != null and game.progress != null and game.progress.durable_key_fn.is_valid(),
-		"progress is filed under dot-game's stable stats key")
+		"progress is filed under gs-game's stable stats key")
 	_check(module != null, "and the host has it under its name")
 
 	if module == null:
@@ -402,7 +402,7 @@ func _test_the_module_loads() -> void:
 		return
 
 	# Through `get()`, because this module has no `class_name` — the shape a module
-	# delivered in a dot-cloud pack must have.
+	# delivered in a gs-cloud pack must have.
 	_check(module.get("net") != null, "the netcode is up")
 	_check(module.get("bridge") != null, "with the game's bridge attached to it")
 	_check(module.get("roster") != null, "and a roster waiting for players")
@@ -439,7 +439,7 @@ func _test_the_module_loads() -> void:
 	_done()
 
 
-## Config cvars, a workbench edit reaching a hand-written cvar and the bus feel, and dot-team's block rules through dot-game's GSGameNoblock.
+## Config cvars, a workbench edit reaching a hand-written cvar and the bus feel, and gs-team's block rules through gs-game's GSGameNoblock.
 func _noblock_and_config(module: GSModule) -> void:
 	var teamblock := server.console.find_cvar("mp_teamblock")
 	var enemyblock := server.console.find_cvar("mp_enemyblock")
@@ -518,7 +518,7 @@ func _test_the_bowl_vote() -> void:
 		"it offers every bowl", str(ids))
 
 	# The map menu's server half (M): the owner's flag changes the bowl now, anybody else
-	# gets a nomination and a rock-the-vote. Contexts as dot-server makes them for a chat line.
+	# gets a nomination and a rock-the-vote. Contexts as gs-server makes them for a chat line.
 	var menu_half: Object = vote.get("commands").get("map_menu")
 	_check(menu_half != null and server.console.find_command("mapmenu") != null
 		and server.console.find_cvar("sv_map_menu_flag").get_string() == "generic"
@@ -588,7 +588,7 @@ func _test_the_bowl_vote() -> void:
 	# brings the ballot forward instead of waiting for open_after_sec.
 	_check(director.current_id() == wanted and not director.is_voting(),
 		"the new round starts the vote over", str(director.current_id()))
-	# Past dot-vote's cooldown between two ballots, on the director alone so the round's own
+	# Past gs-vote's cooldown between two ballots, on the director alone so the round's own
 	# ballot timer does not open one first. In play a round outlasts it.
 	director.rules.rtv_delay_sec = 0.0
 	director.rules.min_players_to_vote = 1
@@ -606,7 +606,7 @@ func _test_the_bowl_vote() -> void:
 	vote.call("advance", 0.05)
 	director.vote_opened.disconnect(on_ballot)
 	_check(director.is_voting(), "and rock-the-vote opens a ballot before its time", str(rocked))
-	# The director opens a rocked ballot itself (dot-vote API 2); this game no longer does, so
+	# The director opens a rocked ballot itself (gs-vote API 2); this game no longer does, so
 	# exactly one ballot opens, not one from each.
 	_check(ballots.size() == 1, "and exactly one ballot, the director's alone", str(ballots.size()))
 	var warm: Dictionary = captured.back() if not captured.is_empty() else {}

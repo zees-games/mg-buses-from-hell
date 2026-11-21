@@ -53,7 +53,7 @@ func _run() -> void:
 
 	OS.remove_logger(errors)
 	# Engine errors go to stderr and change no exit code: a toy pulled out of the tree after a
-	# mid-tick rebuild (dot-net history #30) printed `!is_inside_tree()` on green runs elsewhere.
+	# mid-tick rebuild (gs-net history #30) printed `!is_inside_tree()` on green runs elsewhere.
 	var seen := errors.seen()
 	_check(seen.is_empty(), "the engine reported no error over the whole run",
 		"%d: %s" % [seen.size(), ", ".join(seen.slice(0, 3))])

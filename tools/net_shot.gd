@@ -111,7 +111,7 @@ func _run() -> void:
 		_report_walk()
 	# Frames the interpolator rendered at or past its newest snapshot (stalls) and guessed
 	# beyond it (extrapolations), out of all it sampled. Near zero on a clean loopback; most
-	# frames while dot-net subtracted a buffer counted in snapshots from a tick number.
+	# frames while gs-net subtracted a buffer counted in snapshots from a tick number.
 	print("interpolator: ", _client_net.interpolator.describe())
 	get_tree().quit()
 
@@ -137,8 +137,8 @@ func _build() -> void:
 	_server_net = _make_manager(true, 1, server_side, _server_game.tick_rate)
 	_client_net = _make_manager(false, CLIENT_PEER, client_side, _client_game.tick_rate)
 	# This harness stamps every command itself (`_tick + INPUT_LEAD`), not from the client's clock, so
-	# the client must not ask for dot-net's input-lead report: steered by reports about commands it
-	# never stamped, the clock runs away from them (only dot-net's cap holds it).
+	# the client must not ask for gs-net's input-lead report: steered by reports about commands it
+	# never stamped, the clock runs away from them (only gs-net's cap holds it).
 	var lead_bit := int((GSNetMessageRegistry as Script).get_script_constant_map().get("FEATURE_INPUT_LEAD", 0))
 	_client_net.messages.features &= ~lead_bit
 

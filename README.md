@@ -56,11 +56,11 @@ While you are out: **Mouse 1** / **Mouse 2** watch the next or previous player, 
 
 ## Getting started
 
-You need [Godot 4.7](https://godotengine.org/download). The game is built from many GameSpice addons, each in its own repository, so the easiest way to get everything is [dot-bootstrap](https://github.com/gamespice-platform/bootstrap). It clones every project and links the addons into each one:
+You need [Godot 4.7](https://godotengine.org/download). The game is built from many GameSpice addons, each in its own repository, so the easiest way to get everything is [gs-bootstrap](https://github.com/gamespice-platform/bootstrap). It clones every project and links the addons into each one:
 
 ```bash
 git clone https://github.com/gamespice-platform/bootstrap.git
-cd dot-bootstrap
+cd gs-bootstrap
 ./bootstrap.sh
 cd projects/mg-buses-from-hell
 ./game.sh
@@ -80,13 +80,13 @@ On Windows, run `bootstrap.ps1` instead and open the project in Godot.
 | `./game.sh shot` | Save a screenshot to `screenshots/`. `./game.sh shot --help` lists the views |
 | `./game.sh help` | All of the options |
 
-`online` and `server` use [dot-server-deploy](https://github.com/gamespice-platform/server-deploy), which bootstrap clones next to this one. Run its `./setup.sh` once first.
+`online` and `server` use [gs-server-deploy](https://github.com/gamespice-platform/server-deploy), which bootstrap clones next to this one. Run its `./setup.sh` once first.
 
 ## Running a server
 
 Settings are cvars. Set them in the server's config, on the command line, or live from the console. Changes to the layout take effect from the next round.
 
-Every `BfhConfig` field is also a `bfh_<field>` cvar and a key in a file under `cfg/game/mg-buses-from-hell/config_<group>/game.yml` (or the same file under `cfg/server/`); a typo stops a dedicated server's boot. `bfh_config_diff save` writes what differs from the defaults, ready to copy back as shipped defaults, and F9 (or the `workbench` console command) opens the tuning panel, off on a dedicated server unless `workbench: enabled: true` is in `cfg/server.yml`. The buses' feel (mass, engine, brakes, steering, springs) is server-side, so it is a config field too and a change reaches buses built from then on. `mp_teamblock` (0) and `mp_enemyblock` (1) with `!block` and `!noblock` come from dot-team through dot-game; players are not solid to each other in this game, so they change nothing physical yet.
+Every `BfhConfig` field is also a `bfh_<field>` cvar and a key in a file under `cfg/game/mg-buses-from-hell/config_<group>/game.yml` (or the same file under `cfg/server/`); a typo stops a dedicated server's boot. `bfh_config_diff save` writes what differs from the defaults, ready to copy back as shipped defaults, and F9 (or the `workbench` console command) opens the tuning panel, off on a dedicated server unless `workbench: enabled: true` is in `cfg/server.yml`. The buses' feel (mass, engine, brakes, steering, springs) is server-side, so it is a config field too and a change reaches buses built from then on. `mp_teamblock` (0) and `mp_enemyblock` (1) with `!block` and `!noblock` come from gs-team through gs-game; players are not solid to each other in this game, so they change nothing physical yet.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
@@ -110,11 +110,11 @@ Every `BfhConfig` field is also a `bfh_<field>` cvar and a key in a file under `
 | `bfh_bus_stuck_break` | 1 | Seconds a bus may push against something before what is under it breaks |
 | `bfh_bus_stuck_reset` | 5 | Seconds before a stuck bus is put back on its start line |
 
-Runners who are run over or blown up fly as ragdolls ([dot-player-char](https://github.com/gamespice-platform/player-char)); the server picks how each one goes down and everybody sees the same fall. `sv_ragdoll 0` makes it a quick fall with no physics, `sv_ragdoll_style` picks ragdoll, stiff, topple or hide, `sv_ragdoll_time` and `sv_ragdoll_max` say how long and how many, and `sv_ragdoll_reactions` weights the falls (`limp`, `face_plant`, `crumple`, `headshot_launch`, `power_launch`; 0 turns one off).
+Runners who are run over or blown up fly as ragdolls ([gs-player-char](https://github.com/gamespice-platform/player-char)); the server picks how each one goes down and everybody sees the same fall. `sv_ragdoll 0` makes it a quick fall with no physics, `sv_ragdoll_style` picks ragdoll, stiff, topple or hide, `sv_ragdoll_time` and `sv_ragdoll_max` say how long and how many, and `sv_ragdoll_reactions` weights the falls (`limp`, `face_plant`, `crumple`, `headshot_launch`, `power_launch`; 0 turns one off).
 
 A runner who is out can fly a free camera (G); `mp_freeroam 0` keeps them on players, `mp_forcecamera 1` or `2` restricts the camera and switches it off, and `mp_freeroam_speed` (metres a second) sets the speed.
 
-The bot cvars are the family's shared ones (dot-server's `GSBotQuota`), counted here in driving seats because a bot only ever drives: `bfh_drivers` is how many seats there are and caps the quota.
+The bot cvars are the family's shared ones (gs-server's `GSBotQuota`), counted here in driving seats because a bot only ever drives: `bfh_drivers` is how many seats there are and caps the quota.
 
 Two settings are the map itself, so they are read when the bowl is built and are not cvars: set them in the JSON config, the environment (`BFH_HOOK_LAYOUT`, `BFH_COURTYARD_WEST_LANE`) or the command line (`--bfh-hook-layout`, `--bfh-courtyard-west-lane`) and restart. Connected clients are told them when they join.
 
@@ -133,7 +133,7 @@ Console commands:
 | `bfh_net` | What the network code is doing |
 
 ### Admin commands
-These come from [dot-moderation](https://github.com/gamespice-platform/moderation). Type them in the console, or in chat with a `!` in front. `@team:drivers` and `@team:runners` work as targets, and `modtools` lists what is supported.
+These come from [gs-moderation](https://github.com/gamespice-platform/moderation). Type them in the console, or in chat with a `!` in front. `@team:drivers` and `@team:runners` work as targets, and `modtools` lists what is supported.
 
 | Command | |
 | --- | --- |
@@ -172,12 +172,12 @@ Five numbers are counted per player (runners flattened, rounds survived, seconds
 | Asset | Author / source | License | Where |
 | --- | --- | --- | --- |
 | Bus, crate, barrel | Kenney ([kenney.nl](https://kenney.nl)) | CC0 | `assets/kenney/` |
-| Runners | Quaternius, [Zombie Apocalypse Kit](https://quaternius.com/packs/zombieapocalypsekit.html), skinned from Kenney's blocky characters | CC0 1.0 | dot-player-char |
+| Runners | Quaternius, [Zombie Apocalypse Kit](https://quaternius.com/packs/zombieapocalypsekit.html), skinned from Kenney's blocky characters | CC0 1.0 | gs-player-char |
 | Bowl, town buildings and roads | Drawn in code (`game/bfh_districts.gd`) | none | in code |
 | Game sounds | Generated; the game ships no audio files | none | in code |
-| Footsteps | Kenney, Impact Sounds | CC0 | `addons/dot_audio/stock/CREDITS.md` |
-| Wind | Generated by dot-audio | CC0 | `addons/dot_audio/stock/CREDITS.md` |
-| Beach balls, barrels, tyre | [dot-props](https://github.com/gamespice-platform/props), drawn in code; sounds by Kenney | CC0 | `addons/dot_props/toys/sounds/CREDITS.md` |
+| Footsteps | Kenney, Impact Sounds | CC0 | `addons/gs_audio/stock/CREDITS.md` |
+| Wind | Generated by gs-audio | CC0 | `addons/gs_audio/stock/CREDITS.md` |
+| Beach balls, barrels, tyre | [gs-props](https://github.com/gamespice-platform/props), drawn in code; sounds by Kenney | CC0 | `addons/gs_props/toys/sounds/CREDITS.md` |
 
 If you made one of these assets and want it removed, open an issue.
 

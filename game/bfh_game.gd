@@ -39,7 +39,7 @@ signal earned(player_id: StringName, title: String, points: int)
 ## Whether this world publishes itself under [constant SERVICE].
 @export var register_service: bool = true
 
-## dot-player-controller's `mp_forceview`: whether a player may switch to third person (0), or is
+## gs-player-controller's `mp_forceview`: whether a player may switch to third person (0), or is
 ## held in first (1) or third (2). Bound by the module (REPLICATED) and followed by a client through
 ## its link.
 var view_rules: GSPlayerViewRules = GSPlayerViewRules.new()
@@ -236,12 +236,12 @@ func _build_match() -> void:
 	rules.warmup_sec = config.warmup_seconds
 	rules.countdown_sec = 0.0
 	rules.rounds_to_win = 99
-	# [b]One.[/b] dot-match defaults to two because a deathmatch with one player in it is not a match;
+	# [b]One.[/b] gs-match defaults to two because a deathmatch with one player in it is not a match;
 	# a round here with one runner and no drivers is a legitimate, if dull, thing for a nearly-empty
 	# server to be doing, and the alternative is a server that sits in warmup for ever.
 	rules.min_players = 1
-	# [b]The rule asks the game who is alive, and that is the seam dot-match is built around.[/b] Being
-	# alive is a `GSHealth`, which lives in dot-combat, which dot-match deliberately does not depend
+	# [b]The rule asks the game who is alive, and that is the seam gs-match is built around.[/b] Being
+	# alive is a `GSHealth`, which lives in gs-combat, which gs-match deliberately does not depend
 	# on.
 	rules.alive_fn = _is_alive
 	match_node.rules = rules
@@ -251,15 +251,15 @@ func _build_match() -> void:
 	match_node.round_started.connect(_on_round_started)
 	match_node.round_ended.connect(_on_round_ended)
 
-	# So a client's world kept dot-match's default pair, "Red" and "Blue" — nothing read them until the
+	# So a client's world kept gs-match's default pair, "Red" and "Blue" — nothing read them until the
 	# scoreboard asked for a side's name — and so would a server with `track_progress` off or whose
-	# tracker failed to attach, with dot-match's balancing and its one-ahead cap back on, which is the.
+	# tracker failed to attach, with gs-match's balancing and its one-ahead cap back on, which is the.
 	var teams: Array[GSTeam] = [
 		GSTeam.make(TEAM_DRIVERS, "Drivers", Color(0.92, 0.74, 0.17)),
 		GSTeam.make(TEAM_RUNNERS, "Runners", Color(0.35, 0.62, 0.88)),
 	]
 	match_node.teams.teams = teams
-	# [b]And re-indexed, because assigning the list does not.[/b] dot-match fills in its standard pair
+	# [b]And re-indexed, because assigning the list does not.[/b] gs-match fills in its standard pair
 	# when it is added to the tree and indexes it on first lookup, and `teams.team(id)` goes on
 	# answering from that index: the ids agree (1 and 2), so every rule worked, and the first thing to.
 	match_node.teams.reindex()
@@ -268,7 +268,7 @@ func _build_match() -> void:
 	# move four people into the buses every round and there are two seats.
 	match_node.teams.force_balance = false
 	match_node.teams.allow_choice = true
-	# [b]And off in the second place dot-match balances, which `force_balance` does not reach.[/b]
+	# [b]And off in the second place gs-match balances, which `force_balance` does not reach.[/b]
 	# `max_difference` defaults to 1 and REFUSES any join that puts a side more than one ahead — so on
 	# a shipped server the second driver and every runner past the drivers' count plus one were on no.
 	match_node.teams.max_difference = 0
@@ -319,7 +319,7 @@ func start() -> void:
 		return
 
 	# [b]The bowl is laid out here and not only on `round_started`, and that is the difference between
-	# an empty server and a broken-looking one.[/b] dot-match runs a warmup before the first round, so
+	# an empty server and a broken-looking one.[/b] gs-match runs a warmup before the first round, so
 	# a world that only furnished itself when a round began sat for the whole warmup as a bare disc.
 	_clear_bowl()
 	_lay_out_bowl()
@@ -383,12 +383,12 @@ func _swap_sides() -> void:
 		var now := TEAM_RUNNERS if was == TEAM_DRIVERS else TEAM_DRIVERS
 		sides[id] = now
 
-		# [b]dot-match as well, because its elimination rule is what decides the round and it reads teams
+		# [b]gs-match as well, because its elimination rule is what decides the round and it reads teams
 		# off its own scoreboard.[/b] Flipping `sides` alone left the rule on the old sides for the rest
 		# of the server's life: the drivers ran the new runners down and every such round was.
 		var switched := match_node.switch_team(String(id), now, _tick)
 		if not switched.ok:
-			GSLog.error(CHANNEL, "dot-match refused a side swap", {
+			GSLog.error(CHANNEL, "gs-match refused a side swap", {
 				"id": String(id), "team": now, "why": switched.error.message,
 			})
 
@@ -431,7 +431,7 @@ func _clear_bowl() -> void:
 	_bus_pinned.clear()
 
 ## The map menu's change: [param id] now, not after this round. The next bowl is set and a
-## fresh round begins in it (dot-match's `begin_round_now`: the round called off has no
+## fresh round begins in it (gs-match's `begin_round_now`: the round called off has no
 ## winner); with no match running yet it is simply built. Authority only.
 func change_bowl_now(id: StringName) -> GSResult:
 	if not authoritative:
@@ -632,7 +632,7 @@ func _step(delta: float) -> void:
 
 	match_node.tick(_tick)
 
-## How long a round lasts, from now on: the config AND dot-match's rule.
+## How long a round lasts, from now on: the config AND gs-match's rule.
 func set_round_seconds(seconds: float) -> void:
 	config.round_seconds = seconds
 
@@ -680,7 +680,7 @@ func sides_are_playable() -> bool:
 
 # --- Reacting
 
-## Something dot-props broke. A crate is a sound; a barrel's sound is its blast, which
+## Something gs-props broke. A crate is a sound; a barrel's sound is its blast, which
 ## [signal barrel_exploded] already carries, and a block cannot break.
 func _on_prop_broken(prop: GSPropInstance, at: Vector3, _by: StringName) -> void:
 	if prop != null and prop.def != null and prop.def.id == BfhContent.CRATE:

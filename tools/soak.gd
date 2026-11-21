@@ -5,7 +5,7 @@ const BfhGame := preload("../game/bfh_game.gd")
 const BfhBowls := preload("../game/bfh_bowls.gd")
 
 ## Bot soak on the real game: N bot-driven buses chase idle runners in one bowl for M simulated
-## minutes through dot-bot's GSBotSoak, fed by dot-spawn's GSSpawnWatch. A "map" here is a bowl
+## minutes through gs-bot's GSBotSoak, fed by gs-spawn's GSSpawnWatch. A "map" here is a bowl
 ## id.
 
 const DEFAULT_MAP := &"bfh_bowl"

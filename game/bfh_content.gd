@@ -105,7 +105,7 @@ static func vehicles(config: BfhConfig) -> GSVehicleCatalogue:
 
 	var tunables := GSVehicleTunables.new()
 	apply_bus_feel(tunables, config)
-	# Newtons since dot-vehicle 4f4afaf (they were an impulse per step, and the bus stopped from 15 m/s
+	# Newtons since gs-vehicle 4f4afaf (they were an impulse per step, and the bus stopped from 15 m/s
 	# in 1.9 m on the foot brake and 4.5 m on the handbrake). 30 kN is 15 m/s², three quarters of this
 	# bowl's gravity: 7.6 m from 15 m/s.
 	bus.tunables = tunables

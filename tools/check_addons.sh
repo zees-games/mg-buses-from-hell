@@ -4,7 +4,7 @@
 #   tools/check_addons.sh [--strict] [checkout]   warnings only (exit 0); --strict exits 1 on any;
 #                                                 [checkout] defaults to this repo, e.g. a main checkout to audit
 # Entries after a `# bootstrap-optional` line are not required. A bare git worktree has no links: tools/link_worktree.sh.
-# A stale main checkout shows up as phantom failures; fix with dot-bootstrap, never by editing the checkout.
+# A stale main checkout shows up as phantom failures; fix with gs-bootstrap, never by editing the checkout.
 strict=0; [ "${1:-}" = "--strict" ] && { strict=1; shift; }
 cd "${1:-$(dirname "${BASH_SOURCE[0]}")/..}" || exit 2
 GI="$(dirname "${BASH_SOURCE[0]}")/../.gitignore"; [ -n "${1:-}" ] || GI=.gitignore

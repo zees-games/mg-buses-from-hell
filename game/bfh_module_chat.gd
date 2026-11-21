@@ -80,7 +80,7 @@ func _cmd_say(ctx: GSCmdContext) -> void:
 	ctx.reply("Said: %s" % text)
 
 ## Who somebody is reaches the world: a face as they are seated, the real name and face once dot-
-## platform has them, and the key (dot-game's stable one) what they keep is filed under.
+## platform has them, and the key (gs-game's stable one) what they keep is filed under.
 func _wire_identity(world: BfhGame) -> void:
 	var link := bridge as BfhNetBridge
 
@@ -97,7 +97,7 @@ func _wire_identity(world: BfhGame) -> void:
 				if server != null else null
 			return String(stats_feed.key_for(session)) if session != null and stats_feed != null else ""
 
-## dot-platform's state for a session, through its module, or null.
+## gs-platform's state for a session, through its module, or null.
 func _platform_player(session_id: int) -> Object:
 	var session := server.session_by_userid(session_id) if server != null else null
 	var platform: Object = server.modules.get_module("platform") \
@@ -109,7 +109,7 @@ func _platform_player(session_id: int) -> Object:
 	var held: Variant = platform.call("player_for", session)
 	return held as Object if held is Object else null
 
-## What a session looks like: what dot-platform resolved for them, or the stock person.
+## What a session looks like: what gs-platform resolved for them, or the stock person.
 func _avatar_for(session_id: int) -> GSAvatar:
 	var held := _platform_player(session_id)
 

@@ -14,10 +14,10 @@ const BfhBindings := preload("bfh_bindings.gd")
 var game: BfhGame = null
 var player: BfhPlayer = null
 
-## The clock with the status line under it: dot-ui's [GSScoreStrip], clock alone (this
+## The clock with the status line under it: gs-ui's [GSScoreStrip], clock alone (this
 ## game's two sides keep their rounds-won on the scoreboard, not on the HUD).
 var strip: GSScoreStrip = null
-## Health: dot-ui's [GSVitals], bar and number on one plate, red at a quarter.
+## Health: gs-ui's [GSVitals], bar and number on one plate, red at a quarter.
 var vitals: GSVitals = null
 var _cover: Label = null
 var _crosshair: GSCrosshair = null
@@ -48,9 +48,9 @@ static func piece_theme() -> Theme:
 	return t
 
 
-## The Escape menu, whose theme this HUD follows (dot-menu's `follow_hud`): the menu sets the theme
+## The Escape menu, whose theme this HUD follows (gs-menu's `follow_hud`): the menu sets the theme
 ## on the HUD's root now and at every theme change, and applies the player's HUD size. Duck-typed
-## and called by name, for a client shell older than dot-menu 7.
+## and called by name, for a client shell older than gs-menu 7.
 var _menu: Object = null
 var _wl_text := ""
 var _wl_target: StringName = &""
@@ -151,7 +151,7 @@ func _build() -> void:
 	dot.dot_radius = 3.0
 	dot.colour = Color(1.0, 1.0, 1.0, 0.75)
 	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if GSAddonApi.build_level("dot_ui") >= 14:
+	if GSAddonApi.build_level("gs_ui") >= 14:
 		dot.set(&"alive_source", func() -> bool: return player == null or game == null or game.spectate == null or not game.spectate.is_spectating(player.player_id))
 	_root.add_child(dot)
 	_crosshair = dot

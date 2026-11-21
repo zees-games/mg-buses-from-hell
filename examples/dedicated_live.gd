@@ -3,7 +3,7 @@ extends "dedicated_boot.gd"
 
 
 ## [b]`time_up: finish_round` waits for a round being played, never for warmup.[/b] The game hands
-## dot-vote its match's answer (`round_in_progress_fn`); without it a limit that ran out in warmup
+## gs-vote its match's answer (`round_in_progress_fn`); without it a limit that ran out in warmup
 ## held the change for `finish_round_max_sec` over a round that had not started.
 func _test_finish_round_waits_for_a_live_round() -> void:
 	print("finish_round waits for a live round, not warmup")
@@ -42,7 +42,7 @@ func _test_finish_round_waits_for_a_live_round() -> void:
 
 
 ## A director under `time_up: finish_round` carrying [param hook], its clock run out with a
-## winner already decided: what dot-vote's own suite builds, with the game's answer in it.
+## winner already decided: what gs-vote's own suite builds, with the game's answer in it.
 func _finish_round_probe(hook: Callable, applied: Array) -> GSVoteDirector:
 	var source := GSVoteListSource.new()
 	var _a := source.add(GSVoteChoice.of(&"a", "A"))
@@ -129,7 +129,7 @@ func _test_the_tunables() -> void:
 		"and setting it reaches the world",
 		"%.1f" % game.config.round_seconds
 	)
-	# The config is what the HUD counts down; dot-match's rule is what ends the round. The cvar
+	# The config is what the HUD counts down; gs-match's rule is what ends the round. The cvar
 	# once wrote only the first, and an owner's short round ran the built-in 180 s.
 	_check(
 		absf(game.match_node.rules.time_limit_sec - 90.0) < 0.01,
@@ -219,7 +219,7 @@ func _test_the_bots() -> void:
 
 	# [b]Replicated like anybody else, which is the whole reason a bot needs a session
 	# id.[/b] A player id that is not `u<session>` parses back to zero — one table entry
-	# for every bot, and a join addressed to dot-net's broadcast peer.
+	# for every bot, and a join addressed to gs-net's broadcast peer.
 	var module := _module()
 	_check(
 		module != null and int(module.get("bridge").call("describe")["players"])
@@ -232,7 +232,7 @@ func _test_the_bots() -> void:
 	_check(server.console.find_cvar("bot_quota") != null and server.console.find_cvar("bot_quota_mode") != null,
 		"the shared bot_quota cvars are registered")
 
-	# Free roam: dot-spectate's three cvars are bound on the module, and a console change
+	# Free roam: gs-spectate's three cvars are bound on the module, and a console change
 	# reaches the rules the world's spectator manager runs.
 	var roam_rules: GSSpectatorRules = game.spectate.manager.rules if game.spectate != null else null
 	var _roam_off := _run_command("mp_freeroam 0")
@@ -274,7 +274,7 @@ func _test_the_bots() -> void:
 			if driver.is_bot:
 				names.append(driver.display_name)
 		_check(not names.is_empty() and names.all(func(n: String) -> bool: return GSBotNames.POOL.has(n)),
-			"bots are named from dot-bot's pool, not \"Bus driver\"", str(names))
+			"bots are named from gs-bot's pool, not \"Bus driver\"", str(names))
 		var picked := _run_command("bot_difficulty nightmare")
 		var reached := GSBotSettings.of(game).difficulty() == "nightmare"
 		var _back := _run_command("bot_difficulty medium")
@@ -283,7 +283,7 @@ func _test_the_bots() -> void:
 		_check(false, "the first person on a server of bots runs, because a bot cannot", "no module")
 		_check(false, "a person taking a seat takes it from a bot", "no module")
 		_check(false, "and the bot comes back when they leave", "no module")
-		_check(false, "bots are named from dot-bot's pool, not \"Bus driver\"", "no module")
+		_check(false, "bots are named from gs-bot's pool, not \"Bus driver\"", "no module")
 		_check(false, "bot_difficulty is a cvar, and reaches the world the bots drive from", "no module")
 
 	_run_command("bfh_bots 0")
@@ -366,7 +366,7 @@ func _test_the_services() -> void:
 	_done()
 
 
-## dot-moderation's live tools, built by dot-game's services layer BY PATH, with this game's verbs
+## gs-moderation's live tools, built by gs-game's services layer BY PATH, with this game's verbs
 ## in them — the first game to get them from the shared layer rather than writing its own.
 func _test_the_live_tools() -> void:
 	print("the moderator's live tools")
@@ -375,7 +375,7 @@ func _test_the_live_tools() -> void:
 	var services: Object = module.get("services") if module != null else null
 	var tools: Object = services.get("mod_tools") if services != null else null
 
-	_check(tools != null, "dot-game built dot-moderation's live tools, by path")
+	_check(tools != null, "gs-game built gs-moderation's live tools, by path")
 	_check(
 		server.console.find_command("noclip") != null and server.console.find_command("slay") != null,
 		"and put their commands on the console"
@@ -459,7 +459,7 @@ func _test_the_live_tools() -> void:
 		"and it is on the entity the netcode sends them"
 	)
 
-	# A blind is a spell: dot-moderation lifts it through the same handler when the time
+	# A blind is a spell: gs-moderation lifts it through the same handler when the time
 	# is up, so what is checked is the flag and not the timer.
 	var _lift := await _run_command_later("blind Runner off")
 	var _spell := await _run_command_later("blind Runner 0.2")

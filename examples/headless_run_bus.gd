@@ -2,7 +2,7 @@ extends "headless_run_deck.gd"
 ## The toys, the bus, round ends and the bus's drive: propulsion, brakes and the handbrake turn.
 
 
-## dot-props' toys in the bowl: the ring's six built clear of every obstacle and still two seconds
+## gs-props' toys in the bowl: the ring's six built clear of every obstacle and still two seconds
 ## on, a hammer whacks a beach ball off, a crate thrown into a barrel sends it rolling, and the next
 ## round puts them home.
 func _test_the_toys() -> void:
@@ -207,10 +207,10 @@ func _test_round_ends() -> void:
 		"the new runner is handed a hammer")
 
 	# [b]And the round AFTER the swap is decided by the sides as they are now.[/b] The elimination rule
-	# reads teams off dot-match's scoreboard, not off `sides`, so a swap that only flipped `sides` left
+	# reads teams off gs-match's scoreboard, not off `sides`, so a swap that only flipped `sides` left
 	# the rule scoring the old ones: the drivers ran the new runner down and the round.
 	_check(game.match_node.teams.team_of("d") == BfhGame.TEAM_RUNNERS,
-		"dot-match is told about the swap too",
+		"gs-match is told about the swap too",
 		"it has d on %d" % game.match_node.teams.team_of("d"))
 
 	var new_runner: BfhPlayer = game.players[&"d"]
@@ -489,7 +489,7 @@ func _bus_stop(game: BfhGame, driver: BfhPlayer, how: String) -> Dictionary:
 
 
 ## A handbrake turn: the back end steps out. Godot's raycast vehicle never locks a wheel, so before
-## `handbrake_grip_fraction` a bus turning with Ctrl held turned LESS than without it (dot-vehicle's
+## `handbrake_grip_fraction` a bus turning with Ctrl held turned LESS than without it (gs-vehicle's
 ## driving.md measured the same on a car).
 func _test_handbrake_turn() -> void:
 	print("a handbrake turn")

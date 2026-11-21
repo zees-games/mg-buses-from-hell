@@ -9,7 +9,7 @@ const BfhVote := preload("bfh_vote.gd")
 var bowl_id: StringName = BfhBowls.DEFAULT
 
 ## The server's maps.yml, or null when there is none (every bowl rotates, as it always did).
-## dot-map's rotation file speaks GSMapDef; this game holds bowl records, so [member _defs]
+## gs-map's rotation file speaks GSMapDef; this game holds bowl records, so [member _defs]
 ## mirrors the ids and the file marks `in_rotation` on the mirror.
 var rotation_file: GSMapRotationFile = null
 var _defs: GSMapCatalogue = GSMapCatalogue.new()

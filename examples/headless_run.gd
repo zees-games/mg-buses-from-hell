@@ -84,7 +84,7 @@ func _test_settings() -> void:
 	var schema := BfhSettings.spec_for().make_schema()
 	# reduce_motion is read by the client when the winner reveal is presented, not pushed by the menu.
 	# ambient and ambient_volume are followed by the client's ambience director.
-	# LEFT_TO_THE_GAME keys are applied by GSGameClient (slide sounds, GSFxRenderQuality), as in dot-menu's selftest.
+	# LEFT_TO_THE_GAME keys are applied by GSGameClient (slide sounds, GSFxRenderQuality), as in gs-menu's selftest.
 	var applied := GSMenuApplier.APPLIES + GSMenuApplier.APPLIED_BY_MENU + GSMenuApplier.LEFT_TO_THE_GAME + [&"reduce_motion", &"ambient", &"ambient_volume"]
 	var unapplied := schema.keys().filter(func(k: StringName) -> bool: return not applied.has(k))
 	_check(
@@ -181,7 +181,7 @@ func _test_settings() -> void:
 func _test_pack_paths() -> void:
 	print("a delivered pack's own paths")
 
-	const MOUNT := "res://dot_cloud/tmc/buses/0.1.0"
+	const MOUNT := "res://gs_cloud/tmc/buses/0.1.0"
 	_check(
 		BfhPaths.rebase_onto(BfhContent.CRATE_SCENE, MOUNT) == MOUNT + "/props/bfh_crate.tscn",
 		"a prop scene rebased onto a mount lands inside the pack"

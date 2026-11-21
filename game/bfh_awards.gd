@@ -4,7 +4,7 @@ const BfhStats := preload("bfh_stats.gd")
 
 ## What a player can earn here, as a document rather than as code.
 
-# No `CHANNEL`: a static document, validated by dot-achievements, which is where a
+# No `CHANNEL`: a static document, validated by gs-achievements, which is where a
 # refusal is reported.
 
 const CAT_DRIVING := &"driving"

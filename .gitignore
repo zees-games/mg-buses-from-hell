@@ -2,58 +2,58 @@
 .godot/
 /android/
 
-# Every dot-* addon is a separate repository. For local development, symlink them:
-#   ln -s ../../dot-core/addons/dot_core addons/dot_core
+# Every gs-* addon is a separate repository. For local development, symlink them:
+#   ln -s ../../gs-core/addons/gs_core addons/gs_core
 # A shipped build copies them in instead.
 #
-# THIS LIST IS ALSO THE DEPENDENCY MANIFEST. dot-bootstrap derives what to link
+# THIS LIST IS ALSO THE DEPENDENCY MANIFEST. gs-bootstrap derives what to link
 # from these lines rather than keeping a second copy, because the repository that
 # gains a dependency is the repository that has to ignore its link.
-/addons/dot_core
-/addons/dot_input
-/addons/dot_profile
-/addons/dot_profiler
-/addons/dot_lighting
-/addons/dot_entity
-/addons/dot_player
-/addons/dot_player_controller
-/addons/dot_props
-/addons/dot_combat
-/addons/dot_player_char
-/addons/dot_animation
-/addons/dot_save
-/addons/dot_camera
-/addons/dot_match
-/addons/dot_vehicle
-/addons/dot_ui
-/addons/dot_audio
-/addons/dot_fx
-/addons/dot_spectate
-/addons/dot_stats
-/addons/dot_achievements
-/addons/dot_settings
-/addons/dot_menu
-/addons/dot_console
-/addons/dot_net
-# dot-sim: optional native library (snapshot codec); without its built library the GDScript twins run.
-# bootstrap fetches this release's library for the machine (dot-bootstrap: bootstrap-natives).
-# bootstrap-natives: dot-sim v0.2.10
-/addons/dot_sim
-/addons/dot_server
-/addons/dot_game
-/addons/dot_workbench
-/addons/dot_team
-/addons/dot_chat
-/addons/dot_voice
-/addons/dot_moderation
-/addons/dot_cloud
-/addons/dot_auth
-/addons/dot_user
-/addons/dot_user_avatar
-/addons/dot_platform
-/addons/dot_vote
-/addons/dot_replay
-/addons/dot_spawn
+/addons/gs_core
+/addons/gs_input
+/addons/gs_profile
+/addons/gs_profiler
+/addons/gs_lighting
+/addons/gs_entity
+/addons/gs_player
+/addons/gs_player_controller
+/addons/gs_props
+/addons/gs_combat
+/addons/gs_player_char
+/addons/gs_animation
+/addons/gs_save
+/addons/gs_camera
+/addons/gs_match
+/addons/gs_vehicle
+/addons/gs_ui
+/addons/gs_audio
+/addons/gs_fx
+/addons/gs_spectate
+/addons/gs_stats
+/addons/gs_achievements
+/addons/gs_settings
+/addons/gs_menu
+/addons/gs_console
+/addons/gs_net
+# gs-sim: optional native library (snapshot codec); without its built library the GDScript twins run.
+# bootstrap fetches this release's library for the machine (gs-bootstrap: bootstrap-natives).
+# bootstrap-natives: gs-sim v0.2.10
+/addons/gs_sim
+/addons/gs_server
+/addons/gs_game
+/addons/gs_workbench
+/addons/gs_team
+/addons/gs_chat
+/addons/gs_voice
+/addons/gs_moderation
+/addons/gs_cloud
+/addons/gs_auth
+/addons/gs_user
+/addons/gs_user_avatar
+/addons/gs_platform
+/addons/gs_vote
+/addons/gs_replay
+/addons/gs_spawn
 
 # Exports
 build/
@@ -68,7 +68,7 @@ Thumbs.db
 
 # Editors
 .vscode/
-/addons/dot_bot
-/addons/dot_map
-/addons/dot_flashlight
-/addons/dot_mobile
+/addons/gs_bot
+/addons/gs_map
+/addons/gs_flashlight
+/addons/gs_mobile

@@ -1,6 +1,6 @@
 extends RefCounted
 
-## The phone's controls: dot-mobile's overlay driving the client's [GSFpsTouchSampler]. The buttons a phone needs to
+## The phone's controls: gs-mobile's overlay driving the client's [GSFpsTouchSampler]. The buttons a phone needs to
 ## drive and swing: the hammer (the horn in a bus), jump and the handbrake.
 ## The left half of the screen is the sampler's steer pad (up and down are throttle and brake, sideways is the wheel)
 ## and the right half looks; [GSMobileControls] draws the stick, forwards the fingers and holds the buttons.
@@ -11,7 +11,7 @@ const FIRE := GSGameTouchLayout.FIRE
 const JUMP := GSGameTouchLayout.JUMP
 const HANDBRAKE := GSGameTouchLayout.HANDBRAKE
 
-## dot-game's driving preset less what the steer pad covers (gas, brake, steering) and the buses lack; the hammer takes fire's home.
+## gs-game's driving preset less what the steer pad covers (gas, brake, steering) and the buses lack; the hammer takes fire's home.
 static func touch_layout() -> GSGameTouchLayout:
 	var res := GSGameTouchLayout.build(GSGameTouchLayout.DRIVING, {
 		&"gas": null, &"brake": null, &"use": null, &"respawn": null, &"camera": null, &"board": null, &"chat": null,
@@ -36,7 +36,7 @@ static func controls_layout() -> Array[Dictionary]:
 
 
 var controls: GSMobileControls = null
-## dot-ui's buttons inside the overlay, for the shell's DPI fit.
+## gs-ui's buttons inside the overlay, for the shell's DPI fit.
 var buttons: GSTouchButtons:
 	get:
 		return controls.buttons if controls != null else null
@@ -45,7 +45,7 @@ var _swing_fn: Callable = Callable()
 var _client: Object = null
 
 
-## Builds dot-mobile's overlay under [param parent] (a Control) over [param sampler]: the stick is the steer pad, the
+## Builds gs-mobile's overlay under [param parent] (a Control) over [param sampler]: the stick is the steer pad, the
 ## right half looks, jump and the handbrake hold their bits, the hammer goes to [param swing_fn] (takes `down: bool`).
 ## No crosshair is given, so auto-fire and aim assist have nothing to act on: this is not a shooter. [param client] fits
 ## the buttons to the phone's DPI.

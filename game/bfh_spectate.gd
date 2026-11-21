@@ -124,7 +124,7 @@ func pose_of(key: String) -> Transform3D:
 # --- What the world reports
 
 ## The world ticked. Runs the death camera's hand-overs and moves anybody whose target
-## went away. A mirror's is a no-op inside dot-spectate.
+## went away. A mirror's is a no-op inside gs-spectate.
 func tick(tick_number: int) -> void:
 	advance(tick_number)
 
@@ -153,7 +153,7 @@ func on_round_began() -> void:
 
 
 ## Somebody left. Call AFTER the world has dropped them, so a spectator who was watching
-## them is moved to somebody who is still there — dot-spectate chooses the replacement from
+## them is moved to somebody who is still there — gs-spectate chooses the replacement from
 ## the participants, and a world that reported first would have it pick the leaver.
 func on_leave(player_id: StringName) -> void:
 	left(String(player_id))

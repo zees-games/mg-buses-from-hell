@@ -5,7 +5,7 @@ const BfhContent := preload("bfh_content.gd")
 const BfhPlayer := preload("bfh_player.gd")
 const BfhStats := preload("bfh_stats.gd")
 
-## What a player's round was worth: dot-stats counts it, dot-achievements decides what the counting
+## What a player's round was worth: gs-stats counts it, gs-achievements decides what the counting
 ## earns.
 
 const CHANNEL := "bfh.progress"
@@ -30,7 +30,7 @@ var stats: GSStatsTracker = null
 ## The skill rank, built on lifetime totals: baseline read at join, republished after each reading, forgotten on leave.
 var rank: GSStatsRank = null
 
-## Flattenings for the head-to-head table, through dot-stats' event feed; ids are player ids.
+## Flattenings for the head-to-head table, through gs-stats' event feed; ids are player ids.
 var feed: GSStatsEventFeed = null
 var achievements: GSAchievementTracker = null
 

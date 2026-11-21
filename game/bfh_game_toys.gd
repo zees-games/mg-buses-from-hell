@@ -1,10 +1,10 @@
 extends "bfh_game_hazards.gd"
 ## The bowl's loose toys: built from the arena's ring, pushed by the people who walk into them.
 
-## dot-props' `sv_toys*`, bound by the module (REPLICATED) and followed by a client.
+## gs-props' `sv_toys*`, bound by the module (REPLICATED) and followed by a client.
 var toy_rules: GSPropBodyRules = GSPropBodyRules.new()
 
-## The bowl's toys (dot-props' loose ones: beach balls, barrels, a tyre), on a ring the arena works
+## The bowl's toys (gs-props' loose ones: beach balls, barrels, a tyre), on a ring the arena works
 ## out from its build (`BfhArena.toy_placements`), so both ends place the same toys in the same
 ## order.
 var toys: GSPropBodyBox = null

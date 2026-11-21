@@ -1,4 +1,4 @@
-# mg-buses-from-hell: the flashlight (dot-flashlight), every shown key at its default here, commented out. Uncomment a line to change it;
+# mg-buses-from-hell: the flashlight (gs-flashlight), every shown key at its default here, commented out. Uncomment a line to change it;
 # an operator overrides in cfg/server/game/mg-buses-from-hell/flashlight/game.yml. Layers: defaults < this < env < argv.
 # enabled: true
 # key: F

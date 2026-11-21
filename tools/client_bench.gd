@@ -3,13 +3,13 @@ extends GSGameClientBench
 const BfhConfig := preload("../game/bfh_config.gd")
 const BfhGame := preload("../game/bfh_game.gd")
 
-## Client prediction bench (dot-game's GSGameClientBench): see that class for the flags.
+## Client prediction bench (gs-game's GSGameClientBench): see that class for the flags.
 ## The module fills empty driving seats with bots itself (bot_quota), so `--bots` is ignored.
 
 
 func _configure() -> void:
 	client_scene = "res://game/bfh.tscn"
-	forward_action = &"dot_fps_forward"
+	forward_action = &"gs_fps_forward"
 
 
 func _boot_server(_bots_wanted: int, data_dir: String) -> GSNetManager:

@@ -168,7 +168,7 @@ extends GSConfig
 ## `bfh_big_bowl`; see `BfhBowls`). Empty offers all of them; one id is no vote at all.
 @export var bowl_ids: PackedStringArray = PackedStringArray()
 
-## The file that says which bowls this server ROTATES: `cfg/maps.yml` (dot-map's
+## The file that says which bowls this server ROTATES: `cfg/maps.yml` (gs-map's
 ## `GSMapRotationFile`: named rotations, `random` or `cycle`, wildcards, command names), looked for
 ## in the `--config` directory. Empty, or no such file, rotates every bowl.
 @export var map_rotation_file: String = "cfg/maps.yml"

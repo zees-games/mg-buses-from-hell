@@ -367,7 +367,7 @@ func _test_a_gag() -> void:
 		"before the gag, a line goes through"
 	)
 
-	# Through `issue`, with the SUBJECT spelling dot-moderation uses — `key_for_peer` above answers the
+	# Through `issue`, with the SUBJECT spelling gs-moderation uses — `key_for_peer` above answers the
 	# same way, and a gag against a differently-spelled subject is a gag that silences nobody and
 	# reports success.
 	var gagged: GSResult = await moderation.issue(

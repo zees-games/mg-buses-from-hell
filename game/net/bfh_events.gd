@@ -333,7 +333,7 @@ static func write_clock(
 	w.write_uint(clampi(cover, 0, 1023), 10)
 	w.write_uint(clampi(alive, 0, 255), 8)
 	w.write_bool(playable)
-	# The score, which is dot-match's rounds won per side. Here rather than in ROUND because
+	# The score, which is gs-match's rounds won per side. Here rather than in ROUND because
 	# a player who joins mid-match is sent a CLOCK and never the ROUNDs before them.
 	w.write_varint(maxi(drivers_won, 0))
 	w.write_varint(maxi(runners_won, 0))
@@ -376,7 +376,7 @@ static func read_round(r: GSNetReader) -> Dictionary:
 	return {"round": number, "began": began, "winner": winner, "ok": r.ok()}
 
 
-## [param death] is how the body falls (dot-player-char's [GSPlayerDeath], the server's pick),
+## [param death] is how the body falls (gs-player-char's [GSPlayerDeath], the server's pick),
 ## last and optional, so every client draws the same fall and an older one reads the rest.
 static func write_death(player_id: int, by: int, death: GSPlayerDeath = null) -> PackedByteArray:
 	var w := _w()
@@ -422,7 +422,7 @@ const CHAT_KEY_BYTES := 48
 const CHAT_KIND_BITS := 4
 
 
-## Whether every [enum GSChatMessage.Kind] fits in [constant CHAT_KIND_BITS]. dot-chat owns
+## Whether every [enum GSChatMessage.Kind] fits in [constant CHAT_KIND_BITS]. gs-chat owns
 ## that enum, so it can grow under this game; headless_net reads this.
 static func chat_kinds_fit() -> bool:
 	return GSChatMessage.KIND_NAMES.size() <= (1 << CHAT_KIND_BITS)

@@ -313,7 +313,7 @@ func _on_request(message: GSNetMessage) -> void:
 	if ask == null or net == null or not net.is_server:
 		return
 
-	# [b]From the message, which dot-net stamped from the TRANSPORT.[/b] A peer id inside
+	# [b]From the message, which gs-net stamped from the TRANSPORT.[/b] A peer id inside
 	# a body is a claim; `sender_peer_id` is what the socket said, which is the only
 	# version of it a server may act on.
 	var peer_id := ask.sender_peer_id

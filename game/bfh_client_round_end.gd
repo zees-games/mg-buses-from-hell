@@ -20,7 +20,7 @@ var chat: BfhClientChat = null
 var settings: BfhSettings = null
 ## Records every frame and replays the round's last moment, then the reveal ([BfhKillcam]).
 var killcam: BfhKillcam = null
-## Where the dead lie: dot-player-char's ragdolls under the game's (the server's) rules.
+## Where the dead lie: gs-player-char's ragdolls under the game's (the server's) rules.
 var ragdolls: GSPlayerRagdolls = null
 var link: Node = null
 var winner_reveal: GSWinnerReveal = null

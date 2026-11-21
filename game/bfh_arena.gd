@@ -99,7 +99,7 @@ const TANK_BAND := Color(0.40, 0.62, 0.92)
 const PILLAR_COLOUR := Color(0.58, 0.92, 0.78)
 const PILLAR_CAP := Color(0.36, 0.74, 0.62)
 
-## The sun and the sky, as a dot-lighting document.
+## The sun and the sky, as a gs-lighting document.
 const DAYLIGHT := {
 	"sun": {
 		"pitch_src": -42.0,
@@ -134,7 +134,7 @@ func _build_light() -> void:
 				material.sky_top_color = Color(float(top[0]), float(top[1]), float(top[2]))
 				material.ground_bottom_color = material.sky_top_color
 
-## What this machine draws of [constant DAYLIGHT]: dot-lighting's `painted()`.
+## What this machine draws of [constant DAYLIGHT]: gs-lighting's `painted()`.
 static func light_profile() -> GSLightProfile:
 	var p := GSLightProfile.painted()
 	p.sun_shadows = true
@@ -219,7 +219,7 @@ func _build_ledge() -> void:
 		"Ramp",
 		# Pulled back under the deck by [constant RAMP_TUCK], so the two overlap instead
 		# of meeting at a seam. A seam between two colliders is exactly the interior edge
-		# a sliding body catches on, which dot-props documents from the other direction.
+		# a sliding body catches on, which gs-props documents from the other direction.
 		Vector3(0.0, deck_top() - rise - RAMP_THICKNESS * 0.5, deck_front + run - RAMP_TUCK),
 		# [b]Runner-wide, not vehicle-wide.[/b] At 0.6 of the deck it was thirteen metres across, which is
 		# a road: the bot drove up it on the way to anybody standing near the north edge, beached itself

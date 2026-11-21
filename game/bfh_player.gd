@@ -45,7 +45,7 @@ signal beacon_pulsed(at: Vector3)
 @export var player_id: StringName = &"local"
 @export var display_name: String = "Runner"
 
-## What this player looks like on foot, as a dot-user-avatar document; null is the stock person. Set
+## What this player looks like on foot, as a gs-user-avatar document; null is the stock person. Set
 ## on a server from the platform — see `bfh_module._avatar_for` — and carried to every client in
 ## JOIN.
 var avatar: GSAvatar = null
@@ -113,7 +113,7 @@ var death: GSPlayerDeath = null
 ## This bot's driver, built on first use. Null for a person.
 var autopilot: GSVehicleDriver = null
 
-## The entity id dot-combat knows them by.
+## The entity id gs-combat knows them by.
 var entity_id: int = 0
 
 ## Metres this player has been carried by a prop. Reported rather than kept, because
@@ -139,7 +139,7 @@ func _ready() -> void:
 	controller.tunables = tunables_for(config)
 	# Every player, both ends: an admin's noclip or freeze is a modifier whose index
 	# travels on the wire, and a client that had not registered it would read it as
-	# something else. See dot-player-controller's GSFpsAdminModifiers.
+	# something else. See gs-player-controller's GSFpsAdminModifiers.
 	controller.admin_abilities = true
 	add_child(controller)
 

@@ -8,7 +8,7 @@
 #   ./game.sh online down          stop it again
 #   ./game.sh server               run a local dedicated server only (Ctrl+C stops it)
 #   ./game.sh server check         start the server, load the game, stop; exit 0 if it worked
-#   ./game.sh server -- ARGS       ARGS go to dot-server-deploy's ./server (e.g. -- --port 7000)
+#   ./game.sh server -- ARGS       ARGS go to gs-server-deploy's ./server (e.g. -- --port 7000)
 #   ./game.sh test                 parse every script, then run every test suite
 #   ./game.sh test NAME...         run only these suites (e.g. ./game.sh test headless_net)
 #   ./game.sh soak [BOWL] [MIN]    bot soak on tools/soak.tscn (report in .godot/test-logs/soak-BOWL.json)
@@ -20,17 +20,17 @@
 #   --timeout SEC    the longest one test suite may run (default 900; headless_run has 1800 unless this is given)
 #   --no-parse       skip the parse pass in `test`
 #
-# `online` and `server` use dot-server-deploy, found next to this repository (or at
-# GS_SERVER_DEPLOY). dot-bootstrap puts it there. Both rebuild this game's pack first, so
+# `online` and `server` use gs-server-deploy, found next to this repository (or at
+# GS_SERVER_DEPLOY). gs-bootstrap puts it there. Both rebuild this game's pack first, so
 # what you play is what is on disk now.
 #
 # The same script is in every game repository; only the settings below differ. It is
-# GENERATED from dot-game-template/tools/game.sh.in and this repository's game.conf by
-# dot-game-template/tools/gen-game-sh.py: edit those, never this file (the generator's
+# GENERATED from gs-game-template/tools/game.sh.in and this repository's game.conf by
+# gs-game-template/tools/gen-game-sh.py: edit those, never this file (the generator's
 # --check mode fails when they disagree).
 
 # --- This game ------------------------------------------------------------------
-# PACK is the game's id in dot-server-deploy (empty if it has no server), EXTRA_PACKS
+# PACK is the game's id in gs-server-deploy (empty if it has no server), EXTRA_PACKS
 # are other packs it needs as id:repository pairs, and SUITES are the scenes in
 # examples/ that test it.
 GAME_NAME="Buses From Hell"
@@ -75,7 +75,7 @@ command -v "$GODOT" >/dev/null 2>&1 || die "Godot not found: '$GODOT'. Install G
 cmd="${1:-play}"
 [ $# -gt 0 ] && shift
 
-# The addons are links that dot-bootstrap makes. Without them nothing parses, and the
+# The addons are links that gs-bootstrap makes. Without them nothing parses, and the
 # errors read like a broken game rather than a missing step.
 check_addons() {
     local missing=""
@@ -83,12 +83,12 @@ check_addons() {
         [ -e "addons/$name/plugin.cfg" ] || [ -d "addons/$name" ] || missing="$missing $name"
     done < <(sed -n 's|^/addons/\([^/]*\)/\{0,1\}$|\1|p' .gitignore 2>/dev/null)
     [ -z "$missing" ] || die "Missing addons:$missing
-Run dot-bootstrap first: https://github.com/gamespice-platform/bootstrap" 2
+Run gs-bootstrap first: https://github.com/gamespice-platform/bootstrap" 2
 }
 
 deploy_dir() {
-    local dir="${GS_SERVER_DEPLOY:-${DOT_SERVER_DEPLOY:-$ROOT/../dot-server-deploy}}"
-    [ -x "$dir/server" ] || die "dot-server-deploy not found at $dir (run its ./setup.sh, or set GS_SERVER_DEPLOY)." 2
+    local dir="${GS_SERVER_DEPLOY:-$ROOT/../gs-server-deploy}"
+    [ -x "$dir/server" ] || die "gs-server-deploy not found at $dir (run its ./setup.sh, or set GS_SERVER_DEPLOY)." 2
     (cd "$dir" && pwd)
 }
 
@@ -157,7 +157,7 @@ PARSE_NOISE='ObjectDB instances?( were| was)? leaked|resources still in use|Page
 # Prints each script that does not parse and returns how many. ANY output for a script,
 # past the noise above, is a failure: a warning-as-error reads as nothing else.
 parse_all() {
-    local fails=0 f out tool=addons/dot_core/tools/dot_parse_all.gd
+    local fails=0 f out tool=addons/gs_core/tools/gs_parse_all.gd
     local scripts
     scripts="$(git ls-files '*.gd' 2>/dev/null || find . -name '*.gd' -not -path './.godot/*' -not -path './addons/*' | sed 's|^\./||')"
     if [ -f "$tool" ] && [ -z "${PARSE_PER_FILE:-}" ]; then
@@ -194,7 +194,7 @@ parse_all() {
         rm -f "$list" "$log"
         return "$fails"
     fi
-    # An older dot-core without the tool: one process per script.
+    # An older gs-core without the tool: one process per script.
     while read -r f; do
         [ -n "$f" ] || continue
         out="$(timeout 120 "$GODOT" --headless --path . --check-only --script "res://$f" 2>&1 \

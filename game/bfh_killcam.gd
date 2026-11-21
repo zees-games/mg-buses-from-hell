@@ -2,14 +2,14 @@ extends Node
 
 const BfhPlayer := preload("bfh_player.gd")
 
-## The killcam at a round's end. Client side: every frame drawn goes into dot-replay's
+## The killcam at a round's end. Client side: every frame drawn goes into gs-replay's
 ## [GSKillcamBuffer], every decisive moment (a runner going under a bus) is noted, and when the
 ## round ends [GSKillcam] replays the last one from the eyes of whoever caused it.
 
 const CHANNEL := "bfh.killcam"
 
 ## Skip keys: jump and Escape.
-const SKIP_ACTIONS: PackedStringArray = ["dot_fps_jump", "ui_cancel"]
+const SKIP_ACTIONS: PackedStringArray = ["gs_fps_jump", "ui_cancel"]
 
 ## Metres over a seated driver's feet that the cab's eye is (the client's camera height).
 const CAB_RISE := 0.9

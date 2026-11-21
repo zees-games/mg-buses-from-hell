@@ -151,7 +151,7 @@ func _player_of(peer_id: int) -> BfhPlayer:
 	return (game as BfhGame).players.get(BfhNetBridge.player_key(session_id))
 
 
-# --- dot-moderation's live tools
+# --- gs-moderation's live tools
 
 ## What the admin set means here, one callable per ability. See `GSGameServices`.
 func _mod_abilities() -> Dictionary:
@@ -226,7 +226,7 @@ func _mod_unsupported() -> Dictionary:
 	}
 
 
-## Toggles that outlive a new body here, beyond dot-moderation's own god and buddha.
+## Toggles that outlive a new body here, beyond gs-moderation's own god and buddha.
 const PERSIST_ON_RESPAWN: Array[String] = ["blind", "beacon"]
 
 
@@ -335,7 +335,7 @@ func _on_round_began_for_tools(_number: int) -> void:
 		mod_player_respawned(StringName(str(BfhNetBridge.session_of(key))))
 
 
-## The team seam dot-chat and dot-voice both ask for, which the base cannot wire.
+## The team seam gs-chat and gs-voice both ask for, which the base cannot wire.
 func setup(p_server: GSServer, p_game: Object, p_link: Object) -> GSResult:
 	var ready_now: GSResult = await super.setup(p_server, p_game, p_link)
 

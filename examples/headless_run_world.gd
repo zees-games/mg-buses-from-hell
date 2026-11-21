@@ -91,12 +91,12 @@ func _test_wheel_jump() -> void:
 	var _built: GSResult = settings.setup(GSSettingsStoreMemory.new())
 	var labels: Array = []
 	for row in settings.bindings.rows:
-		if StringName(row["action"]) == &"dot_fps_jump":
+		if StringName(row["action"]) == &"gs_fps_jump":
 			labels.append(str(row["label"]))
 	_check(labels.size() >= 3, "jump has Space plus two wheel rows", str(labels))
 	var found := 0
 	for row in settings.bindings.rows:
-		if StringName(row["action"]) == &"dot_fps_jump" and (str(row["default"]) == "Wheel up" or str(row["default"]) == "Wheel down"):
+		if StringName(row["action"]) == &"gs_fps_jump" and (str(row["default"]) == "Wheel up" or str(row["default"]) == "Wheel down"):
 			found += 1
 	_check(found == 2, "the rows are Wheel up and Wheel down", str(found))
 	var sampler := GSFpsSampler.new(GSFpsTunables.with_profile("legacy"))
@@ -118,7 +118,7 @@ func _test_wheel_jump() -> void:
 
 
 ## The family's rule since the first play test: M opens the bowl list, and solo a choice
-## changes it now. The server's half (the owner's flag, the vote) is in `dedicated` and dot-vote.
+## changes it now. The server's half (the owner's flag, the vote) is in `dedicated` and gs-vote.
 func _test_the_map_menu() -> void:
 	print("M opens the bowl list, and solo a choice changes it")
 	var game := await _world()
@@ -240,12 +240,12 @@ func _test_blind_and_beacon_drawn() -> void:
 	)
 	chat_box.queue_free()
 
-	# A pack naming these classes needs dot-ui 4 in the derived requires.json; nothing may lower it.
+	# A pack naming these classes needs gs-ui 4 in the derived requires.json; nothing may lower it.
 	var asks := GSAddonApi.derive()
 	_check(
-		int(asks.get("dot_ui", 0)) >= 4 and not FileAccess.file_exists("res://" + GSAddonApi.FLOOR_FILE),
-		"the pack asks a shell for dot-ui level 4, the glance pieces",
-		str(asks.get("dot_ui"))
+		int(asks.get("gs_ui", 0)) >= 4 and not FileAccess.file_exists("res://" + GSAddonApi.FLOOR_FILE),
+		"the pack asks a shell for gs-ui level 4, the glance pieces",
+		str(asks.get("gs_ui"))
 	)
 
 	runner.beacon = true
@@ -380,7 +380,7 @@ func _test_world_builds() -> void:
 	_check(game.combat != null, "a combat manager")
 	_check(game.match_node != null, "and a match")
 
-	# The seam dot-match is built around: it has no idea what "alive" means, so the
+	# The seam gs-match is built around: it has no idea what "alive" means, so the
 	# elimination rule asks. Unset, the round runs to the clock instead of ending on
 	# the last kill — which is the kind of wrong that looks like a tuning problem.
 	var rules := game.match_node.rules as GSRulesElimination
@@ -414,7 +414,7 @@ func _test_every_bowl() -> void:
 			tight.append("%s (%.2f / %.2f m)" % [bowl["id"], gap, scaffold])
 		radii[snappedf(arena.radius, 0.5)] = true
 
-		# dot-core's audit: drawn geometry nothing collides with is walked through.
+		# gs-core's audit: drawn geometry nothing collides with is walked through.
 		var res := GSCollisionAudit.audit(arena, true)
 		if res.ok:
 			var report: GSCollisionAudit = res.value

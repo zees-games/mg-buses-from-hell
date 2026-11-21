@@ -1,6 +1,6 @@
 extends "bfh_client_view.gd"
 
-## The flashlight's presentation, split out of `bfh_client.gd` (which extends this): the light on the eye and the others' beams (dot-flashlight); the server owns on/off. No `class_name`.
+## The flashlight's presentation, split out of `bfh_client.gd` (which extends this): the light on the eye and the others' beams (gs-flashlight); the server owns on/off. No `class_name`.
 
 ## Metres over a driver's bus origin that their beam is drawn from: the cab.
 const BUS_BEAM_RISE := 2.6

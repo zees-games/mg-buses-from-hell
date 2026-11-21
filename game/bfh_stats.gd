@@ -2,7 +2,7 @@ extends RefCounted
 
 ## Every per-player number this game counts, declared once.
 
-# No `CHANNEL`: a schema of ids. The tracker that records against it is dot-stats', and
+# No `CHANNEL`: a schema of ids. The tracker that records against it is gs-stats', and
 # logs there; `BfhProgress` logs what it decides.
 
 ## A runner a bus killed, credited to its driver.
@@ -21,7 +21,7 @@ const CRATES_INTO_PATH := &"bfh.crates_into_path"
 ## to the end of it or to being put down.
 const SECONDS_SURVIVED := &"bfh.seconds_survived"
 
-## The published skill figure the site orders by (dot-stats' GSStatsRank). Derived from the five above, so it is not in [method ids].
+## The published skill figure the site orders by (gs-stats' GSStatsRank). Derived from the five above, so it is not in [method ids].
 const RANK_SCORE := &"rank_score"
 
 

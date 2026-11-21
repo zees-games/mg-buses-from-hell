@@ -310,7 +310,7 @@ func _test_a_barrel_is_drawn() -> void:
 		"radius %.2f, ring %.2f m, server %.2f" % [float(blast.get("radius")), reach, truth_radius]
 	)
 
-	# dot-fx retires it on its own lifetime, which is wall-clock milliseconds.
+	# gs-fx retires it on its own lifetime, which is wall-clock milliseconds.
 	await get_tree().create_timer(float(BfhFx.BLAST_MS) / 1000.0 + 0.2).timeout
 	fx.present(0.016, Vector3.ZERO)
 	await get_tree().process_frame
@@ -373,10 +373,10 @@ func _has_audio(n: Node) -> bool:
 
 
 ## The client's scoreboard over the real match: both sides from the roster the server sent, the
-## tallies dot-match kept on the server, up on its own at a round's end with that round already
+## tallies gs-match kept on the server, up on its own at a round's end with that round already
 ## counted, and on Tab.
 func _test_the_scoreboard() -> void:
-	_section("the scoreboard: both sides, and the score dot-match kept on the server")
+	_section("the scoreboard: both sides, and the score gs-match kept on the server")
 
 	var client_names := {}
 	var mine := _client_player()
@@ -390,7 +390,7 @@ func _test_the_scoreboard() -> void:
 	_check(
 		drivers_side != null and drivers_side.display_name == "Drivers"
 		and runners_side != null and runners_side.display_name == "Runners",
-		"the client's dot-match knows the two sides by this game's names",
+		"the client's gs-match knows the two sides by this game's names",
 		"%s, %s" % [str(drivers_side), str(runners_side)]
 	)
 
@@ -427,7 +427,7 @@ func _test_the_scoreboard() -> void:
 		server_drivers > 0
 		and _client_game.rounds_won(BfhGame.TEAM_DRIVERS) == server_drivers
 		and _client_game.rounds_won(BfhGame.TEAM_RUNNERS) == server_runners,
-		"the client's tally is the rounds dot-match counted on the server",
+		"the client's tally is the rounds gs-match counted on the server",
 		"server %d-%d, client %d-%d" % [server_drivers, server_runners,
 			_client_game.rounds_won(BfhGame.TEAM_DRIVERS), _client_game.rounds_won(BfhGame.TEAM_RUNNERS)]
 	)

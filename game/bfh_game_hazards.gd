@@ -34,7 +34,7 @@ var sides: Dictionary = {}
 var _bus_ids: Array[int] = []
 
 ## Whether a player's client is still behind its loading cover: `func(player_key: StringName) -> bool`.
-## The server module fills it from dot-game's roster; unset (offline, a suite, a bot) nobody is
+## The server module fills it from gs-game's roster; unset (offline, a suite, a bot) nobody is
 ## loading, so every offline suite is unchanged. A covered client froze itself and cannot see.
 var loading_fn: Callable = Callable()
 
@@ -105,7 +105,7 @@ func _roof_of(body: Node3D) -> float:
 const BUS_ROOF_MARGIN := 0.25
 
 ## Whether [param player] is behind a loading cover and so may not be hurt. Only the two
-## hazards (a bus, a barrel's blast) ask; an admin's slay or slap goes straight to dot-combat.
+## hazards (a bus, a barrel's blast) ask; an admin's slay or slap goes straight to gs-combat.
 func is_loading(player: BfhPlayer) -> bool:
 	return loading_fn.is_valid() and bool(loading_fn.call(player.player_id))
 
@@ -321,7 +321,7 @@ func driver_of(instance_id: int) -> StringName:
 			return id
 	return &""
 
-## A barrel went off. dot-props described the blast; this is what it does to people.
+## A barrel went off. gs-props described the blast; this is what it does to people.
 func _on_prop_exploded(
 	at: Vector3, radius: float, damage_amount: float, force: float, by: StringName
 ) -> void:

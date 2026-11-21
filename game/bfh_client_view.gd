@@ -34,15 +34,15 @@ var viewmodel: BfhViewmodel = null
 ## player and the camera are all in. See [member GSGameClient.gate].
 var gate: GSLoadGate = null
 
-## dot-game's client platform: the cover, settings and menu, console, Tab, M, the pointer and
+## gs-game's client platform: the cover, settings and menu, console, Tab, M, the pointer and
 ## the input block. See [GSGameClient].
 var platform: GSGameClient = null
 
-## What this client hears. See [BfhAudio]. Null only if dot-audio refused its catalogue.
+## What this client hears. See [BfhAudio]. Null only if gs-audio refused its catalogue.
 var audio: BfhAudio = null
 
 ## What this client draws that nothing simulates: a barrel going off. See [BfhFx]. Null
-## only if dot-fx refused its catalogue.
+## only if gs-fx refused its catalogue.
 var fx: BfhFx = null
 
 ## The player's console, the platform's.
@@ -51,7 +51,7 @@ var console: GSConsoleController = null
 ## Whether the camera was last put on somebody else's eyes. See [method _process].
 var _spectating: bool = false
 
-## Third person: the camera swept back from the eye by dot-core's probe, the own runner
+## Third person: the camera swept back from the eye by gs-core's probe, the own runner
 ## drawn. Presentation only; the server's `mp_forceview` decides whether the key may.
 var third_person: bool = false
 var _probe: GSCameraProbe = null
@@ -188,7 +188,7 @@ func _present_viewmodel() -> void:
 	viewmodel.show_for(BfhViewmodel.wanted(
 		player.hammer, player.health == null or player.health.alive, player.riding, out, third_person))
 
-## Moves the camera from the eye to behind it in third person, swept by dot-core's
+## Moves the camera from the eye to behind it in third person, swept by gs-core's
 ## [GSCameraProbe] so a wall, a bowl's rim or a bus between stops it short; from over the
 ## roof when driving, so the bus being driven is not what stops it.
 func _place_third_person(delta: float) -> void:
@@ -236,7 +236,7 @@ static func present_spectator_camera(p_game: BfhGame, own: BfhPlayer, eye: Camer
 	if not p_game.spectate.is_spectating(own.player_id):
 		return false
 
-	# The chase and death cameras pulled out of the bowl by dot-spectate, given the level.
+	# The chase and death cameras pulled out of the bowl by gs-spectate, given the level.
 	var manager: GSSpectatorManager = p_game.spectate.manager
 	if manager != null and manager.camera_world == null:
 		manager.camera_world = eye.get_world_3d()
@@ -244,7 +244,7 @@ static func present_spectator_camera(p_game: BfhGame, own: BfhPlayer, eye: Camer
 
 	var view := p_game.spectate.camera_for(own.player_id)
 
-	# Identity is dot-spectate's "no pose to give", which is a target that has not been drawn
+	# Identity is gs-spectate's "no pose to give", which is a target that has not been drawn
 	# yet. The last frame's transform is a better picture than the world's origin.
 	if view == Transform3D.IDENTITY:
 		return true
@@ -299,7 +299,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Tab, M and a click taking the pointer back are the platform's (GSGameClient).
 	if event.is_action_pressed("ui_cancel"):
 		# Opens the settings when the menu left this Escape alone, because a released pointer with nothing
-		# on screen to click was a key that did half a job. A second Escape never reaches here: dot-ui's
+		# on screen to click was a key that did half a job. A second Escape never reaches here: gs-ui's
 		# stack sits deeper in the tree, sees it first, and closes the screen.
 		if settings != null:
 			settings.open()
@@ -412,7 +412,7 @@ static func spectator_ask(event: InputEvent) -> int:
 	# The jump key, as bound ([BfhBindings]); Space where nothing put the action on the map.
 	if event is InputEventKey and (event as InputEventKey).pressed \
 			and not (event as InputEventKey).echo \
-			and (event.is_action(&"dot_fps_jump") if InputMap.has_action(&"dot_fps_jump")
+			and (event.is_action(&"gs_fps_jump") if InputMap.has_action(&"gs_fps_jump")
 				else (event as InputEventKey).physical_keycode == KEY_SPACE):
 		return BfhSpectate.ASK_VIEW
 
@@ -486,9 +486,9 @@ func _drive_free_camera() -> void:
 
 	if not _covered() and (settings == null or _pointer_ours()):
 		move = Vector3(
-			Input.get_axis(&"dot_fps_left", &"dot_fps_right"),
-			Input.get_axis(&"dot_fps_crouch", &"dot_fps_jump"),
-			Input.get_axis(&"dot_fps_back", &"dot_fps_forward"))
+			Input.get_axis(&"gs_fps_left", &"gs_fps_right"),
+			Input.get_axis(&"gs_fps_crouch", &"gs_fps_jump"),
+			Input.get_axis(&"gs_fps_back", &"gs_fps_forward"))
 
 	var shift := Input.is_physical_key_pressed(KEY_SHIFT)
 	var alt := Input.is_physical_key_pressed(KEY_ALT)
@@ -562,7 +562,7 @@ func describe() -> Dictionary:
 
 	return out
 
-## Where a roster row's player stands, for dot-game's look-to-gag key (G, K).
+## Where a roster row's player stands, for gs-game's look-to-gag key (G, K).
 func _look_position(row: Dictionary) -> Variant:
 	if game == null:
 		return null

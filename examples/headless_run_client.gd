@@ -288,7 +288,7 @@ func _spectate_roam_refused(game: BfhGame, spectate: BfhSpectate, out: BfhPlayer
 
 ## A target who leaves, and the new round that follows when nobody on the side is up.
 func _spectate_leaves(game: BfhGame, spectate: BfhSpectate, out: BfhPlayer) -> void:
-	# The target leaves. dot-spectate picks the replacement from the participants, so the
+	# The target leaves. gs-spectate picks the replacement from the participants, so the
 	# world has to have dropped them first or the leaver is picked again.
 	game.remove_player(&"r2")
 	_check(
@@ -360,9 +360,9 @@ func _test_the_sounds() -> void:
 func _sounds_catalogue_checks() -> void:
 	var catalogue := BfhSounds.catalogue()
 	var recipes := BfhSounds.sound_recipes()
-	_check(catalogue.validate().ok, "the catalogue is a document dot-audio accepts")
+	_check(catalogue.validate().ok, "the catalogue is a document gs-audio accepts")
 
-	# dot-audio's stock footsteps and beds are files the addon ships, so they need no stand-in.
+	# gs-audio's stock footsteps and beds are files the addon ships, so they need no stand-in.
 	var stock := GSAudioStock.ids()
 	var silent := PackedStringArray()
 	for id in catalogue.ids():
@@ -385,10 +385,10 @@ func _sounds_catalogue_checks() -> void:
 
 	# Inside a pack. Built in, the root is `res://` and every path is under it whatever the
 	# code says, so the question is asked with a mount prefix: see BfhPaths.rebase_onto.
-	var mount := "res://dot_cloud/buses/9"
+	var mount := "res://gs_cloud/buses/9"
 	var outside := PackedStringArray()
 	for def in BfhSounds.catalogue(mount).defs:
-		# Except an addon's own files (dot-player-char's death sounds): an addon is the host's,
+		# Except an addon's own files (gs-player-char's death sounds): an addon is the host's,
 		# delivered as an addon pack under its own res://addons/ path, never inside this one.
 		if def.path.begins_with("res://addons/"):
 			continue
@@ -416,7 +416,7 @@ func _sounds_hammer(game: BfhGame, runner: BfhPlayer, audio: BfhAudio, heard: Ar
 	audio.present(0.0, origin)
 	# The swing is heard from the swinger's eyes, so the swinger is put where the listener
 	# is. Left where the round scattered them, the swing is culled for distance — which is
-	# dot-audio doing its job, and was this check's first failure.
+	# gs-audio doing its job, and was this check's first failure.
 	_put(runner, Vector3(0.0, 0.1, 0.4))
 
 	runner.hammer.swing(game, origin, forward, game.props, game.prop_damage, game.carry, &"r", mask)
@@ -702,11 +702,11 @@ func _progress_flattened(game: BfhGame, victim: BfhPlayer) -> void:
 
 
 
-## Kills go through dot-stats' event feed.
+## Kills go through gs-stats' event feed.
 func _progress_feed(game: BfhGame) -> void:
 	var progress := game.progress
 	_check(progress.feed != null and progress.feed.tracker == progress.stats,
-		"kills go through dot-stats' event feed over the progress tracker")
+		"kills go through gs-stats' event feed over the progress tracker")
 	var was_reporting := progress.stats.report_to_backbone
 	progress.stats.report_to_backbone = true
 	_check(progress.feed.report_kill(&"d", &"v", "bus") and not progress.feed.report_kill(&"d", &"d", "bus"),

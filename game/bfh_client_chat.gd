@@ -8,7 +8,7 @@ const BfhServices := preload("bfh_services.gd")
 const CHANNEL := "bfh.chat"
 
 ## Push to talk. Bound to V, which is where twenty years of this genre put it.
-## dot-voice's action, so dot-menu's key table and every other game's talk key are one setting.
+## gs-voice's action, so gs-menu's key table and every other game's talk key are one setting.
 const TALK_ACTION := GSVoiceManager.TALK_ACTION
 const TALK_KEY := KEY_V
 
@@ -115,7 +115,7 @@ func _build_voice() -> GSResult:
 	voice = GSVoiceManager.new()
 	voice.name = "Voice"
 	voice.config = config
-	# Empty, for the reason every netcode config here says: a stale `user://dot_voice.json`
+	# Empty, for the reason every netcode config here says: a stale `user://gs_voice.json`
 	# is a client talking in a format the server refuses, counted and said to nobody.
 	voice.config_file = ""
 	voice.send_fn = func(payload: PackedByteArray) -> void:
@@ -127,7 +127,7 @@ func _build_voice() -> GSResult:
 
 	# The menu's voice rows bind to it, and the server's sv_voice_enable reaches it.
 	voice.publish_as_client()
-	var _following := voice.follow_cvars(GSRegistry.get_service(&"dot_client_link"))
+	var _following := voice.follow_cvars(GSRegistry.get_service(&"gs_client_link"))
 
 	return GSResult.success(voice)
 
@@ -156,7 +156,7 @@ func _process(_delta: float) -> void:
 		return
 
 	_talking = wanted
-	# The first press opens the microphone (dot-voice's update_talk). Nothing here called
+	# The first press opens the microphone (gs-voice's update_talk). Nothing here called
 	# start_capture before, so the talk key gated a microphone that was never open and no
 	# player was ever heard.
 	var started := voice.update_talk(wanted)
@@ -183,10 +183,10 @@ func _on_submitted(text: String, channel: StringName) -> void:
 
 
 ## [b]The server's own lines arrive on the shell's client link, not on the bridge.[/b] A vote
-## between games, "Ada joined the game." and an admin's `say` are dot-server's chat manager, sent as
+## between games, "Ada joined the game." and an admin's `say` are gs-server's chat manager, sent as
 ## `chat.line` on `GSClientLink`; this box read only the bridge and never showed one.
 func _watch_link() -> void:
-	var link := GSRegistry.get_service(&"dot_client_link")
+	var link := GSRegistry.get_service(&"gs_client_link")
 
 	if link != null and link.has_signal(&"chat_received") \
 			and not link.is_connected(&"chat_received", _on_server_line):

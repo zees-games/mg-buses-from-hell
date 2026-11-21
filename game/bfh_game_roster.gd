@@ -29,7 +29,7 @@ signal player_added(player_id: StringName)
 ## And is not any more.
 signal player_removed(player_id: StringName)
 
-## dot-team's block rules (`!block`, `!noblock`, `mp_teamblock`), set by the server module or `GSGameClient.add_noblock`. They feed [member body_rules]'s `pair_fn`.
+## gs-team's block rules (`!block`, `!noblock`, `mp_teamblock`), set by the server module or `GSGameClient.add_noblock`. They feed [member body_rules]'s `pair_fn`.
 var block_rules: Object = null:
 	set(value):
 		if block_rules != null and block_rules.is_connected(&"changed", body_rules.refresh):
@@ -40,7 +40,7 @@ var block_rules: Object = null:
 
 var round_number: int = 0
 
-## dot-player-controller's body rules, there for dot-team's block rules to feed. Players are never solid to each other here (no hull is built), so it changes nothing physical; `mp_solidplayers` is deliberately not bound.
+## gs-player-controller's body rules, there for gs-team's block rules to feed. Players are never solid to each other here (no hull is built), so it changes nothing physical; `mp_solidplayers` is deliberately not bound.
 var body_rules: GSPlayerBodyRules = GSPlayerBodyRules.new()
 
 ## The scaffold's crates this round, by prop instance id. A crate of it is an ordinary
@@ -54,7 +54,7 @@ signal swung(player_id: StringName, instance_id: int, broke: bool)
 ## Somebody was run over or caught a barrel.
 signal player_died(player_id: StringName, by: StringName)
 
-## Death reactions: dot-player-char's `sv_ragdoll*` cvars, bound by the module and followed by the client.
+## Death reactions: gs-player-char's `sv_ragdoll*` cvars, bound by the module and followed by the client.
 ## Exaggerated by default so a bus throws what it hits; sv_ragdoll_exaggerate 0 turns it back.
 var ragdoll_rules: GSPlayerRagdollRules = _throwing_rules()
 
@@ -63,7 +63,7 @@ func _throwing_rules() -> GSPlayerRagdollRules:
 	rules.exaggerate = true
 	return rules
 
-## The fall a death gets: dot-player-char's reaction rule over the server's weights, seeded from the
+## The fall a death gets: gs-player-char's reaction rule over the server's weights, seeded from the
 ## player and the tick.
 func decide_death(player: BfhPlayer, damage: GSDamage) -> GSPlayerDeath:
 	var why: StringName = damage.context.get("why", &"")
@@ -117,7 +117,7 @@ var remote_cover: int = -1
 ## And whether the server says there is somebody on each side.
 var remote_playable: bool = false
 
-## And the rounds each side has won, `TEAM_*` -> count, as the server's dot-match has them.
+## And the rounds each side has won, `TEAM_*` -> count, as the server's gs-match has them.
 ## Empty on the authority, which reads its own. See [method rounds_won].
 var remote_rounds: Dictionary = {}
 
@@ -186,7 +186,7 @@ func add_player(
 		# Not fatal to the join -- they can still move and be seen -- but the round rule
 		# cannot count them, which is a round decided without them. Said out loud because
 		# the last time this was refused, nothing did.
-		GSLog.error(CHANNEL, "dot-match refused a player's side", {
+		GSLog.error(CHANNEL, "gs-match refused a player's side", {
 			"id": String(player_id), "team": team, "why": joined.error.message,
 		})
 
@@ -251,15 +251,15 @@ func remove_player(player_id: StringName) -> void:
 	if ride != null and ride.is_riding(player_id):
 		ride.exit(vehicles.get_vehicle(ride.vehicle_id_of(player_id)), player_id, true)
 
-	# Before the node goes. dot-combat keyed a `GSHealth` on this entity and NOTHING in this game had
+	# Before the node goes. gs-combat keyed a `GSHealth` on this entity and NOTHING in this game had
 	# ever told it to let go -- so every player who had ever joined left a health record behind,
 	# pointing at a node freed with them.
 	if combat != null and is_instance_valid(combat) and player.entity_id != 0:
 		combat.forget(player.entity_id)
 		entities.close(player.entity_id, GSEntityTable.REASON_OWNER_LEFT)
 
-	# And dot-match, which kept counting them as present: towards `min_players`, and on
-	# the side they left from. Their scoreboard record stays, which is dot-match's own rule.
+	# And gs-match, which kept counting them as present: towards `min_players`, and on
+	# the side they left from. Their scoreboard record stays, which is gs-match's own rule.
 	if match_node != null:
 		match_node.remove_player(String(player_id))
 
@@ -271,7 +271,7 @@ func remove_player(player_id: StringName) -> void:
 	_horn_ready.erase(player_id)
 	player.queue_free()
 
-	# After the roster has dropped them: dot-spectate picks a new target for anybody who
+	# After the roster has dropped them: gs-spectate picks a new target for anybody who
 	# was watching them from the participants, and before the erase that is the leaver.
 	if spectate != null:
 		spectate.on_leave(player_id)
@@ -350,7 +350,7 @@ func _set_riding(
 func team_of(player_id: StringName) -> int:
 	return int(sides.get(player_id, 0))
 
-## The side id dot-team's block rules compare ("" for none): drivers pass drivers and runners pass runners under `mp_teamblock 0`.
+## The side id gs-team's block rules compare ("" for none): drivers pass drivers and runners pass runners under `mp_teamblock 0`.
 func team_of_side(player_id: Variant) -> Variant:
 	var side := team_of(StringName(str(player_id)))
 	return str(side) if side > 0 else ""
@@ -394,7 +394,7 @@ func alive_runners() -> int:
 			count += 1
 	return count
 
-## Rounds [param team] has won this match, which is what dot-match scores here.
+## Rounds [param team] has won this match, which is what gs-match scores here.
 func rounds_won(team: int) -> int:
 	if not authoritative:
 		return int(remote_rounds.get(team, 0))

@@ -122,7 +122,7 @@ func _fall(who: BfhPlayer) -> void:
 func _start_offline() -> void:
 	# A driver and a runner, because a round needs both sides and there is one person here. What the
 	# bot is for is having a bus on the floor to run away from, which is the thing worth looking at.
-	# Named from dot-bot's pool, as a server's are.
+	# Named from gs-bot's pool, as a server's are.
 	var roster := GSBotRoster.new()
 	var taken: Array = ["You"]
 	for i in range(offline_bots):
@@ -185,7 +185,7 @@ func _build_netcode() -> GSResult:
 	net.is_server = false
 	net.local_peer_id = multiplayer.get_unique_id() if multiplayer != null else 2
 	net.auto_tick = false
-	# Empty: a stale `user://dot_net.json` would silently change the tick rate.
+	# Empty: a stale `user://gs_net.json` would silently change the tick rate.
 	net.config_file = ""
 
 	var config := GSNetConfig.new()
@@ -235,7 +235,7 @@ func _build_netcode() -> GSResult:
 	)
 	bridge.seat_changed.connect(_on_seat_changed)
 
-	# The one thing that writes an RTT sample. dot-net never touches a transport, so
+	# The one thing that writes an RTT sample. gs-net never touches a transport, so
 	# nothing in it can; without this the clock's input lead omits the flight time and
 	# past about 30 ms every command arrives after its tick and is discarded as late.
 	if link != null and link.has_method("ping_ms"):
@@ -244,7 +244,7 @@ func _build_netcode() -> GSResult:
 
 	GSLog.result(CHANNEL, "chat and voice", chat.attach(bridge))
 
-	# READY, and not one byte before the scene exists. dot-server's signon finishes and
+	# READY, and not one byte before the scene exists. gs-server's signon finishes and
 	# THEN the client builds this; anything the server sent in between landed on a node
 	# that did not exist and was lost, one "Node not found" per call.
 	if link != null and link.has_method("is_playing") and bool(link.call("is_playing")):
@@ -422,9 +422,9 @@ func _build_settings() -> void:
 		if hud != null:
 			hud.follow_menu(settings.menu)
 
-## M: the bowl list (dot-menu's map menu). Solo a choice changes the bowl here at once; connected
+## M: the bowl list (gs-menu's map menu). Solo a choice changes the bowl here at once; connected
 ## the server decides, by the owner's `sv_map_menu_flag`, and anybody without it gets a vote instead
-## (dot-vote's map menu, wired in [BfhModule]).
+## (gs-vote's map menu, wired in [BfhModule]).
 func _wire_maps() -> void:
 	if game != null:
 		game.workshop_index = GSContentIndex.shared()
@@ -500,7 +500,7 @@ func _start_remote_workbench() -> void:
 	workbench = wb
 	platform.add_workbench(wb)
 
-## dot-team's block rules followed from the server, or, solo, the F9 tuning panel over this process's own config.
+## gs-team's block rules followed from the server, or, solo, the F9 tuning panel over this process's own config.
 func _add_noblock_and_workbench() -> void:
 	if link != null:
 		GSLog.result(CHANNEL, "noblock", platform.add_noblock(game, Callable(game, "team_of_side")))

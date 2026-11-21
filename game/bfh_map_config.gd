@@ -1,8 +1,8 @@
 extends RefCounted
 
-## Per-map settings: dot-game's [GSGameMapConfig] over the tunables a bowl may change.
+## Per-map settings: gs-game's [GSGameMapConfig] over the tunables a bowl may change.
 ##
-## `cfg/game/mg-buses-from-hell/dot_map/map/<bowl>.yml` (a glob such as `*.yml` covers them all), overridable from `cfg/server/...`. A key outside [constant KEYS] is logged and ignored, so a file can never run a command.
+## `cfg/game/mg-buses-from-hell/gs_map/map/<bowl>.yml` (a glob such as `*.yml` covers them all), overridable from `cfg/server/...`. A key outside [constant KEYS] is logged and ignored, so a file can never run a command.
 
 const GAME_ID := "mg-buses-from-hell"
 

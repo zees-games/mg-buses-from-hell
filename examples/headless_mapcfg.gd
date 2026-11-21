@@ -7,7 +7,7 @@ const BfhMapConfig := preload("../game/bfh_map_config.gd")
 ## server's cvars and on the client's hooks.
 
 const CHECKS := 10
-const DIR := "res://cfg/server/game/mg-buses-from-hell/dot_map/map"
+const DIR := "res://cfg/server/game/mg-buses-from-hell/gs_map/map"
 const FILE := "bfh_zz_mapcfg_check.yml"
 
 
@@ -26,9 +26,9 @@ func _ready() -> void:
 
 
 func _run() -> void:
-	print("mg-buses-from-hell: per-bowl settings from cfg/game/mg-buses-from-hell/dot_map/map")
-	if not ResourceLoader.exists("res://addons/dot_map/config/dot_map_config.gd"):
-		print("SKIPPED: dot-map is not linked at addons/dot_map")
+	print("mg-buses-from-hell: per-bowl settings from cfg/game/mg-buses-from-hell/gs_map/map")
+	if not ResourceLoader.exists("res://addons/gs_map/config/gs_map_config.gd"):
+		print("SKIPPED: gs-map is not linked at addons/gs_map")
 		get_tree().quit(0)
 		return
 	GSAddonConfig.game = BfhMapConfig.GAME_ID

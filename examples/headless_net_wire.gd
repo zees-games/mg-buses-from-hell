@@ -182,7 +182,7 @@ func _wire_clock_and_events() -> void:
 	)
 	_check(
 		int(clock["drivers_won"]) == 5 and int(clock["runners_won"]) == 2,
-		"clock: and the rounds each side has won, which is what dot-match scores here"
+		"clock: and the rounds each side has won, which is what gs-match scores here"
 	)
 
 	var round_over := BfhEvents.read_round(GSNetReader.new(
@@ -209,7 +209,7 @@ func _wire_clock_and_events() -> void:
 ## Truncated packets, noises, the spectator's asks, and the kind fields.
 func _wire_truncated_and_asks() -> void:
 	var at := Vector3(12.5, 1.25, -30.75)
-	# [b]A truncated packet must NOT decode as a valid message about nothing.[/b] dot-net
+	# [b]A truncated packet must NOT decode as a valid message about nothing.[/b] gs-net
 	# shipped with reader exhaustion that was not sticky, so a decoder that skipped the
 	# check got a believable value for the field after the overrun.
 	var short := BfhEvents.read_join(GSNetReader.new(

@@ -1,6 +1,6 @@
 extends RefCounted
 
-## Every key this game reads, as one dot-menu [GSMenuBindings] table: the action, the setting that
+## Every key this game reads, as one gs-menu [GSMenuBindings] table: the action, the setting that
 ## stores it, the words a player sees, the default, and the card it goes on.
 
 const SCOREBOARD := &"bfh_scoreboard"
@@ -10,7 +10,7 @@ const VIEW := &"bfh_view"
 const ROAM := &"bfh_roam"
 ## The flashlight, on and off, for everybody still up.
 const FLASHLIGHT := &"bfh_flashlight"
-## The chat box's actions (`BfhClientChat`), which dot-ui's window creates only if missing.
+## The chat box's actions (`BfhClientChat`), which gs-ui's window creates only if missing.
 const CHAT := &"bfh_chat"
 const CHAT_TEAM := &"bfh_chat_team"
 
@@ -18,11 +18,11 @@ const CHAT_TEAM := &"bfh_chat_team"
 static func make() -> GSMenuBindings:
 	var keys := GSMenuBindings.new()
 	keys.add_movement("Movement", "Ctrl", "Crouch")
-	keys.add(&"dot_fps_forward", &"bind_forward", "Forward (driving: accelerate)", "W", "Movement")
-	keys.add(&"dot_fps_back", &"bind_back", "Back (driving: brake and reverse)", "S", "Movement")
-	keys.add(&"dot_fps_left", &"bind_left", "Strafe left (driving: steer)", "A", "Movement")
-	keys.add(&"dot_fps_right", &"bind_right", "Strafe right (driving: steer)", "D", "Movement")
-	keys.add(&"dot_fps_jump", &"bind_jump", "Jump (while out: change the view)", "Space", "Movement")
+	keys.add(&"gs_fps_forward", &"bind_forward", "Forward (driving: accelerate)", "W", "Movement")
+	keys.add(&"gs_fps_back", &"bind_back", "Back (driving: brake and reverse)", "S", "Movement")
+	keys.add(&"gs_fps_left", &"bind_left", "Strafe left (driving: steer)", "A", "Movement")
+	keys.add(&"gs_fps_right", &"bind_right", "Strafe right (driving: steer)", "D", "Movement")
+	keys.add(&"gs_fps_jump", &"bind_jump", "Jump (while out: change the view)", "Space", "Movement")
 	# One hammer and no switching, so the wheel is free: each tick is one press of jump.
 	keys.add_wheel_jump("Movement")
 	keys.add(FLASHLIGHT, &"bind_flashlight", "Flashlight", "F", "General")

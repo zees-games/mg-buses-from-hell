@@ -212,7 +212,7 @@ static func status_of(player: BfhPlayer, team: int) -> String:
 	return "up"
 
 
-## A side's name as dot-match has it, and the rounds it has won.
+## A side's name as gs-match has it, and the rounds it has won.
 static func header_line(p_game: BfhGame, team: int) -> String:
 	var won := p_game.rounds_won(team)
 	return "%s   %d %s won" % [side_name(p_game, team), won, "round" if won == 1 else "rounds"]

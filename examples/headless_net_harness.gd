@@ -185,7 +185,7 @@ func _make_managers(server_side: Node, client_side: Node) -> void:
 		false, &"client", CLIENT_PEER, client_side, _client_game.tick_rate
 	)
 	# This harness stamps commands itself, so asking for the input-lead report would steer the
-	# clock by commands it never stamped. Read by constant map so older dot-net still parses.
+	# clock by commands it never stamped. Read by constant map so older gs-net still parses.
 	var lead_bit := int((GSNetMessageRegistry as Script).get_script_constant_map().get("FEATURE_INPUT_LEAD", 0))
 	_client_net.messages.features &= ~lead_bit
 

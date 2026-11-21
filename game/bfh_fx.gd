@@ -14,7 +14,7 @@ const BLAST := &"barrel_blast"
 ## defined, for the reason docs/delivery.md gives.
 static var BLAST_SCENE := BfhPaths.rebase("res://fx/bfh_blast.tscn")
 
-## A blast's lifetime in dot-fx, in milliseconds. The scene fades out inside it.
+## A blast's lifetime in gs-fx, in milliseconds. The scene fades out inside it.
 const BLAST_MS := 1400
 
 var fx: GSFxManager = null
@@ -25,7 +25,7 @@ var break_fx: GSFxBreak = null
 ## The last blast this client drew, or null. For a check and for `describe`.
 var last_blast: Node3D = null
 
-## How many blasts the world announced, and how many dot-fx drew.
+## How many blasts the world announced, and how many gs-fx drew.
 var heard: int = 0
 var drawn: int = 0
 
@@ -74,7 +74,7 @@ func setup(world: Node) -> GSResult:
 	if not built.ok:
 		return built.wrap("the bowl's effects")
 
-	# [b]Said out loud, because dot-fx will not.[/b] A scene it cannot find is a refusal
+	# [b]Said out loud, because gs-fx will not.[/b] A scene it cannot find is a refusal
 	# it logs at DEBUG — right for a pack still arriving, and exactly how an effect that
 	# was never shipped goes unnoticed for good.
 	var missing := fx.catalogue.missing_scenes()
@@ -93,7 +93,7 @@ func setup(world: Node) -> GSResult:
 	return GSResult.success(self)
 
 
-## Once a frame: where the viewer is, for dot-fx's distance cull, and the clock it retires
+## Once a frame: where the viewer is, for gs-fx's distance cull, and the clock it retires
 ## effects on.
 func present(delta: float, eye: Vector3, forward: Vector3 = Vector3.FORWARD) -> void:
 	if fx == null:

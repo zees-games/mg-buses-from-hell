@@ -6,7 +6,7 @@ const BfhConfig := preload("bfh_config.gd")
 
 # No `const CHANNEL`. This is a value object that swings and emits: `hit` and `missed` are
 # what a caller acts on, and a line per swing at two a second per player is a log nobody
-# can read. The one thing worth keeping — that a crate broke — is dot-props'.
+# can read. The one thing worth keeping — that a crate broke — is gs-props'.
 
 ## A swing landed on a prop.
 signal hit(instance_id: int, at: Vector3, broke: bool)
@@ -81,7 +81,7 @@ func swing(
 	var collider := result.get("collider") as Node
 	var at: Vector3 = result.get("position", origin)
 
-	# A toy (dot-props', the bowl's beach balls and barrels): whacked along the swing, as a shot
+	# A toy (gs-props', the bowl's beach balls and barrels): whacked along the swing, as a shot
 	# of the hammer's weight would push it. The world's box, by name; on a client it does
 	# nothing, the server's swing decides.
 	var box: Variant = world.get("toys")

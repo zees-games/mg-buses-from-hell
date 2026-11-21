@@ -427,19 +427,19 @@ func _test_sides() -> void:
 	_check(not game.match_node.teams.force_balance,
 		"and nothing tries to even them up")
 
-	# [b]And nothing REFUSES them either, which `force_balance` alone does not say.[/b] dot-match's
+	# [b]And nothing REFUSES them either, which `force_balance` alone does not say.[/b] gs-match's
 	# team manager has a second rule, `max_difference`, that refuses a join putting one side more than
-	# one ahead — so the fifth person here was left on no team in dot-match while `sides`.
+	# one ahead — so the fifth person here was left on no team in gs-match while `sides`.
 	game.add_player(&"e", "E")
 	game.add_player(&"f", "F")
 	var unknown := PackedStringArray()
 	for id: StringName in game.sides:
 		if game.match_node.teams.team_of(String(id)) != game.team_of(id):
 			unknown.append(String(id))
-	_check(unknown.is_empty(), "dot-match puts every runner on the runners' side",
+	_check(unknown.is_empty(), "gs-match puts every runner on the runners' side",
 		"it disagrees about %s" % ", ".join(unknown))
 
-	# Somebody leaving leaves dot-match too, or they go on counting as present — towards
+	# Somebody leaving leaves gs-match too, or they go on counting as present — towards
 	# `min_players` and on the side they left from.
 	game.remove_player(&"f")
 	_check(game.match_node.scoreboard.present_count() == game.players.size(),

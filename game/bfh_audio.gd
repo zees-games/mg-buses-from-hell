@@ -32,12 +32,12 @@ var _own: Callable = Callable()
 ## bus node instance id -> {"at": Vector3, "speed": float, "phase": float}.
 var _engines: Dictionary = {}
 
-## Runners' footsteps (sand, so dot-audio's grass set) and the bowl's wind, from dot-audio's
+## Runners' footsteps (sand, so gs-audio's grass set) and the bowl's wind, from gs-audio's
 ## stock. Drivers are in a bus and make the engine instead.
 var steps: GSAudioFootsteps = null
 var ambience: GSAudioAmbience = null
 
-## Quiet moods under the bowl (dot-audio's stock set); the wind bed plays only when none loaded.
+## Quiet moods under the bowl (gs-audio's stock set); the wind bed plays only when none loaded.
 var ambient: GSAmbienceDirector = null
 
 
@@ -56,7 +56,7 @@ func setup(world: Node3D, own: Callable = Callable()) -> GSResult:
 	audio.register_as_service = false
 	# Two buses pulsing and a crowd of hammers is the busiest this game gets.
 	audio.voices = 24
-	# Measured toward the family's -17 LUFS (dot-audio docs/loudness.md): a 40 s stand-in round read
+	# Measured toward the family's -17 LUFS (gs-audio docs/loudness.md): a 40 s stand-in round read
 	# -25.4 LUFS integrated with the wind and the steps in (-20.1 before them, on a run with a crash in
 	# it); -19.9 at +6, -18.1 and -19.1 at +8.
 	audio.loudness_trim_db = 9.0

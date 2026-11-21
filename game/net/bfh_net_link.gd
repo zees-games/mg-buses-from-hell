@@ -7,7 +7,7 @@ const CHANNEL := "bfh.link"
 ## The node name both ends must use. It is the routing, so it is a constant.
 const NODE_NAME := &"Buses"
 
-## Everything here rides [constant GSTransport.Channel.STATE], which dot-server reserves
+## Everything here rides [constant GSTransport.Channel.STATE], which gs-server reserves
 ## for exactly this and uses for nothing itself. Sharing chat's channel would make a
 ## burst of snapshots delay a chat line, and a chat line delay a snapshot.
 const CHANNEL_STATE := 1
