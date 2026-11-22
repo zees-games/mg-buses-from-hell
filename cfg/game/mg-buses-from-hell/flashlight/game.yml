@@ -1,12 +1,67 @@
-# mg-buses-from-hell: the flashlight (gs-flashlight), every shown key at its default here, commented out. Uncomment a line to change it;
+# mg-buses-from-hell: every key of this file at its code default, commented out. Uncomment a line to change it;
 # an operator overrides in cfg/server/game/mg-buses-from-hell/flashlight/game.yml. Layers: defaults < this < env < argv.
+# Master switch: off, the node never lights and refuses to toggle.
 # enabled: true
-# key: F
-# default_state: 2
+
+# --- Beam
+# Metres the beam reaches. [2.0..80.0]
 # range_m: 20.0
+# Cone angle in degrees. [5.0..90.0]
 # angle: 36.0
+# Light energy of the local player's beam. [0.1..16.0]
 # energy: 3.2
+# Beam colour as #rrggbb.
+# colour: "#ffedcc"
+# Under 1 the light falls away from the middle at once, a hot centre; 1 and over is an even disc. [0.1..4.0]
+# angle_attenuation: 0.55
+# Falloff along the beam. [0.1..4.0]
+# attenuation: 0.6
+
+# --- Shadows
+# Whether the local beam casts shadows.
 # shadows: true
+# Shadows on a browser or a phone; off by default, they cost most of the frame there.
 # shadows_on_web: false
+# How many other players' beams, nearest first, cast shadows. The rest are plain cones. [0..16]
 # shadow_beams: 2
+
+# --- Others
+# The most other players' beams drawn at once, nearest first. [0..256]
+# remote_beams: 24
+# Beams further than this from the viewer are not drawn. [5.0..200.0]
+# remote_range: 45.0
+# Other players' beams against yours. [0.1..2.0]
+# remote_energy_scale: 0.7
+
+# --- Battery
+# Whether the light drains a battery.
 # battery: false
+# Seconds a full battery lasts. [5.0..3600.0]
+# battery_seconds: 120.0
+# Seconds an off light takes to recharge fully. [1.0..3600.0]
+# recharge_seconds: 60.0
+# The charge (0 to 1) a dead light needs before it can be lit again. [0.0..1.0]
+# restart_charge: 0.1
+# Below this charge the beam flickers. [0.0..1.0]
+# flicker_below: 0.15
+
+# --- Start
+# Toggle key (the game binds it; the node makes the action only when missing).
+# key: "F"
+# 0 off, 1 on, 2 on only where the map is dark. [0..2]
+# default_state: 2
+# Maps the light works on; empty is every map.
+# allowed_maps: []
+# Ambient energy under which a map counts as dark. [0.0..1.0]
+# dark_ambient_floor: 0.25
+# Moods that count as dark whatever the ambient.
+# dark_moods: ["interior_horror", "cave_tunnel", "outdoor_night"]
+
+# --- Sound
+# GameSpice Audio catalogue ids for the switch clicks; empty is silent.
+# click_on: "flashlight_on"
+# click_off: "flashlight_off"
+# Loudness of a click, 0 to 1; 0 is a silent light. The stock clicks are already quieter than a footstep. [0.0..1.0]
+# click_volume: 1.0
+# Random pitch spread (plus or minus) so repeated clicks do not repeat exactly. [0.0..0.3]
+# click_pitch_jitter: 0.04
