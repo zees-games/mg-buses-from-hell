@@ -78,8 +78,11 @@ func _game_load() -> GSResult:
 	_wire_identity(world)
 
 	_add_tunables(world)
-	world.bowl_changed.connect(func(id: StringName) -> void: _apply_map_config(String(id)))
+	world.bowl_changed.connect(func(id: StringName) -> void:
+		_apply_map_config(String(id))
+		_report_bowl(String(id)))
 	_apply_map_config(String(world.bowl_id))
+	_report_bowl(String(world.bowl_id))
 	_build_vote(world)
 	_add_rotation(world)
 
@@ -130,6 +133,13 @@ func _game_load() -> GSResult:
 
 ## The cvar sets the world's rule objects own (ragdolls, toys, ambience, view, spectating), each
 ## bound under its addon's own names.
+## Tells gs-server which bowl this is, so A2S, DQP and the browser print it in the map column instead of the game's name.
+## Not [method GSGameModule.report_map]: that marks every seat loading, and a bowl change here is not a reload.
+func _report_bowl(bowl_id: String) -> void:
+	if server != null and server.games != null and server.games.has_method("set_current_map"):
+		server.games.call("set_current_map", bowl_id)
+
+
 func _bind_rule_cvars(world: BfhGame) -> void:
 	# Dead bodies: gs-player-char's sv_ragdoll* set. The server only picks each death's reaction
 	# from them; REPLICATED, because the clients draw the bodies (see the client's _build_netcode).
