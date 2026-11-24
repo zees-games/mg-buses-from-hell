@@ -28,10 +28,11 @@ jobs:
     # @v1.2.2 (images/ left out of the pack, as well as v1.2.1's requires.json and draft-until-complete) until v1 is moved onto it.
     release:
         needs: validate
-        uses: gamespice-platform/ci/.github/workflows/release.yml@v1.3.14
+        uses: gamespice-platform/ci/.github/workflows/release.yml@v1.4.1
         permissions:
             contents: write
         with:
             pack: true
+            pack-deny: 'tmcdev(?:games)?\.net|x-tmc-dev'
         secrets:
             DEPS_TOKEN: ${{ secrets.GS_DEPS_TOKEN }}
